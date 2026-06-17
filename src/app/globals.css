@@ -105,15 +105,23 @@ body {
 
 /* ---- Jarvis particle sphere (home hero) ----------------------------------- */
 @keyframes jarvis-rotate { to { transform: rotate(360deg); } }
+@keyframes jarvis-rotate-rev { to { transform: rotate(-360deg); } }
 @keyframes jarvis-twinkle {
   0%, 100% { opacity: 0.18; }
   50% { opacity: var(--tw-max, 0.9); }
 }
-.jarvis-spin-slow { animation: jarvis-rotate 70s linear infinite; transform-box: view-box; transform-origin: 50px 50px; }
-.jarvis-spin-med  { animation: jarvis-rotate 22s linear infinite; transform-box: view-box; transform-origin: 50px 50px; }
-.jarvis-twinkle   { animation: jarvis-twinkle 3s ease-in-out infinite; }
+/* Pulsation — the orb breathes and its glow swells. */
+@keyframes jarvis-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+@keyframes jarvis-glow    { 0%, 100% { opacity: 0.55; }      50% { opacity: 0.95; } }
+.jarvis-spin-slow     { animation: jarvis-rotate 70s linear infinite; transform-box: view-box; transform-origin: 50px 50px; }
+.jarvis-spin-slow-rev { animation: jarvis-rotate-rev 88s linear infinite; transform-box: view-box; transform-origin: 50px 50px; }
+.jarvis-spin-med      { animation: jarvis-rotate 22s linear infinite; transform-box: view-box; transform-origin: 50px 50px; }
+.jarvis-twinkle       { animation: jarvis-twinkle 3s ease-in-out infinite; }
+.jarvis-breathe       { animation: jarvis-breathe 5s ease-in-out infinite; }
+.jarvis-glow-pulse    { animation: jarvis-glow 5s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   .orb-spin, .orb-spin-fast, .orb-spin-rev, .orb-breathe, .orb-pulse-ring,
-  .jarvis-spin-slow, .jarvis-spin-med, .jarvis-twinkle { animation: none; }
+  .jarvis-spin-slow, .jarvis-spin-slow-rev, .jarvis-spin-med, .jarvis-twinkle,
+  .jarvis-breathe, .jarvis-glow-pulse { animation: none; }
 }
