@@ -1,11 +1,13 @@
 import {
   Sparkles,
   Home,
-  CheckSquare,
+  Mail,
   CalendarDays,
-  Target,
+  Mic,
   Users,
-  Briefcase,
+  Compass,
+  CheckSquare,
+  Target,
   Inbox,
   type LucideIcon,
 } from "lucide-react";
@@ -14,15 +16,15 @@ export type NavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
-  /** One line describing the section — shown in the top bar and empty states. */
+  /** One line describing the section — shown in empty states and the drawer. */
   description: string;
-  /** Which roadmap phase delivers the real functionality for this section. */
+  /** Which roadmap phase / agent delivers the real functionality for this section. */
   deliveredBy: string;
 };
 
 /**
- * Single source of truth for the primary navigation.
- * Order matches the roadmap's dashboard nav: Today · Tasks · Calendar · Goals · People · Jobs · Review.
+ * Single source of truth for navigation. Tabs are named to reflect the agent that powers them
+ * (Email · Calendar · Meetings · Contacts · Opportunities), plus the core surfaces.
  */
 export const NAV_ITEMS: NavItem[] = [
   {
@@ -40,18 +42,46 @@ export const NAV_ITEMS: NavItem[] = [
     deliveredBy: "Phase 1 · P1-T3",
   },
   {
-    label: "Tasks",
-    href: "/tasks",
-    icon: CheckSquare,
-    description: "Everything you've committed to, each with a link back to its source.",
-    deliveredBy: "Phase 1 · P1-T1",
+    label: "Email",
+    href: "/email",
+    icon: Mail,
+    description: "The Email agent: triage Gmail into sourced tasks, replies, and follow-ups.",
+    deliveredBy: "Email agent · needs Gmail connected",
   },
   {
     label: "Calendar",
     href: "/calendar",
     icon: CalendarDays,
-    description: "Events from your calendar and meetings proposed from your email.",
-    deliveredBy: "Phase 3",
+    description: "The Calendar agent: events from your calendar and meetings proposed from email.",
+    deliveredBy: "Calendar agent · needs Google connected",
+  },
+  {
+    label: "Meetings",
+    href: "/meetings",
+    icon: Mic,
+    description: "The Meeting agent: turn transcripts into sourced action items.",
+    deliveredBy: "Meeting agent · paste a transcript",
+  },
+  {
+    label: "Contacts",
+    href: "/people",
+    icon: Users,
+    description: "The Contact agent: who to follow up with, why they matter, AI-drafted outreach.",
+    deliveredBy: "Contact agent",
+  },
+  {
+    label: "Opportunities",
+    href: "/opportunities",
+    icon: Compass,
+    description: "The Opportunity agent: programs, jobs, hackathons — found and tracked with deadlines.",
+    deliveredBy: "Opportunity agent",
+  },
+  {
+    label: "Tasks",
+    href: "/tasks",
+    icon: CheckSquare,
+    description: "Everything you've committed to, each with a link back to its source.",
+    deliveredBy: "Phase 1 · P1-T1",
   },
   {
     label: "Goals",
@@ -61,25 +91,11 @@ export const NAV_ITEMS: NavItem[] = [
     deliveredBy: "Phase 1 · P1-T2",
   },
   {
-    label: "People",
-    href: "/people",
-    icon: Users,
-    description: "Who you owe a follow-up, why they matter, and AI-drafted outreach.",
-    deliveredBy: "Phase 6",
-  },
-  {
-    label: "Jobs",
-    href: "/jobs",
-    icon: Briefcase,
-    description: "Job applications that track themselves from your inbox.",
-    deliveredBy: "Phase 7",
-  },
-  {
     label: "Review",
     href: "/review",
     icon: Inbox,
     description: "Suggestions awaiting your approval before they become real items.",
-    deliveredBy: "Phase 1 · P1-T4 (filled in Phase 2)",
+    deliveredBy: "Phase 1 · P1-T4",
   },
 ];
 
