@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+/*
+  Jarvis — "command center" design tokens.
+  Dark-first and intentional (not system-dependent), for a consistent Jarvis feel.
+*/
+:root {
+  --background: #0b0f14; /* near-black blue */
+  --surface: #11161d; /* sidebar / panels */
+  --surface-2: #161d26; /* raised cards */
+  --surface-3: #1c2530; /* hover / active */
+  --border: #232c38;
+  --border-strong: #2f3a48;
+  --foreground: #e6edf3;
+  --muted: #8b97a7; /* secondary text */
+  --muted-strong: #aab6c5;
+  --accent: #38bdf8; /* arc-reactor cyan */
+  --accent-strong: #0ea5e9;
+  --accent-soft: #0c2533; /* tinted accent background */
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --ring: #38bdf8;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-strong: var(--muted-strong);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Thin, unobtrusive scrollbars that match the theme. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 9999px;
+  border: 2px solid var(--background);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Subtle radial glow behind the app — the "command center" ambience. */
+.app-ambient {
+  background:
+    radial-gradient(60rem 40rem at 12% -10%, rgba(56, 189, 248, 0.08), transparent 60%),
+    radial-gradient(50rem 40rem at 100% 0%, rgba(14, 165, 233, 0.05), transparent 55%);
+}
