@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 import { Search } from "lucide-react";
 import { activeNavItem } from "@/lib/nav";
 import { AskJarvisDialog } from "@/components/AskJarvisDialog";
+import { NavDrawer } from "@/components/NavDrawer";
 
-export function Topbar() {
+export function Topbar({ userEmail }: { userEmail?: string }) {
   const pathname = usePathname();
   const item = activeNavItem(pathname);
   const [askOpen, setAskOpen] = useState(false);
@@ -24,7 +25,8 @@ export function Topbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-border bg-background/70 px-5 backdrop-blur md:px-8">
+    <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-border bg-background/70 px-4 backdrop-blur md:px-6">
+      <NavDrawer userEmail={userEmail} />
       <div className="min-w-0 flex-1">
         <h1 className="truncate text-base font-semibold tracking-tight text-foreground">
           {item?.label ?? "Jarvis"}

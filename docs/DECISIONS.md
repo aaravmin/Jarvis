@@ -116,6 +116,14 @@
   raw string. Timezone caveat: when the source names a zone chrono honors it, else server-local — only
   affects sort/reminder, never the displayed deadline.
 
+- **2026-06-17 — Immersive Jarvis home + hamburger nav-drawer replaces the persistent sidebar (by
+  user request).** Why: the user wants the home to read like a command center — a live clock, the
+  arc-reactor orb, the JARVIS wordmark, and the ask console. The always-on sidebar fought that, so nav
+  moved into a slide-in `<NavDrawer>` opened from a hamburger in the `Topbar` (works at every screen
+  size; closes on Esc/overlay/route-change). `/jarvis` is the immersive home; root (`/`) and post-login
+  now land there (was `/today`). Sidebar.tsx + MobileNav.tsx deleted (orphaned). `JarvisConsole` gained
+  a `hero` prop that adds the clock + wordmark. `LiveClock` is hydration-safe (placeholder until mount).
+
 - **2026-06-17 — Tavily is an OPTIONAL recall seed, never a provenance source.** Why: the user asked to
   "use Tavily where applicable," but the citation gate (hard rule #3) requires real `web_search`
   citations. So when `TAVILY_API_KEY` is set, the Opportunity agent runs a quick Tavily search and

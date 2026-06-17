@@ -23,6 +23,12 @@ needs the real Supabase **access token** in the MCP config + a Claude Code windo
 Supabase MCP connects). `ANTHROPIC_API_KEY` + the anon key are already in `.env.local`.
 
 ## Task log (most recent first)
+- **Immersive Jarvis home + nav drawer** — ✅ built (local). `/jarvis` is now the command-center home:
+  `LiveClock` (ticking, hydration-safe) + the arc-reactor orb + "JARVIS" wordmark + the ask console
+  (`JarvisConsole hero`). The persistent sidebar was replaced by a slide-in `NavDrawer` opened from a
+  hamburger in the `Topbar` (Esc/overlay/route-change close it). Root `/` and post-login now land on
+  `/jarvis` (was `/today`). Deleted orphaned `Sidebar.tsx` + `MobileNav.tsx`. **Verified:** tsc +
+  eslint clean; live server `/jarvis` + `/` → 307 `/login` (compile + auth gate OK).
 - **Multi-agent system + Opportunity agent** — ✅ built (local; gated on migrations to *run*). Two
   parts:
   1. **Intent router** — `POST /api/agent` classifies one request (Haiku, `JARVIS_ROUTER_MODEL`) and

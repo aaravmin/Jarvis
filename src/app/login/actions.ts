@@ -13,7 +13,7 @@ function siteUrl(): string {
 
 /**
  * One server action for both sign-in and sign-up; the clicked submit button supplies `intent`.
- * On success we redirect to /today (redirect() throws, so nothing after it runs). On failure we
+ * On success we redirect to /jarvis (redirect() throws, so nothing after it runs). On failure we
  * return a message that the login form renders inline via useActionState.
  */
 export async function authenticate(
@@ -44,7 +44,7 @@ export async function authenticate(
     // If the project has email confirmation disabled, sign-up returns a live session.
     if (data.session) {
       revalidatePath("/", "layout");
-      redirect("/today");
+      redirect("/jarvis");
     }
     return {
       notice: "Account created. Check your email to confirm, then sign in.",

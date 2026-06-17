@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Mic, Send, Globe, FileText, ExternalLink, Square } from "lucide-react";
 import { JarvisOrb, type OrbState } from "@/components/JarvisOrb";
+import { LiveClock } from "@/components/LiveClock";
 import type { AskResponse } from "@/lib/assistant/types";
 
 // Minimal typings for the browser SpeechRecognition API (no extra dependency).
@@ -24,7 +25,7 @@ const EXAMPLES = [
   "What are the main risks in the contract in my fineprint folder?",
 ];
 
-export function JarvisConsole() {
+export function JarvisConsole({ hero = false }: { hero?: boolean }) {
   const [input, setInput] = useState("");
   const [phase, setPhase] = useState<OrbState>("idle");
   const [answer, setAnswer] = useState<AskResponse | null>(null);
@@ -117,8 +118,20 @@ export function JarvisConsole() {
   const listening = phase === "listening";
   const thinking = phase === "thinking";
 
+  const statusText = thinking
+    ? "Thinking…"
+    : listening
+      ? "Listening… speak, then pause"
+      : "Ask anything — I can search the web and read your files";
+
   return (
     <div className="mx-auto flex max-w-2xl flex-col items-center">
+      {hero && (
+        <div className="mb-6">
+          <LiveClock />
+        </div>
+      )}
+
       <button
         type="button"
         onClick={() => (listening ? stopListening() : voiceSupported ? startListening() : undefined)}
@@ -129,13 +142,16 @@ export function JarvisConsole() {
         <JarvisOrb state={phase} />
       </button>
 
-      <p className="mb-5 h-5 text-sm text-muted">
-        {thinking
-          ? "Thinking…"
-          : listening
-            ? "Listening… speak, then pause"
-            : "Ask Jarvis anything — it can search the web and read your files"}
-      </p>
+      {hero ? (
+        <div className="mb-5 text-center">
+          <h1 className="text-3xl font-semibold tracking-[0.45em] text-foreground sm:text-4xl">
+            <span className="pl-[0.45em]">JARVIS</span>
+          </h1>
+          <p className="mt-1.5 h-5 text-sm text-muted">{statusText}</p>
+        </div>
+      ) : (
+        <p className="mb-5 h-5 text-sm text-muted">{statusText}</p>
+      )}
 
       {/* Input */}
       <form

@@ -11,11 +11,11 @@ export async function GET(request: NextRequest) {
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   // Only allow same-origin, root-relative redirects — block off-origin "//evil.com" and "/\evil.com".
-  const rawNext = searchParams.get("next") ?? "/today";
+  const rawNext = searchParams.get("next") ?? "/jarvis";
   const next =
     rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.startsWith("/\\")
       ? rawNext
-      : "/today";
+      : "/jarvis";
 
   if (token_hash && type) {
     const supabase = await createClient();
