@@ -102,6 +102,18 @@ body {
 .orb-spin-rev { animation: orb-spin-rev 24s linear infinite; }
 .orb-breathe { animation: orb-breathe 4s ease-in-out infinite; }
 .orb-pulse-ring { animation: orb-pulse-ring 2.4s ease-out infinite; }
+
+/* ---- Jarvis particle sphere (home hero) ----------------------------------- */
+@keyframes jarvis-rotate { to { transform: rotate(360deg); } }
+@keyframes jarvis-twinkle {
+  0%, 100% { opacity: 0.18; }
+  50% { opacity: var(--tw-max, 0.9); }
+}
+.jarvis-spin-slow { animation: jarvis-rotate 70s linear infinite; transform-box: view-box; transform-origin: 50px 50px; }
+.jarvis-spin-med  { animation: jarvis-rotate 22s linear infinite; transform-box: view-box; transform-origin: 50px 50px; }
+.jarvis-twinkle   { animation: jarvis-twinkle 3s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
-  .orb-spin, .orb-spin-fast, .orb-spin-rev, .orb-breathe, .orb-pulse-ring { animation: none; }
+  .orb-spin, .orb-spin-fast, .orb-spin-rev, .orb-breathe, .orb-pulse-ring,
+  .jarvis-spin-slow, .jarvis-spin-med, .jarvis-twinkle { animation: none; }
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Mic, Send, Globe, FileText, ExternalLink, Square } from "lucide-react";
 import { JarvisOrb, type OrbState } from "@/components/JarvisOrb";
+import { JarvisSphere } from "@/components/JarvisSphere";
 import { LiveClock } from "@/components/LiveClock";
 import type { AskResponse } from "@/lib/assistant/types";
 
@@ -126,40 +127,37 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col items-center">
-      {hero && (
-        <div className="mb-6">
-          <LiveClock />
-        </div>
-      )}
-
       <button
         type="button"
         onClick={() => (listening ? stopListening() : voiceSupported ? startListening() : undefined)}
         disabled={thinking}
         aria-label={listening ? "Stop listening" : "Talk to Jarvis"}
-        className="mt-2 mb-1 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default"
+        className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default"
       >
-        <JarvisOrb state={phase} />
+        {hero ? <JarvisSphere state={phase} /> : <JarvisOrb state={phase} />}
       </button>
 
       {hero ? (
-        <div className="mb-5 text-center">
-          <h1 className="text-3xl font-semibold tracking-[0.45em] text-foreground sm:text-4xl">
-            <span className="pl-[0.45em]">JARVIS</span>
-          </h1>
-          <p className="mt-1.5 h-5 text-sm text-muted">{statusText}</p>
+        <div className="-mt-2 mb-8 text-center">
+          <LiveClock />
+          <p className="mt-4 h-5 text-xs text-muted/80">{statusText}</p>
         </div>
       ) : (
         <p className="mb-5 h-5 text-sm text-muted">{statusText}</p>
       )}
 
-      {/* Input */}
+      {/* Input — slim and quiet on the home, fuller elsewhere */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
           void submit(input);
         }}
-        className="flex w-full items-center gap-2 rounded-xl border border-border bg-surface-2 px-3 py-2"
+        className={[
+          "flex items-center gap-2 rounded-xl border px-3 py-2",
+          hero
+            ? "w-full max-w-md border-border/60 bg-surface/50"
+            : "w-full border-border bg-surface-2",
+        ].join(" ")}
       >
         {voiceSupported && (
           <button
@@ -189,7 +187,7 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
         </button>
       </form>
 
-      {!answer && !error && !thinking && (
+      {!hero && !answer && !error && !thinking && (
         <div className="mt-4 flex flex-wrap justify-center gap-2">
           {EXAMPLES.map((ex) => (
             <button
