@@ -6,6 +6,7 @@ import {
   Mic,
   CalendarDays,
   PenLine,
+  Globe,
   ExternalLink,
   X,
   type LucideIcon,
@@ -18,6 +19,7 @@ const SOURCE_ICONS: Record<SourceType, LucideIcon> = {
   meeting: Mic,
   calendar: CalendarDays,
   manual: PenLine,
+  research: Globe,
 };
 
 function confidenceTone(c: number): string {
@@ -129,6 +131,52 @@ export function SourceChip({ source }: { source: CardSource }) {
                     {Math.round(source.confidence * 100)}%
                   </span>
                 </p>
+              )}
+
+              {source.fields && source.fields.length > 0 && (
+                <div>
+                  <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted">
+                    Per-field sources
+                  </p>
+                  <ul className="space-y-2">
+                    {source.fields.map((field, i) => (
+                      <li
+                        key={`${field.label}-${i}`}
+                        className="rounded-lg border border-border bg-surface-2 px-3 py-2"
+                      >
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="text-[11px] font-medium uppercase tracking-wider text-muted">
+                            {field.label}
+                          </span>
+                          {typeof field.source.confidence === "number" && (
+                            <span
+                              className={`text-[11px] font-semibold ${confidenceTone(field.source.confidence)}`}
+                            >
+                              {Math.round(field.source.confidence * 100)}%
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 text-sm text-foreground">{field.value}</p>
+                        {field.source.quote && (
+                          <blockquote className="mt-1 border-l-2 border-border-strong pl-2 text-xs italic text-muted-strong">
+                            “{field.source.quote}”
+                          </blockquote>
+                        )}
+                        {field.source.permalink && (
+                          <a
+                            href={field.source.permalink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 inline-flex items-center gap-1 text-[11px] text-accent hover:underline"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            view original
+                          </a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
 

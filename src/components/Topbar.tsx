@@ -1,12 +1,27 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Mic } from "lucide-react";
+import { Search } from "lucide-react";
 import { activeNavItem } from "@/lib/nav";
+import { AskJarvisDialog } from "@/components/AskJarvisDialog";
 
 export function Topbar() {
   const pathname = usePathname();
   const item = activeNavItem(pathname);
+  const [askOpen, setAskOpen] = useState(false);
+
+  // Cmd/Ctrl+K opens the "Ask Jarvis to find…" command surface.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setAskOpen((v) => !v);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-border bg-background/70 px-5 backdrop-blur md:px-8">
@@ -19,19 +34,22 @@ export function Topbar() {
         )}
       </div>
 
-      {/* Voice orb — placeholder until Phase 8. Disabled, but present so the layout is final. */}
+      {/* Ask Jarvis — auto-populate command surface. Text now; the same handler takes voice in Phase 8. */}
       <button
         type="button"
-        disabled
-        title="Voice control arrives in Phase 8"
-        aria-label="Ask Jarvis (coming in Phase 8)"
-        className="inline-flex items-center gap-2 rounded-full border border-border-strong bg-surface-2 px-3 py-1.5 text-sm text-muted opacity-70 cursor-not-allowed"
+        onClick={() => setAskOpen(true)}
+        title="Ask Jarvis to find people (⌘K)"
+        aria-label="Ask Jarvis to find people"
+        className="inline-flex items-center gap-2 rounded-full border border-border-strong bg-surface-2 px-3 py-1.5 text-sm text-muted-strong transition-colors hover:border-accent/50 hover:text-foreground"
       >
-        <span className="relative inline-flex h-4 w-4 items-center justify-center">
-          <Mic className="h-4 w-4" strokeWidth={2} />
-        </span>
+        <Search className="h-4 w-4 text-accent" strokeWidth={2} />
         <span className="hidden sm:inline">Ask Jarvis</span>
+        <kbd className="hidden rounded border border-border bg-surface px-1.5 text-[10px] text-muted md:inline">
+          ⌘K
+        </kbd>
       </button>
+
+      <AskJarvisDialog open={askOpen} onClose={() => setAskOpen(false)} />
     </header>
   );
 }

@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ShieldCheck, Globe } from "lucide-react";
 import { Card } from "@/components/Card";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PersonCard } from "@/components/PersonCard";
+import { ResearchRunCard } from "@/components/ResearchRunCard";
 import type { CardSource } from "@/lib/types";
+import type { DiscoveredPerson, ResearchRunView } from "@/lib/research/types";
 
 /**
  * Component lab (P0-T5 demo). Not a real product surface — a place to click the source chip and
@@ -28,6 +31,61 @@ const meetingSource: CardSource = {
   rawText:
     "...so for next steps, let's split this up. Aarav will own the onboarding flow and share a doc by Friday, and Priya will take the analytics dashboard. Sound good? Great, talk next week.",
   confidence: 0.78,
+};
+
+const fakePerson: DiscoveredPerson = {
+  id: "demo-1",
+  fullName: "Dr. Maya Chen",
+  company: "Helix Bio (YC W23)",
+  roleTitle: "Co-founder & CSO",
+  background: "Brown ScB '14; former Ginkgo Bioworks scientist working on enzyme design.",
+  relevance: "Brown alum + YC biotech founder — matches your cohort and your 'biotech network' goal.",
+  theAsk: "A 20-minute intro call about breaking into computational biology.",
+  notes: "Email inferred from company pattern — confirm before sending.",
+  sourceQuote: "Maya Chen (Brown '14) co-founded Helix Bio, a YC W23 biotech startup.",
+  sourceUrl: "https://www.ycombinator.com/companies/helix-bio",
+  confidence: 0.88,
+  reviewStatus: "review",
+  channels: [
+    { kind: "linkedin", value: "linkedin.com/in/mayachen", verified: true, sourceUrl: "https://www.linkedin.com/in/mayachen", confidence: 0.9 },
+    { kind: "email", value: "maya@helixbio.com", verified: false, confidence: 0.4 },
+  ],
+  goalLinks: [{ goalId: "g1", rationale: "YC biotech founder advances your biotech-network goal.", confidence: 0.8 }],
+  fieldSources: {
+    company: { url: "https://www.ycombinator.com/companies/helix-bio", quote: "Helix Bio, a YC W23 biotech startup.", confidence: 0.9 },
+    role_title: { url: "https://www.helixbio.com/team", quote: "Maya Chen, Co-founder & CSO", confidence: 0.85 },
+  },
+};
+
+const runningRun: ResearchRunView = {
+  id: "demo-running",
+  query: "Brown alumni at YC biotech startups",
+  targetKind: "people",
+  status: "running",
+  resultCount: 0,
+  createdAt: new Date(0).toISOString(),
+  people: [],
+};
+
+const doneRun: ResearchRunView = {
+  id: "demo-done",
+  query: "Brown alumni at YC biotech startups",
+  targetKind: "people",
+  status: "done",
+  resultCount: 1,
+  createdAt: new Date(0).toISOString(),
+  people: [fakePerson],
+};
+
+const errorRun: ResearchRunView = {
+  id: "demo-error",
+  query: "Brown alumni at YC biotech startups",
+  targetKind: "people",
+  status: "error",
+  resultCount: 0,
+  error: "ANTHROPIC_API_KEY is not set.",
+  createdAt: new Date(0).toISOString(),
+  people: [],
 };
 
 export default function DevPage() {
@@ -102,6 +160,29 @@ export default function DevPage() {
             </Card>
           </ErrorBoundary>
         )}
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Globe className="h-4 w-4 text-accent" />
+          <h3 className="text-xs font-medium uppercase tracking-wider text-muted">
+            Auto-populate — discovered person (per-field provenance)
+          </h3>
+        </div>
+        <p className="text-sm text-muted">
+          A discovered person rendered via the same <code className="text-accent">{"<Card>"}</code>.
+          Click the source chip: the cohort-match quote is the card&apos;s source, and each field
+          (company, role, channels) shows its own backing citation in the &ldquo;Per-field
+          sources&rdquo; block. (Actions are inert here.)
+        </p>
+        <PersonCard person={fakePerson} showActions />
+
+        <h3 className="pt-2 text-xs font-medium uppercase tracking-wider text-muted">
+          Research run — lifecycle states
+        </h3>
+        <ResearchRunCard run={runningRun} elapsed={7} onCancel={() => {}} />
+        <ResearchRunCard run={doneRun} />
+        <ResearchRunCard run={errorRun} onRetry={() => {}} />
       </section>
     </div>
   );
