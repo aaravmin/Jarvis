@@ -170,7 +170,12 @@ provenance, landing in Review) mirrors the people agent's shape:
    `contacts_provenance_chk`; `review_feed` view. (Pulled forward with Phase 6 to support the feature.)
 4. **Opportunity agent (`0004_opportunities.sql`):** `opportunity_runs`, `opportunities` (+
    `opportunities_provenance_chk`); `review_feed` view re-created to also union `opportunities`.
-5. **Phase 7:** `applications` (Kanban) — schema TBD when we reach P7-T1.
+5. **Google connector (`0005_connected_accounts.sql`):** `connected_accounts` (RLS-scoped Google token
+   storage); `sources.source_type` extended with `sheet` + `drive`.
+6. **Phase 7:** `applications` (Kanban) — schema TBD when we reach P7-T1.
+
+**Applied to the live project on 2026-06-17:** `0001→0005` via the Supabase MCP. RLS verified on all 12
+tables; advisors clean.
 
 ## Changelog
 - _2026-06-17_ — Initial data model documented from roadmap Sections 3.4 & 3.7 (P0-T1). No migrations
@@ -181,6 +186,11 @@ provenance, landing in Review) mirrors the people agent's shape:
   `review_feed` view, `source_type='research'`). RLS on every table; child tables scope via the
   parent contact; `contact_goals` insert verifies both parents. **Not yet applied to a live project**
   (awaiting the real Supabase access token + window reload to run via the Supabase MCP).
+- _2026-06-17_ — **Migrations `0001→0005` APPLIED to the live project** (Supabase MCP). Added
+  `0005_connected_accounts` (Google OAuth token storage, RLS owner-only) and extended
+  `sources.source_type` with `sheet`/`drive` for Drive/Sheets import provenance. Verified RLS on all 12
+  tables; both provenance CHECKs present; `review_feed` is `security_invoker`; revoked a stray public
+  `EXECUTE` on the pre-existing `rls_auto_enable` event-trigger helper (advisor finding).
 - _2026-06-17_ — **Migration `0004_opportunities.sql` written** for the Opportunity agent:
   `opportunity_runs` + `opportunities` (+ `opportunities_provenance_chk`), and `review_feed` re-created
   to union opportunities (the fixed `research_run_id` column generalized to `run_id`). Dates split into

@@ -61,18 +61,19 @@ when you approve that step (Phase 3/6) — read-only first.
 
 ---
 
-## What gets built once the client exists + migrations are applied
-- `0005_connected_accounts.sql` — a `connected_accounts` table (provider, access/refresh tokens,
-  expiry, granted scopes, user-scoped RLS) to hold Google tokens server-side. (Encryption-at-rest is a
-  hardening follow-up; RLS + server-only access is the baseline.)
-- `GET /api/connect/google` (start OAuth) + `/api/connect/google/callback` (exchange code, store tokens).
-- A **Connections** surface to connect/disconnect accounts and show status + granted scopes.
-- **Gmail + Calendar** readers → ingest into `sources` → extraction engine derives `items` (tasks /
-  events / follow-ups) into Review, each with its source link.
-- **Drive** reader → the Email agent drafts from a named template doc (draft-from-template).
-- **Sheets** reader → the Contact agent maps rows → contacts into Review (contacts-from-sheet), reusing
-  the auto-populate provenance/Review model.
+## Status — BUILT (2026-06-17)
+The Google connector is built and live in code (activates once you connect Google on the **Connections**
+tab):
+- ✅ `0005_connected_accounts.sql` — applied. RLS-scoped token storage (refreshed on expiry in
+  `lib/google/store.ts`). Encryption-at-rest is a noted hardening follow-up.
+- ✅ `GET /api/connect/google` + `/callback` (CSRF state cookie, code exchange) + `/disconnect`.
+- ✅ **Connections** tab (`/connections`, `ConnectionsPanel`) — connect/disconnect + the two tools.
+- ✅ **Sheets → contacts** (`/api/google/import-contacts`): rows land in Review, sourced to the
+  sheet+row, reusing `research_runs` + the people Review UI.
+- ✅ **Drive template → email draft** (`/api/google/draft-email`): Claude fills a Doc's placeholders;
+  **draft-only** (sending needs the `gmail.send` write scope, deferred).
+- ⏳ **Next:** Gmail + Calendar ingestion into `sources` → extraction → Review (readers not built yet);
+  natural-language routing of these via the agent router; the generic paste/URL ingest.
 
-> Order, respecting "migrations before new implementations": apply `0001–0004` (needs the real
-> Supabase access token — now fixed), then the Google connector bundle: `0005_connected_accounts`
-> + OAuth flow + the Gmail/Calendar/Drive/Sheets readers.
+**To activate:** enable the **Drive** + **Sheets** APIs in Google Cloud (alongside Gmail/Calendar),
+confirm the redirect URI, then click **Connect Google** on the Connections tab and grant the scopes.

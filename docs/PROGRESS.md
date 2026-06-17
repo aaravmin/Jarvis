@@ -18,11 +18,24 @@ On top of that, a **multi-agent system** is now built: an intent **router** (`PO
 each request to exactly one agent, and a full **Opportunity agent** (programs/jobs/hackathons) mirrors
 the people agent with chrono-resolved deadlines. Tabs were renamed to mirror the agents.
 
-**One thing gates *running* the DB-backed features (not the build):** applying migrations `0001→0004`
-needs the real Supabase **access token** in the MCP config + a Claude Code window reload (so the
-Supabase MCP connects). `ANTHROPIC_API_KEY` + the anon key are already in `.env.local`.
+**Migrations `0001→0005` are now APPLIED to the live project** (via the Supabase MCP). RLS is on for
+all 12 tables, both provenance CHECKs exist, `review_feed` is `security_invoker`, and the security
+advisor is clean (revoked a stray public `EXECUTE` on the pre-existing `rls_auto_enable` helper).
+People / Opportunities / Review / Auto-Populate are live. The **Google connector** (read-only OAuth +
+Drive/Sheets) is built; it activates once the user connects Google on the Connections tab.
 
 ## Task log (most recent first)
+- **Migrations applied LIVE + Google connector** — ✅ done. Applied `0001→0005` via the Supabase MCP
+  (12 tables, RLS verified, advisors clean). Built the **Google connector** (read-only):
+  `0005_connected_accounts` (RLS-scoped token storage; `sources.source_type` extended with
+  `sheet`/`drive`); `src/lib/google/{oauth,store,drive,sheets,import-contacts,draft-email}.ts`;
+  `/api/connect/google` + `/callback` + `/disconnect` (CSRF state cookie, refresh-on-expiry);
+  `/api/google/import-contacts` + `/draft-email`; a **Connections** tab
+  (`ConnectionsPanel`) to connect/disconnect + run the two tools. **Two features:** (1) import contacts
+  from a Google Sheet → each row lands in Review with the sheet+row as source (reuses `research_runs`);
+  (2) draft an email from a Drive template → Claude fills placeholders, draft-only (no send scope yet).
+  **Verified:** tsc + eslint clean; live routes gate correctly (connect → /login, APIs → 401). Live
+  Drive/Sheets calls await the user connecting Google.
 - **Immersive Jarvis home + nav drawer** — ✅ built (local). `/jarvis` is now the command-center home:
   `LiveClock` (ticking, hydration-safe) + the arc-reactor orb + "JARVIS" wordmark + the ask console
   (`JarvisConsole hero`). The persistent sidebar was replaced by a slide-in `NavDrawer` opened from a

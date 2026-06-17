@@ -9,6 +9,7 @@ import {
   CheckSquare,
   Target,
   Inbox,
+  Plug,
   type LucideIcon,
 } from "lucide-react";
 
@@ -96,6 +97,13 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Inbox,
     description: "Suggestions awaiting your approval before they become real items.",
     deliveredBy: "Phase 1 · P1-T4",
+  },
+  {
+    label: "Connections",
+    href: "/connections",
+    icon: Plug,
+    description: "Connect Google (read-only) so agents can use your Drive, Sheets, Gmail and Calendar.",
+    deliveredBy: "Google connector",
   },
 ];
 

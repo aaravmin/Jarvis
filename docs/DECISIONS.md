@@ -116,6 +116,16 @@
   raw string. Timezone caveat: when the source names a zone chrono honors it, else server-local — only
   affects sort/reminder, never the displayed deadline.
 
+- **2026-06-17 — Google connector: read-only OAuth, tokens in an RLS-scoped `connected_accounts`
+  table, Drive/Sheets features reuse the existing Review/provenance model.** Why: hard rule #6
+  (narrowest scopes, server-side tokens). Scopes are `*.readonly` (gmail/calendar/drive/spreadsheets)
+  + identity; write scopes (`gmail.send`) are deferred until the user approves sending. Tokens live in
+  `connected_accounts` (RLS owner-only, refreshed on expiry in `store.ts`), never in the browser. The
+  two requested features map onto existing agents, not new tables: **contacts-from-sheet** reuses
+  `research_runs` + `contacts` (each row → a Review contact sourced to the sheet+row), and
+  **draft-from-template** is draft-only (Claude fills a Drive doc's placeholders; no send without the
+  write scope). `sources.source_type` gained `sheet`/`drive` so imports carry honest provenance.
+
 - **2026-06-17 — Immersive Jarvis home + hamburger nav-drawer replaces the persistent sidebar (by
   user request).** Why: the user wants the home to read like a command center — a live clock, the
   arc-reactor orb, the JARVIS wordmark, and the ask console. The always-on sidebar fought that, so nav
