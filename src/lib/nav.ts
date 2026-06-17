@@ -1,4 +1,5 @@
 import {
+  Sparkles,
   Home,
   CheckSquare,
   CalendarDays,
@@ -24,6 +25,13 @@ export type NavItem = {
  * Order matches the roadmap's dashboard nav: Today · Tasks · Calendar · Goals · People · Jobs · Review.
  */
 export const NAV_ITEMS: NavItem[] = [
+  {
+    label: "Jarvis",
+    href: "/jarvis",
+    icon: Sparkles,
+    description: "Ask Jarvis anything — it searches the web and reads your files.",
+    deliveredBy: "Assistant",
+  },
   {
     label: "Today",
     href: "/today",

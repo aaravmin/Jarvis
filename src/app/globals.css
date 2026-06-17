@@ -80,3 +80,28 @@ body {
     radial-gradient(60rem 40rem at 12% -10%, rgba(56, 189, 248, 0.08), transparent 60%),
     radial-gradient(50rem 40rem at 100% 0%, rgba(14, 165, 233, 0.05), transparent 55%);
 }
+
+/* ---- Jarvis orb ------------------------------------------------------------ */
+@keyframes orb-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes orb-spin-rev {
+  to { transform: rotate(-360deg); }
+}
+@keyframes orb-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.05); opacity: 1; }
+}
+@keyframes orb-pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.6; }
+  70% { transform: scale(1.35); opacity: 0; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+.orb-spin { animation: orb-spin 18s linear infinite; }
+.orb-spin-fast { animation: orb-spin 6s linear infinite; }
+.orb-spin-rev { animation: orb-spin-rev 24s linear infinite; }
+.orb-breathe { animation: orb-breathe 4s ease-in-out infinite; }
+.orb-pulse-ring { animation: orb-pulse-ring 2.4s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .orb-spin, .orb-spin-fast, .orb-spin-rev, .orb-breathe, .orb-pulse-ring { animation: none; }
+}
