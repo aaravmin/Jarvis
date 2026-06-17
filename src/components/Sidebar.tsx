@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/nav";
 import { Brand } from "@/components/Brand";
 
-export function Sidebar() {
+export function Sidebar({ userEmail }: { userEmail?: string }) {
   const pathname = usePathname();
 
   return (
@@ -54,13 +55,26 @@ export function Sidebar() {
       </nav>
 
       <div className="space-y-2 border-t border-border px-4 py-3">
-        <div className="flex items-center gap-2 rounded-lg bg-surface-2 px-3 py-2">
-          <span className="h-2 w-2 rounded-full bg-warning" />
-          <div className="leading-tight">
-            <p className="text-xs font-medium text-foreground">Phase 0 · Foundations</p>
-            <p className="text-[11px] text-muted">No data sources connected yet</p>
+        {userEmail && (
+          <div className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2">
+            <div className="min-w-0 leading-tight">
+              <p className="truncate text-xs font-medium text-foreground" title={userEmail}>
+                {userEmail}
+              </p>
+              <p className="text-[11px] text-muted">Phase 0 · Foundations</p>
+            </div>
+            <form action="/auth/signout" method="post">
+              <button
+                type="submit"
+                aria-label="Sign out"
+                title="Sign out"
+                className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-3 hover:text-foreground"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </form>
           </div>
-        </div>
+        )}
         <Link
           href="/dev"
           className="block px-3 text-[11px] text-muted transition-colors hover:text-accent"
