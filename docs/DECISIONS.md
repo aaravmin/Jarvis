@@ -29,6 +29,16 @@
   calendar. Read-only first; add write scopes only when a feature needs them. Tokens live server-side,
   never in the browser. RLS keeps every row user-scoped.
 
+- **2026-06-17 — Connect Supabase via the official Supabase MCP server (not the CLI/manual SQL).**
+  Why: it matches the roadmap's "MCP connector" design and gives the tightest build loop — Claude can
+  create tables, apply migrations, and read project URL/anon key directly. The MCP server is scoped to
+  a single project ref and authed with a revocable personal access token. Migrations are still written
+  as SQL files in `supabase/migrations/` for a versioned record; the MCP `apply_migration` tool runs
+  them. (Decision: P0-T3/T4 setup.)
+
+- **2026-06-17 — Stay local-only for now; defer Vercel deploy.** Why: local dev works; a live URL is
+  only meaningful once there's auth + real data. Revisit deploy after Phase 1/2.
+
 - **2026-06-17 — Concrete Phase 0 stack: Next.js 15.5 (App Router + Turbopack), React 19, Tailwind
   v4, lucide-react; app at repo root.** Why: `create-next-app@15` gives a stable, current baseline on
   Node 24. Tailwind v4 uses the `@tailwindcss/postcss` pipeline (theme tokens in `globals.css` via
