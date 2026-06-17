@@ -14,38 +14,48 @@ controllable by voice. Full product definition: `/docs/PRD.md`. Full roadmap: `/
 - The LLM never computes dates — use a date-parser library.
 - Every derived item stores `source_id` + `source_quote` + `confidence`.
 - No UI card renders without a working source chip (enforced by `<Card>`).
-- One atomic task per session; commit at the end.
+- Ship autonomy L0 (suggest-only) first; narrowest OAuth scopes; tokens server-side.
 
-## Current state (Phase 0)
-- ✅ **P0-T1** docs scaffold, ✅ **P0-T2** app shell (local), ✅ **P0-T5** provenance `<Card>`.
-- ⏳ **P0-T2 Vercel deploy** — pending the user.
-- ⛔ **P0-T3 (Supabase Auth)** and **P0-T4 (schema)** — blocked until the user provides Supabase
-  credentials.
-- App runs: `npm run dev` → http://localhost:3000 (opens on `/today`). `npm run build` passes.
+## Current state
+- ✅ **Phase 0 code-complete**: P0-T1 docs, P0-T2 shell, P0-T5 `<Card>`, **P0-T3 auth**, **P0-T4 +
+  Phase-6 + research migrations** (written, not yet applied to a live DB).
+- ✅ **Auto-Populate cohort research agent** built end-to-end (cross-cutting feature, user request):
+  natural-language cohort → Claude w/ web search → verified people in the Review queue (L0). A design
+  workflow shaped it; a 4-dimension adversarial review found 12 defects, **all fixed**.
+- Verified: `npx tsc --noEmit` clean; `npm run build` green (14 routes + middleware); runtime auth
+  gate works (`/today`→`/login`, unauth API→401 JSON).
+- ⛔ **Live** auth + migrations + research are blocked on credentials (see below). The build is not.
 
 ## How to run
 ```
-npm install      # if node_modules is missing
-npm run dev      # http://localhost:3000
-npm run build    # production build / typecheck
+npm install          # if node_modules is missing
+npm run dev          # http://localhost:3000  (redirects to /login until Supabase is live)
+npm run build        # production build / typecheck
 ```
 
 ## Files that matter
-- `/CLAUDE.md` — how to work here (read automatically each session).
-- `/docs/PROGRESS.md` — living state; **read this first**.
-- `/docs/ROADMAP.md` — the phased task list + working method (Section 4) + task template (4.3).
-- `/docs/DATA_MODEL.md` — the schema and migration order (P0-T4 next).
-- `src/components/Card.tsx` + `src/components/SourceChip.tsx` — the provenance primitive (reuse
-  everywhere a derived item is shown).
-- `src/lib/nav.ts` — single source of truth for the dashboard nav.
-- `src/app/(app)/` — the dashboard layout + section pages. `/dev` is the component lab.
+- `/CLAUDE.md` — how to work here (auto-read each session). `/docs/PROGRESS.md` — **read first**.
+- `/docs/DATA_MODEL.md` — schema + migration order + changelog. `/docs/DECISIONS.md` — why.
+- `supabase/migrations/0001_core.sql · 0002_people.sql · 0003_research.sql` — apply in order.
+- `src/lib/supabase/{client,server,middleware}.ts` + `src/middleware.ts` — auth (P0-T3).
+- `src/app/login/*`, `src/app/auth/{confirm,signout}/*` — auth screens/routes.
+- `src/lib/research/extract.ts` — **the research engine + the citation-allowlist provenance gate**
+  (the model's URLs/quotes are validated against real `web_search` citations before persist).
+- `src/app/api/research/*` — POST (run) + `[runId]` GET/PATCH (load / accept / dismiss / cancel).
+- `src/components/{Card,SourceChip,PersonCard,ResearchRunCard,AskJarvisDialog,FindPeopleBar}.tsx`.
+- `src/app/(app)/{people,review,dev}/page.tsx` — where the feature surfaces. ⌘K opens "Ask Jarvis".
 
 ## The single next task
-**P0-T3 — Supabase project + Auth** (needs the user). Then **P0-T4 — create `sources` + `items`
-with RLS** per `/docs/DATA_MODEL.md`.
+**Apply the migrations and verify auth + research live.** Steps once unblocked:
+1. Apply `0001 → 0002 → 0003` via the Supabase MCP (`apply_migration`).
+2. Verify RLS: sign up two users; a row inserted by A is invisible to B; `review_feed` excludes B.
+3. Put `ANTHROPIC_API_KEY` (+ the anon key) in `.env.local`; run one cohort search (⌘K → "Brown
+   alumni at a YC biotech startup") and confirm verified people land in Review with working source chips.
 
 ## What we need from the user to unblock
-1. A Supabase project: Project URL, anon (publishable) key, and the DB connection string (or
-   service-role key) for running migrations. (P0-T3/T4)
-2. A Vercel account/login if we want to deploy now (P0-T2 deploy). Optional; local works.
-3. Later: an Anthropic API key (Phase 2 extraction) and a Google Cloud OAuth client (Phase 2 Gmail).
+1. **Real Supabase personal access token** in the MCP config (`~/.claude.json` → `supabase` server;
+   only the token is a placeholder now) **+ a Claude Code window reload** so the MCP connects.
+2. **Supabase anon (publishable) key** → `.env.local` `NEXT_PUBLIC_SUPABASE_ANON_KEY` (URL already set).
+3. **`ANTHROPIC_API_KEY`** → `.env.local` (server-side; powers the research agent). Optionally set
+   `ANTHROPIC_MODEL=claude-opus-4-8` for stronger research (defaults to `claude-sonnet-4-6`).
+4. Later: Google Cloud OAuth client (Phase 2 Gmail/Calendar); a Vercel login if/when we deploy.

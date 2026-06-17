@@ -115,12 +115,45 @@ create table contact_goals (
 > **after** `contacts` exists (Phase 6). In P0-T4 we create `sources` and `items` *without*
 > `contact_id`, then `alter table items add column contact_id uuid references contacts;` in Phase 6.
 
+## Auto-populate (cohort research) additions — migration `0003_research.sql`
+
+The auto-populate feature (a cohort research agent: natural-language request → web-researched people,
+each with provenance, landing in Review) adds:
+
+- **`source_type = 'research'`** — a research run is itself a `sources` row (the artifact every
+  discovered person points back to). `sources.source_type` now allows `'research'` alongside
+  `email|meeting|calendar|manual`.
+- **`contacts` provenance + review columns** (added by `0003`, on top of the documented Phase-6
+  table): `review_status` (`'review'|'accepted'|'dismissed'`, default `'accepted'`; jarvis-discovered
+  rows insert as `'review'`), `source_quote` (verbatim web snippet asserting the cohort match),
+  `confidence` (0..1 match confidence), `research_run_id` (FK → `research_runs`).
+- **DB-level provenance guard** — `contacts_provenance_chk`: a `created_by='jarvis'` contact MUST have
+  `source_id` and `source_quote`. This mirrors the `<Card>` invariant at the database.
+- **`research_runs`** — one row per cohort request: `query`, `target_kind` (`'people'` for now — the
+  only generalization seam), `status` (`'running'|'done'|'error'`), `result_count`, `source_id`,
+  `error`. RLS-scoped to the owner.
+- **`review_feed` view** — unifies extracted `items` (`status='review'`) and discovered `contacts`
+  (`review_status='review'`) for one Review queue. Created `with (security_invoker = true)` so it
+  honors each base table's RLS (without it the view would run as owner and leak rows).
+
+**Per-field provenance:** `contacts.field_sources` (jsonb) stores `{ field: { url, quote, confidence } }`
+for each auto-filled claim. Every stored `url` is validated server-side against the run's **real
+`web_search` citations** before persist — the model's self-reported URLs/quotes are never trusted.
+
 ## Migration order
-1. **P0-T4:** `sources`, `items` (no `contact_id` yet) + RLS.
-2. **Phase 6:** `goals`, `contacts`, `contact_channels`, `connections`, `email_templates`,
-   `contact_goals`; then `alter table items add column contact_id`.
-3. **Phase 7:** `applications` (Kanban) — schema TBD when we reach P7-T1.
+1. **P0-T4 (`0001_core.sql`):** `sources`, `items` (no `contact_id` yet) + RLS.
+2. **Phase 6 (`0002_people.sql`):** `goals`, `contacts`, `contact_channels`, `connections`,
+   `email_templates`, `contact_goals`; then `alter table items add column contact_id`.
+3. **Auto-populate (`0003_research.sql`):** `research_runs`; `contacts` review/provenance columns +
+   `contacts_provenance_chk`; `review_feed` view. (Pulled forward with Phase 6 to support the feature.)
+4. **Phase 7:** `applications` (Kanban) — schema TBD when we reach P7-T1.
 
 ## Changelog
 - _2026-06-17_ — Initial data model documented from roadmap Sections 3.4 & 3.7 (P0-T1). No migrations
   run yet.
+- _2026-06-17_ — **Migrations written (`supabase/migrations/0001–0003`).** P0-T4 core (`sources`,
+  `items` + RLS); Phase-6 People schema pulled forward; auto-populate additions (`research_runs`,
+  `contacts.review_status/source_quote/confidence/research_run_id`, `contacts_provenance_chk`,
+  `review_feed` view, `source_type='research'`). RLS on every table; child tables scope via the
+  parent contact; `contact_goals` insert verifies both parents. **Not yet applied to a live project**
+  (awaiting the real Supabase access token + window reload to run via the Supabase MCP).

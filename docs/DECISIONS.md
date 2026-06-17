@@ -54,3 +54,39 @@
 - **2026-06-17 — Work task-by-task; the repo is the memory.** Why: long chat contexts cause drift and
   "it forgot what we decided." State lives in files (`/CLAUDE.md`, `/docs/*`), one atomic task per
   unit of work, commit at the end as a recoverable checkpoint. See `/docs/ROADMAP.md` Section 4.
+
+- **2026-06-17 — Auth: email/password via `@supabase/ssr`, tokens in httpOnly cookies, gated in
+  middleware + the `(app)` layout.** Why: matches the roadmap's narrowest-scope/server-side-token
+  rule. The browser client uses only the public anon key (RLS-protected); the session rides in
+  httpOnly cookies refreshed by `src/middleware.ts`. The dashboard layout re-checks `getUser()`
+  server-side as defense-in-depth. (P0-T3.)
+
+- **2026-06-17 — Added a cross-cutting "Auto-Populate" cohort research agent (beyond the roadmap, by
+  user request).** Natural-language request ("Brown alumni at a YC biotech startup") → Claude with
+  web search finds real people → each lands in Review as a suggested contact with provenance. It is a
+  generalization of P6-T8/T9 applied at the cohort level. The Phase-6 People schema was pulled forward
+  to support it.
+
+- **2026-06-17 — The model's reported URLs/quotes are UNTRUSTED; provenance is validated against the
+  real `web_search` citations before persist.** Why: hard rule #3. The engine harvests the
+  server-side `web_search` citation objects (url + cited_text) separately from the model's tool args,
+  builds a per-run allowlist, and DROPS any candidate whose `source_quote` isn't backed by a real
+  citation and nulls any field source URL not in the allowlist. This makes provenance verifiable, not
+  cosmetic. (`src/lib/research/extract.ts`.)
+
+- **2026-06-17 — `review_status` lives on `contacts` (not as an `items` row); the unified Review queue
+  is a `security_invoker` SQL view.** Why: a discovered person is a rich `contacts` row with child
+  rows — forcing it through `items` orphans them. `review_feed` unions review-status items + contacts
+  for one queue; `security_invoker=true` keeps base-table RLS in force. L0 is enforced everywhere by
+  filtering `review_status='accepted'` on live reads — nothing auto-applies.
+
+- **2026-06-17 — Structured output via forced `tool_choice` on a `report_candidates` tool, in a
+  two-phase call (search → then report).** Why: `output_config.format` JSON mode is incompatible with
+  citations, and forcing the report tool up front would stop the model from searching first. Phase 1
+  runs `web_search` (tool_choice auto) and yields citations; phase 2 forces `report_candidates` to
+  structure the findings. Web search tool: `web_search_20250305` (stable; no code-exec dependency).
+
+- **2026-06-17 — The research run is server-only and synchronous in v1 (POST awaits completion).** Why:
+  tokens must never reach the browser, and a synchronous request is the simplest robust path in local
+  dev. The `research_runs.status` column + `GET /api/research/[runId]` polling endpoint are in place so
+  this can move to a background worker later without changing the client contract.
