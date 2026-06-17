@@ -25,6 +25,23 @@ People / Opportunities / Review / Auto-Populate are live. The **Google connector
 Drive/Sheets) is built; it activates once the user connects Google on the Connections tab.
 
 ## Task log (most recent first)
+- **Goals as ANCHORS (in progress — backend+API done, UI next)** — Migrations `0006_goals_anchors`
+  (polymorphic `goal_links` entity↔goal + `goal_connections` + `goal_intersections`) and
+  `0007_goals_provenance` (goals get `created_by`/`review_status`/`source_*`/`confidence` for L0 AI
+  goals; back-filled `contact_goals` → `goal_links`) are **applied live**. Backend lib in
+  `src/lib/goals/`: `links.ts` (link/unlink/setReview + deterministic `refreshIntersection`),
+  `load.ts` (loadGoals, loadGoalDetail, entityIdsForGoal, goalsForEntities), `generate.ts` (4 Claude
+  flows: goals-from-context, propose links, combined-ask, goal-connection), `facts.ts` (entity facts +
+  goal digests), `types.ts`. API: `/api/goals` (GET/POST), `/api/goals/[goalId]` (PATCH incl.
+  accept/dismiss, DELETE), `/api/goals/generate`, `/api/goal-links` (POST) + `/[linkId]` (PATCH/DELETE),
+  `/api/entities/suggest-goals`, `/api/goal-intersections` (POST/DELETE), `/api/goals/[goalId]/connections`.
+  Model: entity_type ∈ {contact, opportunity, item, source} (source = email/meeting/calendar). AI links
+  land review (L0); intersections auto-detected in SQL, Claude only writes the combined-ask. **tsc +
+  eslint clean.** NEXT: UI — Goals page (list + manual create + generate-from-context), goal detail
+  (`/goals/[goalId]`: linked entities, intersections rail, connections), a goal filter/toggle in the
+  Topbar wired through `?goal=` to filter People/Opportunities, and an "Add to goal / suggest goals"
+  control on PersonCard + OpportunityCard. Then adversarial review + commit. Design spec lives in the
+  workflow output (run wuo6a0whl).
 - **Migrations applied LIVE + Google connector** — ✅ done. Applied `0001→0005` via the Supabase MCP
   (12 tables, RLS verified, advisors clean). Built the **Google connector** (read-only):
   `0005_connected_accounts` (RLS-scoped token storage; `sources.source_type` extended with
