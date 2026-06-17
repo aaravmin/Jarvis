@@ -1,0 +1,123 @@
+import "server-only";
+import Anthropic from "@anthropic-ai/sdk";
+import { AGENTS, AGENT_KINDS } from "@/lib/agents/registry";
+import type { AgentKind, RouteDecision } from "@/lib/agents/types";
+
+/**
+ * The intent router. Classifies one free-text request into exactly ONE agent so we never run all of
+ * them in conjunction. Uses a small/fast Claude model (Haiku by default) with a forced tool call —
+ * classification is cheap and shouldn't burn the heavy model the research agents use.
+ *
+ * Safe by construction: any failure (no key, refusal, malformed output, unknown agent) falls back to
+ * the 'assistant' agent, which is the general catch-all and always available.
+ */
+
+// Routing is a cheap classification task — default to Haiku, overridable for experimentation.
+const ROUTER_MODEL = process.env.JARVIS_ROUTER_MODEL || "claude-haiku-4-5-20251001";
+
+const ROUTE_TOOL = {
+  name: "route_task",
+  description: "Choose the single best agent to handle the user's request and normalize the query for it.",
+  input_schema: {
+    type: "object" as const,
+    additionalProperties: false,
+    properties: {
+      agent: {
+        type: "string",
+        enum: AGENT_KINDS,
+        description: "The one agent best suited to this request.",
+      },
+      normalized_query: {
+        type: "string",
+        description:
+          "The actionable task for that agent, stripped of filler like 'hey jarvis' or 'can you find me'. Keep the user's meaning.",
+      },
+      reason: { type: "string", description: "One short sentence: why this agent." },
+      confidence: { type: "number", description: "0..1 confidence in this routing." },
+    },
+    required: ["agent", "normalized_query", "reason", "confidence"],
+  },
+};
+
+function buildSystem(): string {
+  const catalog = AGENT_KINDS.map((k) => {
+    const a = AGENTS[k];
+    return `- ${k}: ${a.blurb}\n    e.g. ${a.triggers}`;
+  }).join("\n");
+  return `You are Jarvis's task router. Pick the SINGLE best agent for the user's request — never more than one.
+
+Agents:
+${catalog}
+
+Guidance:
+- "find/research PEOPLE (alumni, founders, recruiters, named individuals)" → contact.
+- "find programs / jobs / internships / hackathons / fellowships / grants / scholarships / competitions" → opportunity.
+- Questions about the user's own inbox/replies → email. Their own schedule/availability → calendar. A meeting transcript → meeting.
+- Anything general (web facts, reading local files, chit-chat, or no clear fit) → assistant.
+Normalize the query to the actionable task. Always return a confidence.`;
+}
+
+function getClient(): Anthropic {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set.");
+  return new Anthropic({ apiKey });
+}
+
+function clampConfidence(n: unknown): number {
+  if (typeof n !== "number" || Number.isNaN(n)) return 0.5;
+  return Math.max(0, Math.min(1, n));
+}
+
+/** The assistant fallback decision, used whenever routing can't be trusted. */
+function fallback(message: string, reason: string): RouteDecision {
+  return { agent: "assistant", normalizedQuery: message.trim(), reason, confidence: 0.3 };
+}
+
+export async function routeTask(message: string): Promise<RouteDecision> {
+  const trimmed = (message ?? "").trim();
+  if (!trimmed) return fallback("", "Empty request.");
+
+  let client: Anthropic;
+  try {
+    client = getClient();
+  } catch {
+    return fallback(trimmed, "Router unavailable; using the general assistant.");
+  }
+
+  try {
+    const params = {
+      model: ROUTER_MODEL,
+      max_tokens: 512,
+      system: buildSystem(),
+      tools: [ROUTE_TOOL],
+      tool_choice: { type: "tool", name: "route_task" },
+      messages: [{ role: "user", content: trimmed }],
+    } as unknown as Anthropic.MessageCreateParamsNonStreaming;
+
+    const resp = await client.messages.create(params);
+    const block = resp.content.find(
+      (b) => b.type === "tool_use" && b.name === "route_task",
+    ) as Anthropic.ToolUseBlock | undefined;
+    if (!block) return fallback(trimmed, "Router returned no decision; using the general assistant.");
+
+    const input = block.input as {
+      agent?: string;
+      normalized_query?: string;
+      reason?: string;
+      confidence?: number;
+    };
+    const agent = (AGENT_KINDS as string[]).includes(input.agent ?? "")
+      ? (input.agent as AgentKind)
+      : "assistant";
+    const normalizedQuery = (input.normalized_query ?? "").trim() || trimmed;
+
+    return {
+      agent,
+      normalizedQuery,
+      reason: (input.reason ?? "").trim() || "Routed by intent.",
+      confidence: clampConfidence(input.confidence),
+    };
+  } catch {
+    return fallback(trimmed, "Routing failed; using the general assistant.");
+  }
+}

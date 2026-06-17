@@ -140,13 +140,37 @@ each with provenance, landing in Review) adds:
 for each auto-filled claim. Every stored `url` is validated server-side against the run's **real
 `web_search` citations** before persist — the model's self-reported URLs/quotes are never trusted.
 
+## Opportunity agent — migration `0004_opportunities.sql`
+
+The Opportunity agent (programs / jobs / hackathons / fellowships → web-researched, each with
+provenance, landing in Review) mirrors the people agent's shape:
+
+- **`opportunity_runs`** — one row per NL search: `query`, `kind_filter` (`'all'|'programs'|'jobs'|
+  'hackathons'`), `status` (`'running'|'done'|'error'`), `result_count`, `source_id`, `error`. A
+  partial unique index (`… where status='running'`) blocks concurrent duplicate runs. RLS owner-scoped.
+- **`opportunities`** — a discovered opportunity: `title` (only required content), `organization`,
+  `category` (program/job/internship/hackathon/fellowship/grant/scholarship/competition/accelerator/
+  other), `description`, `location`, `is_remote`, `how_to_apply_url`, `requirements`, `required_skills`
+  (`text[]`), `comp_or_prize`, `notes`. **Dates obey hard rule #2:** `raw_deadline`/`raw_event_dates`
+  are the model's VERBATIM strings (the displayed source of truth); `deadline_at`/`starts_at`/`ends_at`
+  are **chrono-resolved by our code**, never the model. Provenance: `field_sources`, `source_id`,
+  `source_quote`, `confidence`. Review: `review_status` (default `'review'` for jarvis rows),
+  `created_by`, `opportunity_run_id`.
+- **DB-level provenance guard** — `opportunities_provenance_chk`: a `created_by='jarvis'` row MUST have
+  `source_id` + non-empty `source_quote` (mirrors the `<Card>` invariant, same as contacts).
+- **`review_feed` view extended** — now unions three branches: `items` (status=review) + `contacts`
+  (review_status=review) + `opportunities` (review_status=review). The fixed `research_run_id` column
+  became a generic `run_id`. Still `security_invoker=true` so base-table RLS holds.
+
 ## Migration order
 1. **P0-T4 (`0001_core.sql`):** `sources`, `items` (no `contact_id` yet) + RLS.
 2. **Phase 6 (`0002_people.sql`):** `goals`, `contacts`, `contact_channels`, `connections`,
    `email_templates`, `contact_goals`; then `alter table items add column contact_id`.
 3. **Auto-populate (`0003_research.sql`):** `research_runs`; `contacts` review/provenance columns +
    `contacts_provenance_chk`; `review_feed` view. (Pulled forward with Phase 6 to support the feature.)
-4. **Phase 7:** `applications` (Kanban) — schema TBD when we reach P7-T1.
+4. **Opportunity agent (`0004_opportunities.sql`):** `opportunity_runs`, `opportunities` (+
+   `opportunities_provenance_chk`); `review_feed` view re-created to also union `opportunities`.
+5. **Phase 7:** `applications` (Kanban) — schema TBD when we reach P7-T1.
 
 ## Changelog
 - _2026-06-17_ — Initial data model documented from roadmap Sections 3.4 & 3.7 (P0-T1). No migrations
@@ -157,3 +181,8 @@ for each auto-filled claim. Every stored `url` is validated server-side against 
   `review_feed` view, `source_type='research'`). RLS on every table; child tables scope via the
   parent contact; `contact_goals` insert verifies both parents. **Not yet applied to a live project**
   (awaiting the real Supabase access token + window reload to run via the Supabase MCP).
+- _2026-06-17_ — **Migration `0004_opportunities.sql` written** for the Opportunity agent:
+  `opportunity_runs` + `opportunities` (+ `opportunities_provenance_chk`), and `review_feed` re-created
+  to union opportunities (the fixed `research_run_id` column generalized to `run_id`). Dates split into
+  model-verbatim `raw_*` strings + chrono-resolved `*_at` timestamps (hard rule #2). RLS owner-scoped.
+  **Apply order is now `0001→0004`.** Not yet applied to a live project (same token/reload blocker).

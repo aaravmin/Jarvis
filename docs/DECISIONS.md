@@ -90,3 +90,36 @@
   tokens must never reach the browser, and a synchronous request is the simplest robust path in local
   dev. The `research_runs.status` column + `GET /api/research/[runId]` polling endpoint are in place so
   this can move to a background worker later without changing the client contract.
+
+- **2026-06-17 — Multi-agent system with an intent ROUTER that picks exactly one agent (by user
+  request).** Why: the user asked to "route to a specific agent depending on the task, so you don't run
+  all of them in conjunction." A small/fast Claude model (Haiku, `JARVIS_ROUTER_MODEL`) classifies a
+  free-text request into ONE of: opportunity · contact · email · calendar · meeting · assistant, then
+  `POST /api/agent` dispatches only that agent. Routing is failsafe — any error falls back to the
+  `assistant` (the always-available catch-all). Registry of agents + capabilities + run-status:
+  `src/lib/agents/registry.ts`; router: `src/lib/agents/router.ts`. Tab names were renamed to mirror
+  the agents (Email, Calendar, Meetings, Contacts, Opportunities).
+
+- **2026-06-17 — The Opportunity agent mirrors the people research pattern exactly (programs / jobs /
+  hackathons / fellowships …).** Why: the people agent's two-phase (search → forced structured report)
+  + citation-allowlist provenance gate is proven; reusing it keeps one mental model and one Review
+  queue. New: `opportunity_runs` + `opportunities` tables (migration `0004`), the shared citation gate
+  extracted to `src/lib/agents/citation-gate.ts`, and `runOpportunitySearch`/`runPeopleSearch` lib
+  functions so BOTH the page bars and the router share one run-and-persist path.
+
+- **2026-06-17 — Opportunity DEADLINES obey hard rule #2: the model returns only verbatim date STRINGS;
+  our code resolves them with chrono-node.** Why: the same anti-hallucination rule that bans LLM date
+  math. `opportunities` stores `raw_deadline`/`raw_event_dates` (verbatim, the displayed source of
+  truth) AND `deadline_at`/`starts_at`/`ends_at` (chrono-resolved, for sorting/reminders). The resolver
+  (`src/lib/agents/opportunity/deadline.ts`) resolves ambiguous dates FORWARD against one captured
+  reference instant; unparseable phrases ("rolling") leave the resolved column null and the UI shows the
+  raw string. Timezone caveat: when the source names a zone chrono honors it, else server-local — only
+  affects sort/reminder, never the displayed deadline.
+
+- **2026-06-17 — Tavily is an OPTIONAL recall seed, never a provenance source.** Why: the user asked to
+  "use Tavily where applicable," but the citation gate (hard rule #3) requires real `web_search`
+  citations. So when `TAVILY_API_KEY` is set, the Opportunity agent runs a quick Tavily search and
+  seeds the result URLs into the agent's prompt as leads — but nothing Tavily returns is ever stored as
+  fact; the agent must still cite a real `web_search` result for a claim to survive. With no key,
+  `src/lib/search/tavily.ts` is a safe no-op. It also never throws (an outage degrades recall, never
+  aborts a run). Webhooks remain deferred to the Gmail/Calendar connectors (they need OAuth first).
