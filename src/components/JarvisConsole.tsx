@@ -187,31 +187,46 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
     setError(null);
     setAsked(message); // echo the question now and keep it visible through (and after) the answer
     setInput(""); // free the input for the next question; "You asked" preserves what was just sent
+    // Only a genuine transport failure (server down, dropped connection) is a "network error".
+    let res: Response;
     try {
-      const res = await fetch("/api/ask", {
+      res = await fetch("/api/ask", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ message }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setAnswer(null);
-        setError(data?.error ?? "Jarvis couldn't answer that.");
-        setPhase("idle");
-        // Keep a hands-free conversation going even after a stumble.
-        if (convoModeRef.current) startListeningRef.current();
-      } else {
-        // Success: the speak effect takes over (and, in convo mode, re-opens the mic when it ends).
-        // If voice is off and we're not conversing, settle to idle now.
-        setAnswer(data as AskResponse);
-        if (!speechOnRef.current && !convoModeRef.current) setPhase("idle");
-      }
     } catch {
       setAnswer(null);
-      setError("Network error reaching the assistant.");
+      setError("Couldn't reach the assistant — make sure the app is running, then try again.");
       setPhase("idle");
       if (convoModeRef.current) startListeningRef.current();
+      return;
     }
+
+    // Parse defensively: a crashed route can answer with a NON-JSON body (an HTML/text error page),
+    // which must surface as the real server error — not a misleading "network error" from a JSON
+    // parse blowing up. Read the body once as text, then try to parse it.
+    const bodyText = await res.text().catch(() => "");
+    let data: (AskResponse & { error?: string }) | null = null;
+    try {
+      data = bodyText ? (JSON.parse(bodyText) as AskResponse & { error?: string }) : null;
+    } catch {
+      data = null;
+    }
+
+    if (!res.ok || !data) {
+      setAnswer(null);
+      setError(data?.error ?? `Jarvis hit a server error (${res.status}). Please try again.`);
+      setPhase("idle");
+      // Keep a hands-free conversation going even after a stumble.
+      if (convoModeRef.current) startListeningRef.current();
+      return;
+    }
+
+    // Success: the speak effect takes over (and, in convo mode, re-opens the mic when it ends).
+    // If voice is off and we're not conversing, settle to idle now.
+    setAnswer(data as AskResponse);
+    if (!speechOnRef.current && !convoModeRef.current) setPhase("idle");
   }, []);
 
   const startListening = useCallback(() => {
