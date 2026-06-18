@@ -138,9 +138,13 @@ export function ConnectionEmailComposer({
   }
 
   async function copyDraft() {
-    await navigator.clipboard.writeText(`Subject: ${draftSubject}\n\n${draftBody}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      await navigator.clipboard?.writeText(`Subject: ${draftSubject}\n\n${draftBody}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setErr("Couldn't copy to clipboard.");
+    }
   }
 
   const composeUrl =
@@ -271,7 +275,7 @@ export function ConnectionEmailComposer({
               }`}
             >
               {result.privacyOk ? <ShieldCheck className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
-              {result.privacyOk ? "No personal details — safe to reuse" : result.privacyNote ?? "A personal detail was removed"}
+              {result.privacyOk ? "Generalized for reuse — review the text before saving" : result.privacyNote ?? "A personal detail was removed"}
             </p>
 
             <div className="grid gap-3 sm:grid-cols-2">

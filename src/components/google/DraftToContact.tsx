@@ -44,6 +44,8 @@ export function DraftToContact({ name, email }: { name: string; email?: string }
         setDraft({ subject: data.subject, body: data.body });
         setSavedUrl(null);
       }
+    } catch {
+      setErr("Network error.");
     } finally {
       setBusy(false);
     }
@@ -80,9 +82,13 @@ export function DraftToContact({ name, email }: { name: string; email?: string }
 
   async function copy() {
     if (!draft) return;
-    await navigator.clipboard.writeText(`Subject: ${draft.subject}\n\n${draft.body}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      await navigator.clipboard?.writeText(`Subject: ${draft.subject}\n\n${draft.body}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setErr("Couldn't copy to clipboard.");
+    }
   }
 
   return (

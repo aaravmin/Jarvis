@@ -37,9 +37,9 @@ export async function POST(request: Request) {
     const draft = await createDraft(token, { to: body.to?.trim() || undefined, subject: subject || "(no subject)", body: text });
     return NextResponse.json({ ok: true, draftId: draft.id, url: draft.url });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Could not save the draft." },
-      { status: 500 },
-    );
+    const msg = err instanceof Error ? err.message : "";
+    console.error("gmail/create-draft failed:", msg);
+    const userMsg = msg.startsWith("Reconnect Google") ? msg : "Could not save the draft. Try reconnecting Google.";
+    return NextResponse.json({ error: userMsg }, { status: 500 });
   }
 }

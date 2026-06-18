@@ -53,9 +53,9 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ ok: true, event });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Could not create the event." },
-      { status: 500 },
-    );
+    const msg = err instanceof Error ? err.message : "";
+    console.error("calendar/create-event failed:", msg);
+    const userMsg = msg.startsWith("Reconnect Google") ? msg : "Could not create the event. Try reconnecting Google.";
+    return NextResponse.json({ error: userMsg }, { status: 500 });
   }
 }

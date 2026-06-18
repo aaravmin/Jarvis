@@ -110,11 +110,13 @@ async function upsertConnectionType(
   ct: ProposedConnectionType,
 ): Promise<string> {
   const label = ct.label.trim();
+  // Escape LIKE metacharacters so a label like "50% discount" matches literally, not as a wildcard.
+  const likeSafe = label.replace(/[\\%_]/g, (c) => `\\${c}`);
   const { data: existing } = await supabase
     .from("connection_types")
     .select("id, description, guidance")
     .eq("user_id", userId)
-    .ilike("label", label)
+    .ilike("label", likeSafe)
     .maybeSingle();
 
   if (existing) {

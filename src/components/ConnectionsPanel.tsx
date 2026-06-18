@@ -261,9 +261,13 @@ function DraftEmailTool() {
 
   async function copyDraft() {
     if (!draft) return;
-    await navigator.clipboard.writeText(`Subject: ${draft.subject}\n\n${draft.body}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      await navigator.clipboard?.writeText(`Subject: ${draft.subject}\n\n${draft.body}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setErr("Couldn't copy to clipboard.");
+    }
   }
 
   return (

@@ -70,29 +70,38 @@ export function gmailLink(id: string): string {
   return `https://mail.google.com/mail/u/0/#all/${id}`;
 }
 
+/** Strip CR/LF so a header value can't inject extra headers (header-injection guard). */
+function sanitizeHeaderValue(value: string): string {
+  return value.replace(/[\r\n]+/g, " ").trim();
+}
+
 /** RFC 2047 encoded-word for header values that contain non-ASCII (keeps subjects intact). */
 function encodeHeader(value: string): string {
+  const clean = sanitizeHeaderValue(value);
   let ascii = true;
-  for (let i = 0; i < value.length; i++) {
-    if (value.charCodeAt(i) > 0x7f) {
+  for (let i = 0; i < clean.length; i++) {
+    if (clean.charCodeAt(i) > 0x7f) {
       ascii = false;
       break;
     }
   }
-  if (ascii) return value;
-  return `=?UTF-8?B?${Buffer.from(value, "utf8").toString("base64")}?=`;
+  if (ascii) return clean;
+  return `=?UTF-8?B?${Buffer.from(clean, "utf8").toString("base64")}?=`;
 }
 
 /** Build a minimal RFC 2822 message and base64url-encode it for the Gmail drafts API. */
 function buildRawMessage(opts: { to?: string; subject: string; body: string }): string {
+  const to = opts.to ? sanitizeHeaderValue(opts.to) : "";
   const headers = [
-    opts.to ? `To: ${opts.to}` : "",
+    to ? `To: ${to}` : "",
     `Subject: ${encodeHeader(opts.subject)}`,
     "MIME-Version: 1.0",
     'Content-Type: text/plain; charset="UTF-8"',
     "Content-Transfer-Encoding: 8bit",
   ].filter(Boolean);
-  const message = `${headers.join("\r\n")}\r\n\r\n${opts.body}`;
+  // Body keeps its newlines but is normalized to CRLF per RFC 2822.
+  const body = opts.body.replace(/\r?\n/g, "\r\n");
+  const message = `${headers.join("\r\n")}\r\n\r\n${body}`;
   return Buffer.from(message, "utf8").toString("base64url");
 }
 

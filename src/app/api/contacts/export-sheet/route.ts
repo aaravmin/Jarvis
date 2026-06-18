@@ -20,9 +20,12 @@ export async function POST() {
     const result = await exportContactsToSheet(supabase, user.id);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Could not export contacts." },
-      { status: 500 },
-    );
+    const msg = err instanceof Error ? err.message : "";
+    console.error("contacts/export-sheet failed:", msg);
+    const userMsg =
+      msg.startsWith("Reconnect Google") || msg.startsWith("You have no")
+        ? msg
+        : "Could not export contacts. Try reconnecting Google.";
+    return NextResponse.json({ error: userMsg }, { status: 500 });
   }
 }
