@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PenLine, Loader2, Copy, ExternalLink, Check } from "lucide-react";
+import { PenLine, Loader2, Copy, ExternalLink, Check, Inbox } from "lucide-react";
 
 /**
  * Compose an email to a contact: Jarvis drafts it (optionally from a Drive template) given your
@@ -15,6 +15,8 @@ export function DraftToContact({ name, email }: { name: string; email?: string }
   const [err, setErr] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ subject: string; body: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedUrl, setSavedUrl] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,9 +40,36 @@ export function DraftToContact({ name, email }: { name: string; email?: string }
       });
       const data = await res.json();
       if (!res.ok) setErr(data?.error ?? "Draft failed.");
-      else setDraft({ subject: data.subject, body: data.body });
+      else {
+        setDraft({ subject: data.subject, body: data.body });
+        setSavedUrl(null);
+      }
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function saveToGmail() {
+    if (!draft) return;
+    setSaving(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/google/gmail/create-draft", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          to: email ? `${name} <${email}>` : undefined,
+          subject: draft.subject,
+          body: draft.body,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) setErr(data?.error ?? "Couldn't save the draft.");
+      else setSavedUrl(data.url ?? "https://mail.google.com/mail/u/0/#drafts");
+    } catch {
+      setErr("Network error saving the draft.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -97,13 +126,32 @@ export function DraftToContact({ name, email }: { name: string; email?: string }
             <div className="mt-3 rounded-lg border border-border bg-surface-2 p-2.5">
               <p className="text-sm font-semibold text-foreground">{draft.subject}</p>
               <p className="mt-1 max-h-40 overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed text-muted-strong">{draft.body}</p>
-              <div className="mt-2 flex items-center gap-2">
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {savedUrl ? (
+                  <a
+                    href={savedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-lg bg-success/15 px-2.5 py-1 text-xs font-medium text-success hover:bg-success/25"
+                  >
+                    <Check className="h-3.5 w-3.5" /> Saved — open Drafts
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void saveToGmail()}
+                    disabled={saving}
+                    className="inline-flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-[#04181f] hover:bg-accent-strong disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Inbox className="h-3.5 w-3.5" />} Save to Gmail Drafts
+                  </button>
+                )}
                 {composeUrl && (
                   <a
                     href={composeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-[#04181f] hover:bg-accent-strong"
+                    className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-muted hover:text-foreground"
                   >
                     <ExternalLink className="h-3.5 w-3.5" /> Open in Gmail
                   </a>

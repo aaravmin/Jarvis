@@ -1,19 +1,34 @@
 import "server-only";
 
 /**
- * Google OAuth 2.0 helpers (server-only). Read-only scopes first (hard rule #6); tokens are never
- * exposed to the browser — these run in route handlers and are stored server-side via store.ts.
+ * Google OAuth 2.0 helpers (server-only). Per hard rule #6 we use the NARROWEST scopes that each
+ * shipped feature needs: read-only for ingestion/templates, plus the minimal write scopes for the
+ * three write features (draft into Gmail, create calendar events, export a contacts Sheet). Tokens are
+ * never exposed to the browser — these run in route handlers and are stored server-side via store.ts.
+ *
+ * NOTE: when this list changes the user must RECONNECT Google (the consent screen re-grants scopes;
+ * `prompt=consent` forces it). Until they do, write routes return a clear "reconnect" error.
  */
 
-/** Read-only scopes for the four Google surfaces Jarvis uses, plus identity. */
+// Individual scope constants (also used by store.ts to gate write features on the granted scope).
+export const SCOPE_GMAIL_READONLY = "https://www.googleapis.com/auth/gmail.readonly";
+/** Create/manage drafts (and send) — we only ever create drafts; nothing is sent without the user. */
+export const SCOPE_GMAIL_COMPOSE = "https://www.googleapis.com/auth/gmail.compose";
+/** View + create/edit events on the user's calendars (covers our read ingest AND event creation). */
+export const SCOPE_CALENDAR_EVENTS = "https://www.googleapis.com/auth/calendar.events";
+export const SCOPE_DRIVE_READONLY = "https://www.googleapis.com/auth/drive.readonly";
+/** Read + write spreadsheets (read for contact import; write to create the contacts export Sheet). */
+export const SCOPE_SPREADSHEETS = "https://www.googleapis.com/auth/spreadsheets";
+
 export const GOOGLE_SCOPES = [
   "openid",
   "email",
   "profile",
-  "https://www.googleapis.com/auth/gmail.readonly",
-  "https://www.googleapis.com/auth/calendar.readonly",
-  "https://www.googleapis.com/auth/drive.readonly",
-  "https://www.googleapis.com/auth/spreadsheets.readonly",
+  SCOPE_GMAIL_READONLY,
+  SCOPE_GMAIL_COMPOSE,
+  SCOPE_CALENDAR_EVENTS,
+  SCOPE_DRIVE_READONLY,
+  SCOPE_SPREADSHEETS,
 ];
 
 const AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";

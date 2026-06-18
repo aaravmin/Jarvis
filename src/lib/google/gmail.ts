@@ -69,3 +69,54 @@ export async function getMessage(token: string, id: string): Promise<GmailMessag
 export function gmailLink(id: string): string {
   return `https://mail.google.com/mail/u/0/#all/${id}`;
 }
+
+/** RFC 2047 encoded-word for header values that contain non-ASCII (keeps subjects intact). */
+function encodeHeader(value: string): string {
+  let ascii = true;
+  for (let i = 0; i < value.length; i++) {
+    if (value.charCodeAt(i) > 0x7f) {
+      ascii = false;
+      break;
+    }
+  }
+  if (ascii) return value;
+  return `=?UTF-8?B?${Buffer.from(value, "utf8").toString("base64")}?=`;
+}
+
+/** Build a minimal RFC 2822 message and base64url-encode it for the Gmail drafts API. */
+function buildRawMessage(opts: { to?: string; subject: string; body: string }): string {
+  const headers = [
+    opts.to ? `To: ${opts.to}` : "",
+    `Subject: ${encodeHeader(opts.subject)}`,
+    "MIME-Version: 1.0",
+    'Content-Type: text/plain; charset="UTF-8"',
+    "Content-Transfer-Encoding: 8bit",
+  ].filter(Boolean);
+  const message = `${headers.join("\r\n")}\r\n\r\n${opts.body}`;
+  return Buffer.from(message, "utf8").toString("base64url");
+}
+
+export type GmailDraft = { id: string; messageId?: string; url: string };
+
+/**
+ * Create a Gmail DRAFT (never sends) from a subject/body. Requires the gmail.compose scope. The draft
+ * lands in the user's Drafts folder for them to review and send — keeping us at autonomy L0 for email.
+ */
+export async function createDraft(
+  token: string,
+  opts: { to?: string; subject: string; body: string },
+): Promise<GmailDraft> {
+  const raw = buildRawMessage(opts);
+  const res = await fetch(`${API}/drafts`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ message: { raw } }),
+  });
+  if (!res.ok) throw new Error(`Gmail draft create failed (${res.status}): ${await res.text()}`);
+  const data = (await res.json()) as { id: string; message?: { id?: string } };
+  return {
+    id: data.id,
+    messageId: data.message?.id,
+    url: "https://mail.google.com/mail/u/0/#drafts",
+  };
+}

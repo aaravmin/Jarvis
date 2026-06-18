@@ -92,6 +92,37 @@ export async function getValidAccessToken(
   return refreshed.accessToken;
 }
 
+/** The scopes Google actually granted on the last connect (used to gate write features). */
+export async function getGrantedScopes(supabase: SupabaseClient, userId: string): Promise<string[]> {
+  const { data } = await supabase
+    .from(TABLE)
+    .select("scopes")
+    .eq("user_id", userId)
+    .eq("provider", "google")
+    .maybeSingle();
+  return ((data?.scopes as string[] | null) ?? []).filter(Boolean);
+}
+
+/**
+ * Return a valid access token but only if a specific scope was granted; otherwise throw a clear
+ * "reconnect" error naming the feature. This turns Google's opaque 403 ACCESS_TOKEN_SCOPE_INSUFFICIENT
+ * into actionable guidance when the user connected before the write scopes were added.
+ */
+export async function getTokenWithScope(
+  supabase: SupabaseClient,
+  userId: string,
+  scope: string,
+  featureLabel: string,
+): Promise<string> {
+  const scopes = await getGrantedScopes(supabase, userId);
+  if (!scopes.includes(scope)) {
+    throw new Error(
+      `Reconnect Google to enable ${featureLabel}. The required permission isn't granted yet — open Connections and click Reconnect.`,
+    );
+  }
+  return getValidAccessToken(supabase, userId);
+}
+
 /** Remove the connection (disconnect). */
 export async function disconnect(supabase: SupabaseClient, userId: string): Promise<void> {
   await supabase.from(TABLE).delete().eq("user_id", userId).eq("provider", "google");

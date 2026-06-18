@@ -2,8 +2,28 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plug, CheckCircle2, AlertTriangle, Users, FileText, Copy, ExternalLink } from "lucide-react";
+import {
+  Loader2,
+  Plug,
+  CheckCircle2,
+  AlertTriangle,
+  Users,
+  FileText,
+  Copy,
+  ExternalLink,
+  Inbox,
+  CalendarPlus,
+  RefreshCw,
+  Check,
+} from "lucide-react";
 import type { GoogleConnection } from "@/lib/google/store";
+
+/** Write scopes that light up the draft/calendar/export features once re-granted. */
+const WRITE_SCOPES = [
+  "https://www.googleapis.com/auth/gmail.compose",
+  "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/spreadsheets",
+];
 
 function StatusBanner({ status }: { status?: string }) {
   if (!status) return null;
@@ -34,11 +54,14 @@ export function ConnectionsPanel({
       <header>
         <h1 className="text-lg font-semibold text-foreground">Connections</h1>
         <p className="mt-1 text-sm text-muted">
-          Connect Google (read-only) so the Contact and Email agents can use your Drive and Sheets.
+          Connect Google so Jarvis can read your Gmail, Calendar, Drive &amp; Sheets — and now save
+          email drafts, add calendar events, and export your contacts. After an update, click Reconnect
+          to grant the new permissions.
         </p>
       </header>
 
       <StatusBanner status={status} />
+      {connection && <WriteScopeNotice scopes={connection.scopes} />}
 
       <section className="rounded-xl border border-border bg-surface-2 p-4">
         <div className="flex items-center justify-between gap-3">
@@ -54,14 +77,23 @@ export function ConnectionsPanel({
             </div>
           </div>
           {connection ? (
-            <form action="/api/connect/google/disconnect" method="post">
-              <button
-                type="submit"
-                className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:border-danger/50 hover:text-danger"
+            <div className="flex items-center gap-2">
+              <a
+                href="/api/connect/google"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent-soft/40"
+                title="Re-run consent to grant any newly added permissions"
               >
-                Disconnect
-              </button>
-            </form>
+                <RefreshCw className="h-3.5 w-3.5" /> Reconnect
+              </a>
+              <form action="/api/connect/google/disconnect" method="post">
+                <button
+                  type="submit"
+                  className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:border-danger/50 hover:text-danger"
+                >
+                  Disconnect
+                </button>
+              </form>
+            </div>
           ) : (
             <a
               href="/api/connect/google"
@@ -82,14 +114,32 @@ export function ConnectionsPanel({
         <>
           <ImportContactsTool />
           <DraftEmailTool />
+          <CalendarEventTool />
         </>
       ) : (
         <p className="text-sm text-muted">
-          Once connected, you&apos;ll be able to import contacts from a Google Sheet and draft emails from a
-          Drive template here.
+          Once connected, you&apos;ll be able to import contacts from a Google Sheet, draft emails from a
+          Drive template (and save them to Gmail), and add events to your calendar here.
         </p>
       )}
     </div>
+  );
+}
+
+/** Nudge the user to reconnect when their grant predates the write scopes. */
+function WriteScopeNotice({ scopes }: { scopes: string[] }) {
+  const granted = new Set(scopes);
+  const missing = WRITE_SCOPES.filter((s) => !granted.has(s));
+  if (missing.length === 0) return null;
+  return (
+    <p className="flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
+      <AlertTriangle className="h-4 w-4 shrink-0" />
+      Write features (save drafts, add calendar events, export contacts) need new permissions.{" "}
+      <a href="/api/connect/google" className="font-semibold underline">
+        Reconnect Google
+      </a>{" "}
+      to enable them.
+    </p>
   );
 }
 
@@ -165,11 +215,14 @@ function DraftEmailTool() {
   const [err, setErr] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ subject: string; body: string; templateName: string; templateUrl?: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedUrl, setSavedUrl] = useState<string | null>(null);
 
   async function run() {
     setBusy(true);
     setErr(null);
     setDraft(null);
+    setSavedUrl(null);
     try {
       const res = await fetch("/api/google/draft-email", {
         method: "POST",
@@ -183,6 +236,26 @@ function DraftEmailTool() {
       setErr("Network error.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function saveToGmail() {
+    if (!draft) return;
+    setSaving(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/google/gmail/create-draft", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ to: to.trim() || undefined, subject: draft.subject, body: draft.body }),
+      });
+      const data = await res.json();
+      if (!res.ok) setErr(data?.error ?? "Couldn't save the draft.");
+      else setSavedUrl(data.url ?? "https://mail.google.com/mail/u/0/#drafts");
+    } catch {
+      setErr("Network error saving the draft.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -260,7 +333,119 @@ function DraftEmailTool() {
           </div>
           <p className="text-sm font-semibold text-foreground">{draft.subject}</p>
           <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-muted-strong">{draft.body}</p>
+          <div className="mt-2.5">
+            {savedUrl ? (
+              <a
+                href={savedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-success/15 px-3 py-1.5 text-xs font-medium text-success hover:bg-success/25"
+              >
+                <Check className="h-3.5 w-3.5" /> Saved to Gmail — open Drafts
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={saveToGmail}
+                disabled={saving}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-[#04181f] transition-colors hover:bg-accent-strong disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Inbox className="h-3.5 w-3.5" />}
+                Save to Gmail Drafts
+              </button>
+            )}
+          </div>
         </div>
+      )}
+    </section>
+  );
+}
+
+function CalendarEventTool() {
+  const [title, setTitle] = useState("");
+  const [datetime, setDatetime] = useState(""); // <input type="datetime-local"> value
+  const [location, setLocation] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [created, setCreated] = useState<{ summary: string; htmlLink?: string } | null>(null);
+
+  async function run() {
+    setBusy(true);
+    setErr(null);
+    setCreated(null);
+    try {
+      // datetime-local has no timezone; new Date() interprets it in the browser's local zone, then we
+      // send a real ISO instant. Our code resolves the time — the model never touches it (hard rule #2).
+      const startISO = datetime ? new Date(datetime).toISOString() : "";
+      const res = await fetch("/api/google/calendar/create-event", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ summary: title, startISO, location: location.trim() || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) setErr(data?.error ?? "Could not create the event.");
+      else setCreated(data.event);
+    } catch {
+      setErr("Network error.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="rounded-xl border border-border bg-surface-2 p-4">
+      <div className="mb-2 flex items-center gap-2">
+        <CalendarPlus className="h-4 w-4 text-accent" />
+        <h2 className="text-sm font-semibold text-foreground">Add an event to your calendar</h2>
+      </div>
+      <p className="mb-3 text-xs text-muted">
+        Creates a real event on your primary Google Calendar (1 hour by default). The time you pick is
+        resolved by the app, never guessed by the model.
+      </p>
+      <div className="space-y-2">
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          disabled={busy}
+          placeholder="Event title — e.g. “Coffee with Dr. Chen”"
+          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="datetime-local"
+            value={datetime}
+            onChange={(e) => setDatetime(e.target.value)}
+            disabled={busy}
+            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none"
+          />
+          <input
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            disabled={busy}
+            placeholder="Location (optional)"
+            className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={run}
+          disabled={busy || title.trim().length < 2 || !datetime}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-[#04181f] transition-colors hover:bg-accent-strong disabled:opacity-50"
+        >
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarPlus className="h-4 w-4" />}
+          Add to calendar
+        </button>
+      </div>
+      {err && <p className="mt-2 text-xs text-danger">{err}</p>}
+      {created && (
+        <p className="mt-2 text-xs text-success">
+          Added “{created.summary}”.{" "}
+          {created.htmlLink && (
+            <a href={created.htmlLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline">
+              Open in Calendar <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+        </p>
       )}
     </section>
   );
