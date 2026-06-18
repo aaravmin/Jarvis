@@ -47,6 +47,69 @@ export async function POST(request: Request) {
 }
 
 /**
+ * PATCH /api/contacts — edit a contact. Body: { id, fullName, company?, roleTitle?, email?,
+ * linkedin?, notes? }. RLS scopes every write to the caller's own rows. Email/linkedin live in
+ * contact_channels: we only rewrite a channel when its value actually changed, so an unchanged,
+ * research-discovered channel keeps its original provenance (source_url / confidence).
+ */
+export async function PATCH(request: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+
+  let body: {
+    id?: string;
+    fullName?: string;
+    company?: string;
+    roleTitle?: string;
+    email?: string;
+    linkedin?: string;
+    notes?: string;
+  };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+
+  const id = (body.id ?? "").trim();
+  if (!id) return NextResponse.json({ error: "id is required." }, { status: 400 });
+  const fullName = (body.fullName ?? "").trim();
+  if (fullName.length < 2) return NextResponse.json({ error: "Name is required." }, { status: 400 });
+
+  const { error: updateError } = await supabase
+    .from("contacts")
+    .update({
+      full_name: fullName,
+      company: body.company?.trim() || null,
+      role_title: body.roleTitle?.trim() || null,
+      notes: body.notes?.trim() || null,
+    })
+    .eq("id", id); // RLS additionally restricts this to the caller's own row
+  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+
+  // Reconcile the single email + linkedin channels. Leave a channel untouched when its value is
+  // unchanged (preserving provenance); otherwise replace this kind's channels with the new value
+  // (or clear them when the field was emptied).
+  for (const kind of ["email", "linkedin"] as const) {
+    const val = (body[kind] ?? "").trim();
+    const { data: existing } = await supabase
+      .from("contact_channels")
+      .select("value")
+      .eq("contact_id", id)
+      .eq("kind", kind);
+    const current = existing ?? [];
+    if (val && current.some((c) => c.value === val)) continue; // unchanged — keep its provenance
+    if (current.length) await supabase.from("contact_channels").delete().eq("contact_id", id).eq("kind", kind);
+    if (val) await supabase.from("contact_channels").insert({ contact_id: id, kind, value: val, is_primary: true });
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
+/**
  * DELETE /api/contacts?id=<contactId> — remove a contact and its channels. User-driven; RLS scopes
  * the delete to the signed-in user's own rows, so it can never touch another user's contacts.
  */

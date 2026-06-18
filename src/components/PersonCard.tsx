@@ -5,6 +5,7 @@ import { Card } from "@/components/Card";
 import { AddToGoal } from "@/components/goals/AddToGoal";
 import { DraftToContact } from "@/components/google/DraftToContact";
 import { ContactStatusControl } from "@/components/ContactStatusControl";
+import { EditContactForm } from "@/components/EditContactForm";
 import { RemoveContactButton } from "@/components/RemoveContactButton";
 import type { CardFieldSource, CardSource } from "@/lib/types";
 import type { DiscoveredPerson } from "@/lib/research/types";
@@ -112,6 +113,7 @@ export function PersonCard({
     ) : undefined;
 
   const emailChannel = person.channels.find((c) => c.kind === "email")?.value;
+  const linkedinChannel = person.channels.find((c) => c.kind === "linkedin")?.value;
   // A manually-added contact carries no source quote. It legitimately has no provenance, so it must
   // NOT render through <Card> (which throws without a source chip — hard rule #4). It gets its own
   // tile below with an "Added by you" badge instead of a source chip.
@@ -121,6 +123,17 @@ export function PersonCard({
       <ContactStatusControl contactId={person.id} initial={person.outreachStatus} />
       <DraftToContact name={person.fullName} email={emailChannel} />
       <AddToGoal entityType="contact" entityId={person.id} />
+      <EditContactForm
+        contactId={person.id}
+        initial={{
+          fullName: person.fullName,
+          company: person.company ?? "",
+          roleTitle: person.roleTitle ?? "",
+          email: emailChannel ?? "",
+          linkedin: linkedinChannel ?? "",
+          notes: person.notes ?? "",
+        }}
+      />
       <RemoveContactButton contactId={person.id} name={person.fullName} />
     </>
   ) : person.reviewStatus === "review" ? (

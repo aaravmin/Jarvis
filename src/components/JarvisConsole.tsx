@@ -37,9 +37,9 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
   const [input, setInput] = useState("");
   const [phase, setPhase] = useState<OrbState>("idle");
   const [answer, setAnswer] = useState<AskResponse | null>(null);
-  // The question currently being answered — echoed on-screen so the long /api/ask call never looks
-  // like the screen went blank ("it disappears once I finish talking").
-  const [pending, setPending] = useState<string | null>(null);
+  // The last question asked — echoed on-screen and KEPT after the answer arrives so the user can
+  // always see what they asked (it only updates when a new question is submitted).
+  const [asked, setAsked] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [voiceSupported, setVoiceSupported] = useState(false);
   // Spoken replies (ElevenLabs via /api/voice). On by default; the preference is remembered.
@@ -50,6 +50,8 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
   // it's never restored "on" but idle on reload). Voice output is forced on while it's active.
   const [convoMode, setConvoMode] = useState(false);
 
+  // The big orb is a <button>; we run a one-shot grow-then-shrink animation on it when pressed.
+  const orbButtonRef = useRef<HTMLButtonElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
@@ -183,7 +185,8 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
     if (!message || phaseRef.current === "thinking") return;
     setPhase("thinking");
     setError(null);
-    setPending(message); // show the question + a thinking indicator for the whole multi-second call
+    setAsked(message); // echo the question now and keep it visible through (and after) the answer
+    setInput(""); // free the input for the next question; "You asked" preserves what was just sent
     try {
       const res = await fetch("/api/ask", {
         method: "POST",
@@ -194,7 +197,6 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
       if (!res.ok) {
         setAnswer(null);
         setError(data?.error ?? "Jarvis couldn't answer that.");
-        setPending(null);
         setPhase("idle");
         // Keep a hands-free conversation going even after a stumble.
         if (convoModeRef.current) startListeningRef.current();
@@ -202,13 +204,11 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
         // Success: the speak effect takes over (and, in convo mode, re-opens the mic when it ends).
         // If voice is off and we're not conversing, settle to idle now.
         setAnswer(data as AskResponse);
-        setPending(null);
         if (!speechOnRef.current && !convoModeRef.current) setPhase("idle");
       }
     } catch {
       setAnswer(null);
       setError("Network error reaching the assistant.");
-      setPending(null);
       setPhase("idle");
       if (convoModeRef.current) startListeningRef.current();
     }
@@ -362,9 +362,27 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
     }
   }, [voiceSupported, stopListening, stopSpeaking]);
 
+  // One-shot tactile feedback when the orb is pressed: it swells then settles back to size. This is
+  // separate from the orb's own ambient motion (it composites on the wrapping <button>), and runs
+  // every press regardless of what the press does. Honors the reduced-motion preference.
+  const pulseOrb = useCallback(() => {
+    const el = orbButtonRef.current;
+    if (!el || typeof el.animate !== "function") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    el.animate(
+      [
+        { transform: "scale(1)" },
+        { transform: "scale(1.12)", offset: 0.4 },
+        { transform: "scale(1)" },
+      ],
+      { duration: 460, easing: "ease-in-out" },
+    );
+  }, []);
+
   // The big orb/sphere is the primary push-to-talk control. While Jarvis is speaking, tapping it
   // interrupts and starts a new turn (barge-in); while listening it stops; when idle it listens.
   const onOrbClick = useCallback(() => {
+    pulseOrb(); // grow-then-shrink feedback on every press
     if (phaseRef.current === "thinking") return;
     if (phaseRef.current === "listening") {
       stopListening();
@@ -375,7 +393,7 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
       emptyTurnsRef.current = 0; // a manual tap gets a fresh silent-turn budget
       startListeningRef.current();
     }
-  }, [voiceSupported, stopListening, stopSpeaking]);
+  }, [voiceSupported, stopListening, stopSpeaking, pulseOrb]);
 
   const listening = phase === "listening";
   const thinking = phase === "thinking";
@@ -404,6 +422,7 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
   return (
     <div className="mx-auto flex max-w-2xl flex-col items-center">
       <button
+        ref={orbButtonRef}
         type="button"
         onClick={onOrbClick}
         disabled={thinking}
@@ -514,29 +533,30 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
         </div>
       )}
 
-      {/* While Jarvis works, echo the question + an explicit thinking indicator so the screen never
-          looks blank after you speak/send (and the prior answer is hidden until the new one lands). */}
-      {pending && (
-        <div className="mt-5 w-full space-y-3">
+      {/* The last question — echoed while Jarvis works AND kept on-screen after the answer arrives, so
+          you can always see what you asked. It only changes when a new question is submitted. */}
+      {asked && (
+        <div className="mt-5 w-full space-y-4">
           <div className="rounded-xl border border-border/70 bg-surface/40 px-4 py-2.5">
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted">You asked</p>
-            <p className="mt-0.5 text-sm text-foreground">{pending}</p>
+            <p className="mt-0.5 text-sm text-foreground">{asked}</p>
           </div>
-          <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-muted-strong">
-            <Loader2 className="h-4 w-4 animate-spin text-accent" />
-            Jarvis is thinking…
-          </div>
-        </div>
-      )}
 
-      {error && !pending && (
-        <p className="mt-5 w-full rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
-          {error}
-        </p>
-      )}
+          {thinking && (
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-muted-strong">
+              <Loader2 className="h-4 w-4 animate-spin text-accent" />
+              Jarvis is thinking…
+            </div>
+          )}
 
-      {answer && !pending && (
-        <div className="mt-5 w-full space-y-4">
+          {!thinking && error && (
+            <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+              {error}
+            </p>
+          )}
+
+          {!thinking && answer && (
+            <div className="space-y-4">
           <div className="rounded-xl border border-border bg-surface-2 p-4">
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
               {answer.answer}
@@ -617,6 +637,15 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
             </div>
           )}
         </div>
+          )}
+        </div>
+      )}
+
+      {/* A mic/permission error with no question attached (e.g. a blocked microphone). */}
+      {error && !asked && (
+        <p className="mt-5 w-full rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+          {error}
+        </p>
       )}
     </div>
   );
