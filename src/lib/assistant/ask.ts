@@ -2,12 +2,17 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { listDir, readFile, allowedRootsLabel } from "@/lib/assistant/fs-tools";
 import type { AskCitation, AskFileRef, AskResponse } from "@/lib/assistant/types";
+import type { AskDataContext } from "@/lib/assistant/data-tools";
 
 /**
- * The Jarvis "brain": an agentic loop over Claude with three tools —
- *  - web_search  (server-side; "search up X", current facts) → real citations
- *  - list_dir    (client-side; browse the user's allowed local folders)
- *  - read_file   (client-side; read a local file the user references)
+ * The Jarvis "brain": an agentic loop over Claude with four tools —
+ *  - web_search      (server-side; "search up X", current facts) → real citations
+ *  - search_my_data  (the user's OWN Gmail/Calendar/meetings/tasks/contacts/opportunities) → answers
+ *                     questions about their connected data; only present when a data context is passed
+ *  - list_dir        (client-side; browse the user's allowed local folders)
+ *  - read_file       (client-side; read a local file the user references)
+ * When a data context is supplied, a compact digest of the user's world is also folded into the
+ * system prompt so simple questions ("what's on my plate today?") answer without a tool round-trip.
  * Returns the answer plus provenance (web citations + files read). Read-only and server-only.
  */
 
@@ -37,6 +42,26 @@ const READ_FILE_TOOL = {
   },
 };
 
+const SEARCH_MY_DATA_TOOL = {
+  name: "search_my_data",
+  description:
+    "Search the user's OWN connected data — their Gmail, Google Calendar events, meeting notes, tasks, contacts, and opportunities — to answer questions about their inbox, schedule, meetings, to-dos, people, or applications. Read-only. Use this whenever the question is about the user's own world (e.g. 'what's on my calendar this week', 'did anyone email me about the internship', 'what do I owe a reply to', 'who am I tracking at OpenAI'). Returns real rows with dates and links — never invent any.",
+  input_schema: {
+    type: "object" as const,
+    additionalProperties: false,
+    properties: {
+      keywords: { type: "string", description: "Words to match — a sender, subject, person, org, or topic. Optional; omit to list recent items." },
+      kinds: {
+        type: "array",
+        items: { type: "string", enum: ["email", "calendar", "meeting", "task", "contact", "opportunity"] },
+        description: "Limit to these data types. Optional; omit to search all.",
+      },
+      when: { type: "string", enum: ["today", "upcoming", "past", "all"], description: "Time window. Optional; default all." },
+    },
+    required: [],
+  },
+};
+
 const DEFAULT_MODEL = "claude-opus-4-8";
 const MAX_TURNS = 8;
 const MAX_TOKENS = 8000;
@@ -49,17 +74,23 @@ function getClient(): Anthropic {
   return new Anthropic({ apiKey });
 }
 
-function systemPrompt(todayISO: string): string {
+function systemPrompt(todayISO: string, dataDigest?: string): string {
+  const dataCap = dataDigest
+    ? `\n- search_my_data: read the user's OWN connected data — their Gmail, Google Calendar, meetings, tasks, contacts, and opportunities. Use it for any question about their inbox, schedule, meetings, to-dos, people, or applications. Only state what the data shows; if something isn't there, say you don't see it rather than guessing. Refer to items by their subject/title and date, and include their link when you have one.`
+    : "";
+  const dataBlock = dataDigest
+    ? `\n\nThe user's connected data (your working memory — use it directly for quick questions, and search_my_data for anything more specific):\n${dataDigest}`
+    : "";
   return `You are Jarvis, a personal command-center assistant. You are concise, direct, and never fabricate.
 
 Capabilities:
-- web_search: use it for anything current, changing, or outside your knowledge ("search up X", news, prices, facts about specific people/companies). Always ground such answers in the sources you searched.
+- web_search: use it for anything current, changing, or outside your knowledge ("search up X", news, prices, facts about specific people/companies). Always ground such answers in the sources you searched.${dataCap}
 - list_dir / read_file: read the user's LOCAL files, but ONLY within these allowed folders: ${allowedRootsLabel()}. You are strictly read-only — you cannot create, edit, move, or delete anything. When the user points you at a file or folder ("my fineprint folder", "this file"), use list_dir to find it, then read_file to read it, then answer about its actual contents. Never guess a file's contents.
 
 Rules:
-- Cite web sources you used. When you read a local file, refer to it by name/path.
+- Cite web sources you used. When you read a local file, refer to it by name/path. When you use the user's own data, name the specific email/event/task you're drawing from.
 - If a folder or file isn't in the allowed list, say so plainly rather than guessing.
-- Never compute or assert exact dates from reasoning; if asked about dates, rely on sources. Today is ${todayISO}.`;
+- Never compute or assert exact dates from reasoning; rely on the dates in the data or sources. Today is ${todayISO}.${dataBlock}`;
 }
 
 type Block = {
@@ -84,10 +115,13 @@ function harvest(content: Block[], citations: AskCitation[], seen: Set<string>) 
   }
 }
 
-export async function ask(message: string): Promise<AskResponse> {
+export async function ask(message: string, ctx?: AskDataContext): Promise<AskResponse> {
   const client = getClient();
   const model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
-  const system = systemPrompt(new Date().toISOString().slice(0, 10));
+  const system = systemPrompt(new Date().toISOString().slice(0, 10), ctx?.dataDigest);
+  const tools = ctx?.searchData
+    ? [WEB_SEARCH_TOOL, SEARCH_MY_DATA_TOOL, LIST_DIR_TOOL, READ_FILE_TOOL]
+    : [WEB_SEARCH_TOOL, LIST_DIR_TOOL, READ_FILE_TOOL];
 
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: message }];
   const citations: AskCitation[] = [];
@@ -99,7 +133,7 @@ export async function ask(message: string): Promise<AskResponse> {
       model,
       max_tokens: MAX_TOKENS,
       system,
-      tools: [WEB_SEARCH_TOOL, LIST_DIR_TOOL, READ_FILE_TOOL],
+      tools,
       messages,
     } as unknown as Anthropic.MessageCreateParamsNonStreaming;
 
@@ -129,9 +163,11 @@ export async function ask(message: string): Promise<AskResponse> {
       const results: Anthropic.ToolResultBlockParam[] = [];
       for (const tu of content.filter((b) => b.type === "tool_use")) {
         const p = (tu.input as { path?: string } | undefined)?.path ?? "";
-        let out;
+        let out: { ok: boolean; text: string; path?: string; bytes?: number };
         if (tu.name === "read_file") out = await readFile(p);
         else if (tu.name === "list_dir") out = await listDir(p);
+        else if (tu.name === "search_my_data" && ctx?.searchData)
+          out = await ctx.searchData((tu.input as Parameters<NonNullable<AskDataContext["searchData"]>>[0]) ?? {});
         else out = { ok: false, text: `Unknown tool: ${tu.name ?? "(unnamed)"}` };
         if (tu.name === "read_file" && out.ok && out.path) {
           files.push({ path: out.path, bytes: out.bytes ?? 0 });

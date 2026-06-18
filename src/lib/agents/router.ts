@@ -52,7 +52,8 @@ ${catalog}
 Guidance:
 - "find/research PEOPLE (alumni, founders, recruiters, named individuals)" → contact.
 - "find programs / jobs / internships / hackathons / fellowships / grants / scholarships / competitions" → opportunity.
-- Questions about the user's own inbox/replies → email. Their own schedule/availability → calendar. A meeting transcript → meeting.
+- QUESTIONS about the user's own data — their inbox, schedule, meetings, tasks, contacts, or what's on their plate ("what's on my calendar", "did X email me?", "what do I owe a reply to?", "what should I do today?") → assistant. The assistant can read their connected Gmail/Calendar/meetings/tasks and answer.
+- Route to email/calendar/meeting ONLY when the user wants an ACTION those agents perform: email = triage the inbox INTO tasks; calendar = create/propose calendar events; meeting = extract tasks from a pasted transcript.
 - Anything general (web facts, reading local files, chit-chat, or no clear fit) → assistant.
 Normalize the query to the actionable task. Always return a confidence.`;
 }

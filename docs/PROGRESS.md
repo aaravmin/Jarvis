@@ -25,6 +25,25 @@ People / Opportunities / Review / Auto-Populate are live. The **Google connector
 Drive/Sheets) is built; it activates once the user connects Google on the Connections tab.
 
 ## Task log (most recent first)
+- **Daily Plan (Today) + Jarvis Q&A over connected data** — ✅ shipped (local). Two features:
+  1. **Daily Plan** (`/today`): `src/lib/agents/today/plan.ts` loads today's calendar events + open/overdue/
+     undated tasks + recent emails, then a forced Claude `build_day_plan` tool returns **only**
+     order/part-of-day/priority/action/why — **never a clock time** (hard rule #2). Code attaches the real
+     calendar times (`sources.occurred_at` → `formatWhen`) and computes a deterministic sortKey (fixed
+     events at their epoch; flexible items at startOfDay + bucketHour[morning9/afternoon13/evening18/
+     anytime12] + order). Ephemeral — nothing persisted (L0). Every block carries a non-empty `CardSource`
+     so `<Card>` renders. `GET /api/today/plan` + `DayPlanView` client component.
+  2. **Q&A over connected data**: `src/lib/assistant/data-tools.ts` gives the assistant read-only,
+     RLS-scoped access to Gmail/Calendar/meetings/tasks/contacts/opportunities via a prompt **digest**
+     (`buildDataDigest`) + a `search_my_data` tool (`searchMyData`). Threaded through `ask(message, ctx)`
+     and both `/api/ask` + `/api/agent`. Dates only formatted, never computed. Router/registry guidance +
+     JarvisConsole examples updated to advertise data Q&A.
+  - Adversarial review (workflow w77ny0yiv, 9 agents): 4 confirmed findings. **Fixed:** voice-input
+    duplication (cumulative `e.results` re-appended → rebuild each event); `searchMyData` silently dropped
+    null-date tasks/opps under a time window (now `nullableWindowOr` keeps undated/rolling in today/upcoming).
+    **Deferred/acknowledged:** `/api/agent` router is not reached by any UI (orb posts to `/api/ask`
+    directly) — to be wired when the action-agents arc lands; model prose could restate a real event time
+    (low, compliant — the structured timeLabel path is code-derived). **tsc + eslint clean.**
 - **Goals anchors UI + manual entry + Gmail/Calendar ingestion + drafting + orb/nav polish** — ✅ shipped
   (migrations `0006→0009` live). Highlights: Goals page/detail + global goal filter (`?goal=`) + per-tab
   filtering + add-to-goal on cards + AI goals-from-context + intersections (combined-ask) + goal

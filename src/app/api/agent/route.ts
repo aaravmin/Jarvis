@@ -5,6 +5,7 @@ import { agentMeta } from "@/lib/agents/registry";
 import { runOpportunitySearch } from "@/lib/agents/opportunity/run";
 import { runPeopleSearch } from "@/lib/research/run";
 import { ask } from "@/lib/assistant/ask";
+import { buildAskDataContext, type AskDataContext } from "@/lib/assistant/data-tools";
 import type { AgentDispatchResult } from "@/lib/agents/types";
 
 // Research agents call Claude web_search (30-90s); the router adds a quick classification first.
@@ -75,9 +76,15 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   }
 
-  // assistant — answer inline (the orb brain: web search + local files).
+  // assistant — answer inline (the orb brain: web search + local files + the user's connected data).
   try {
-    const answer = await ask(query);
+    let dataCtx: AskDataContext | undefined;
+    try {
+      dataCtx = await buildAskDataContext(supabase);
+    } catch {
+      dataCtx = undefined;
+    }
+    const answer = await ask(query, dataCtx);
     const result: AgentDispatchResult = { decision, outcome: "answer", answer: answer.answer };
     return NextResponse.json(result);
   } catch (err) {

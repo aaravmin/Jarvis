@@ -21,9 +21,11 @@ type SpeechRecognitionLike = {
 };
 
 const EXAMPLES = [
+  "What's on my plate today?",
+  "Did anyone email me about the internship?",
+  "What's on my calendar this week?",
   "Search up the latest on the YC Spring 2026 batch",
-  "Look in my fineprint folder and summarize the newest file",
-  "What are the main risks in the contract in my fineprint folder?",
+  "Summarize the newest file in my fineprint folder",
 ];
 
 export function JarvisConsole({ hero = false }: { hero?: boolean }) {
@@ -87,14 +89,19 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
     rec.lang = "en-US";
     finalTranscriptRef.current = "";
     rec.onresult = (e) => {
+      // e.results is CUMULATIVE — it contains every result for the session, and finalized ones keep
+      // their isFinal flag on later events. So rebuild the transcript from scratch each event rather
+      // than appending, or already-final segments get re-added and duplicated.
+      let finalText = "";
       let interim = "";
       for (let i = 0; i < e.results.length; i++) {
         const r = e.results[i];
         const text = r[0]?.transcript ?? "";
-        if (r.isFinal) finalTranscriptRef.current += text;
+        if (r.isFinal) finalText += text;
         else interim += text;
       }
-      setInput((finalTranscriptRef.current + interim).trimStart());
+      finalTranscriptRef.current = finalText;
+      setInput((finalText + interim).trimStart());
     };
     rec.onend = () => {
       setPhase("idle");
@@ -123,7 +130,7 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
     ? "Thinking…"
     : listening
       ? "Listening… speak, then pause"
-      : "Ask anything — I can search the web and read your files";
+      : "Ask about your email, calendar, meetings & tasks — or search the web and your files";
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col items-center">
@@ -174,7 +181,7 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={thinking}
-          placeholder="Search up something, or ask about a file…"
+          placeholder="Ask about your day, your inbox, or anything…"
           className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted"
         />
         <button

@@ -2,6 +2,29 @@
 
 > One entry per non-obvious decision: date, decision, why. Never edit past entries; append new ones.
 
+- **2026-06-17 — Daily Plan is ephemeral and the model only SEQUENCES; it never emits a time.** Why:
+  hard rule #2. `build_day_plan` (`src/lib/agents/today/plan.ts`) returns order/part_of_day/priority/
+  action/why only — no date/time field. Real times come from `sources.occurred_at` (formatted by code);
+  flexible items get a deterministic sortKey (startOfDay + bucketHour + order). The plan persists nothing
+  (L0/suggest-only) — it's a view recomputed on each `GET /api/today/plan`. Every block carries a
+  `CardSource` so `<Card>`'s provenance invariant holds. (Residual: the model's free-text action/why can
+  *restate* a real event time — accepted, since repeating given data ≠ computing a date; a regex strip
+  would wrongly mangle accurate references.)
+
+- **2026-06-17 — The assistant reads the user's own data via a server-only, RLS-scoped bridge
+  (`src/lib/assistant/data-tools.ts`): a prompt digest + a `search_my_data` tool.** Why: the user wants
+  to ASK about their email/calendar/meetings/tasks, not just see them. The digest gives breadth for
+  instant answers; the tool drills down. The user-scoped Supabase client (RLS → auth.uid()) guarantees
+  rows never cross tenants; no service-role client is used. Dates are only formatted, never computed.
+  Nullable date columns (tasks.due_at, opps.deadline_at) use `nullableWindowOr` so undated/rolling-open
+  items survive a today/upcoming filter (a bare gte/lte drops SQL NULLs).
+
+- **2026-06-17 — The orb (JarvisConsole) posts to `/api/ask`, NOT the `/api/agent` router.** Why: the
+  ask path always answers (web + files + the user's data) and never needs the router's one-agent
+  dispatch. Consequence: `/api/agent` + router + registry are currently unreached by the UI; the
+  registry/router routing-guidance is forward-looking, taking effect only once an action-dispatch UI
+  posts to `/api/agent`. Revisit when the write/action agents (Gmail draft, calendar create) land.
+
 - **2026-06-17 — Supabase (Postgres) is the system of record; Notion is only an optional one-way
   mirror.** Why: Notion's API (~3 req/s, ~1000-block page ceiling, slow block writes) is unfit for
   all-day programmatic ingestion. Postgres/Supabase gives ~167× throughput plus auth, RLS, realtime,

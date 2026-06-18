@@ -26,8 +26,8 @@ export const AGENTS: Record<AgentKind, AgentMeta> = {
     kind: "email",
     label: "Email agent",
     tab: "Email",
-    blurb: "Triages your Gmail into sourced tasks, replies, and follow-ups, each linked back to the exact message.",
-    triggers: "any new emails from my advisor?; what do I owe replies to?; turn my inbox into tasks; did I respond to the recruiter?",
+    blurb: "ACTIONS on your Gmail: triages it into sourced tasks, replies, and follow-ups, each linked to the exact message. (To just ASK about your inbox, the Jarvis assistant answers from your synced mail.)",
+    triggers: "turn my inbox into tasks; triage my unread mail into to-dos; pull action items out of my email.",
     status: "needs-connection",
     unavailableHint:
       "The Email agent needs Gmail connected (read-only) via the Google OAuth client. See /docs/CONNECTORS.md to enable it.",
@@ -36,8 +36,8 @@ export const AGENTS: Record<AgentKind, AgentMeta> = {
     kind: "calendar",
     label: "Calendar agent",
     tab: "Calendar",
-    blurb: "Reads your calendar and proposes events from email/meetings; answers what's coming up.",
-    triggers: "what's on my calendar tomorrow?; am I free Thursday afternoon?; add the interview to my calendar.",
+    blurb: "ACTIONS on your calendar: proposes and adds events from your email/meetings. (To just ASK what's on your calendar, the Jarvis assistant answers from your synced events.)",
+    triggers: "add the interview to my calendar; propose events from my email; block focus time before the deadline.",
     status: "needs-connection",
     unavailableHint:
       "The Calendar agent needs Google Calendar connected via the Google OAuth client. See /docs/CONNECTORS.md to enable it.",
@@ -56,8 +56,8 @@ export const AGENTS: Record<AgentKind, AgentMeta> = {
     kind: "assistant",
     label: "Jarvis assistant",
     tab: "Jarvis",
-    blurb: "General questions: searches the web for current facts and reads your local files. The catch-all when no specialized agent fits.",
-    triggers: "search up the latest on X; what's the weather; read my fineprint folder; explain this file; anything not about the agents above.",
+    blurb: "Answers QUESTIONS about your own connected data — your Gmail, calendar, meetings, tasks, contacts and opportunities — and also searches the web for current facts and reads your local files. The catch-all when no specialized agent fits.",
+    triggers: "what's on my plate today?; what's on my calendar tomorrow?; did anyone email me about the internship?; what do I owe a reply to?; who am I tracking at OpenAI?; search up the latest on X; read my fineprint folder.",
     status: "live",
   },
 };
