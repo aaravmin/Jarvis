@@ -4,6 +4,7 @@ import { loadAcceptedOpportunities } from "@/lib/agents/opportunity/load";
 import { entityIdsForGoal } from "@/lib/goals/load";
 import { OpportunityCard } from "@/components/OpportunityCard";
 import { FindOpportunitiesBar } from "@/components/FindOpportunitiesBar";
+import { ManualOpportunityForm } from "@/components/manual/ManualOpportunityForm";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +18,9 @@ export default async function OpportunitiesPage({ searchParams }: { searchParams
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
+    <div className="mx-auto max-w-3xl space-y-4">
       <FindOpportunitiesBar />
+      <ManualOpportunityForm />
 
       {opportunities.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border-strong bg-surface/40 px-6 py-12 text-center">

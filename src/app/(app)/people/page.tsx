@@ -4,6 +4,7 @@ import { loadAcceptedPeople } from "@/lib/research/load";
 import { entityIdsForGoal } from "@/lib/goals/load";
 import { PersonCard } from "@/components/PersonCard";
 import { FindPeopleBar } from "@/components/FindPeopleBar";
+import { ManualContactForm } from "@/components/manual/ManualContactForm";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +18,9 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
+    <div className="mx-auto max-w-3xl space-y-4">
       <FindPeopleBar />
+      <ManualContactForm />
 
       {people.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border-strong bg-surface/40 px-6 py-12 text-center">

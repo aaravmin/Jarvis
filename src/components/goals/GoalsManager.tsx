@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Target, Plus, Sparkles, Loader2, Check, X, Users, Compass, CheckSquare, Mail, GitMerge } from "lucide-react";
+import { ProfileForm } from "@/components/manual/ProfileForm";
 import type { GoalSummary } from "@/lib/goals/load";
 
 const TYPE_ICON = { contact: Users, opportunity: Compass, item: CheckSquare, source: Mail } as const;
@@ -18,6 +19,7 @@ export function GoalsManager({ initialGoals }: { initialGoals: GoalSummary[] }) 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <AddGoal onChanged={() => router.refresh()} />
+      <ProfileForm />
 
       {review.length > 0 && (
         <section className="space-y-2">
