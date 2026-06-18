@@ -6,7 +6,7 @@ import { SCOPE_CALENDAR_EVENTS, SCOPE_GMAIL_COMPOSE, SCOPE_DRIVE_READONLY } from
 import { createEvent } from "@/lib/google/calendar";
 import { createDraft } from "@/lib/google/gmail";
 import { extractFileId, findDocsByName, readDocText } from "@/lib/google/drive";
-import { saveDriveTemplate } from "@/lib/templates/store";
+import { saveDriveTemplate, listTemplates as loadTemplates } from "@/lib/templates/store";
 import { formatWhen } from "@/lib/format";
 import type { AskActionRef } from "@/lib/assistant/types";
 
@@ -34,6 +34,8 @@ export type AskActions = {
   }) => Promise<ActionOutcome>;
   draftEmail: (a: { to?: string; subject?: string; body?: string }) => Promise<ActionOutcome>;
   saveTemplate: (a: { document?: string; name?: string }) => Promise<ActionOutcome>;
+  /** Read-only: the user's saved templates, so Jarvis can adapt one before drafting. No ref/receipt. */
+  listTemplates: () => Promise<{ ok: boolean; message: string }>;
 };
 
 const MAX_DATE_INPUT = 200;
@@ -250,6 +252,28 @@ export function buildAskActions(supabase: SupabaseClient, userId: string): AskAc
         };
       } catch (e) {
         return { ok: false, message: friendly(e, "I couldn't save that document as a template — please try again.") };
+      }
+    },
+
+    async listTemplates() {
+      try {
+        const tpls = await loadTemplates(supabase, userId);
+        if (tpls.length === 0) {
+          return { ok: true, message: "The user has no saved templates yet. You can draft from scratch, or they can add one on the Templates page." };
+        }
+        // Hand the model the FULL text of each template so it can genuinely adapt one (not just
+        // paraphrase a summary) before calling draft_email.
+        const text = tpls
+          .map((t, i) => {
+            const tags = [t.connectionTypeLabel, t.source].filter(Boolean).join(", ");
+            const head = `${i + 1}. "${t.name}"${tags ? ` (${tags})` : ""}`;
+            const subj = t.subject ? `\nSubject: ${t.subject}` : "";
+            return `${head}${subj}\nBody:\n${t.body}`;
+          })
+          .join("\n\n---\n\n");
+        return { ok: true, message: text };
+      } catch {
+        return { ok: false, message: "I couldn't load your saved templates just now." };
       }
     },
   };

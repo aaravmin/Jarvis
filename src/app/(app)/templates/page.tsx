@@ -5,6 +5,7 @@ import { getConnection } from "@/lib/google/store";
 import { listTemplates, listConnectionTypes } from "@/lib/templates/store";
 import { ConnectionEmailComposer } from "@/components/templates/ConnectionEmailComposer";
 import { TemplatesManager } from "@/components/templates/TemplatesManager";
+import { NewTemplateForm } from "@/components/templates/NewTemplateForm";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,7 @@ export default async function TemplatesPage() {
       </header>
 
       <ConnectionEmailComposer templates={templates} connectionTypes={connectionTypes} />
+      <NewTemplateForm />
       <TemplatesManager templates={templates} connectionTypes={connectionTypes} />
     </div>
   );

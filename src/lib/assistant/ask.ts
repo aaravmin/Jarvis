@@ -119,6 +119,13 @@ const SAVE_TEMPLATE_FN = {
   },
 };
 
+const LIST_TEMPLATES_FN = {
+  name: "list_templates",
+  description:
+    "List the user's saved email templates — each with its name, subject, and FULL body. Call this whenever the user asks to draft using one of their templates, or to adapt/edit/rewrite a saved template. Then take the relevant template and genuinely rewrite it to match exactly what they asked (fill placeholders with their specifics, adjust tone/length/content), and call draft_email with your edited subject and body. Don't reproduce a template verbatim when the user asked for changes.",
+  parameters: { type: "object" as const, properties: {}, required: [] },
+};
+
 const MAX_TURNS = 8;
 const MAX_TOKENS = 8000;
 
@@ -129,12 +136,14 @@ function systemPrompt(todayISO: string, dataDigest?: string, canAct?: boolean): 
   const actCap = canAct
     ? `\n- create_calendar_event: add a real event to the user's Google Calendar. Pass their EXACT words for the time in \`when\` — never a date you worked out yourself; the system resolves it deterministically.
 - draft_email: compose an email and save it as a DRAFT in Gmail (it is never sent — the user reviews and sends it). Write the full body from their intent.
-- save_drive_template: save a Google Doc the user names as a reusable template.`
+- save_drive_template: save a Google Doc the user names as a reusable template.
+- list_templates: read the user's saved templates (name, subject, full body). Use it when they ask to draft from a template or to adapt one.`
     : "";
   const actRules = canAct
     ? `\n- Taking actions: when the user asks you to schedule something, draft an email, or save a template, actually call the matching tool — don't just describe what you would do. Confirm concretely afterward (what you created and when).
 - You only ever create a DRAFT email — you cannot and must not send mail. Always say the draft is waiting in their Gmail for them to send.
-- For event times, pass the user's words verbatim to create_calendar_event; if their phrasing has no clear date/time, ask them for one rather than guessing.`
+- For event times, pass the user's words verbatim to create_calendar_event; if their phrasing has no clear date/time, ask them for one rather than guessing.
+- Templates: when the user references one of their saved templates ("use my outreach template", "draft from my X template"), call list_templates, pick the one they mean, and MEANINGFULLY adapt it to their request — fill in the {{placeholders}} with the specifics they gave, and change tone, length, or content as asked — then call draft_email with your edited subject and body. Don't just echo the template back unchanged.`
     : "";
   const dataBlock = dataDigest
     ? `\n\nThe user's connected data (your working memory — use it directly for quick questions, and search_my_data for anything more specific):\n${dataDigest}`
@@ -158,7 +167,7 @@ export async function ask(message: string, ctx?: AskDataContext): Promise<AskRes
   const functions = [
     WEB_SEARCH_FN,
     ...(ctx?.searchData ? [SEARCH_MY_DATA_FN] : []),
-    ...(ctx?.actions ? [CREATE_EVENT_FN, DRAFT_EMAIL_FN, SAVE_TEMPLATE_FN] : []),
+    ...(ctx?.actions ? [CREATE_EVENT_FN, DRAFT_EMAIL_FN, SAVE_TEMPLATE_FN, LIST_TEMPLATES_FN] : []),
     LIST_DIR_FN,
     READ_FILE_FN,
   ];
@@ -214,6 +223,10 @@ export async function ask(message: string, ctx?: AskDataContext): Promise<AskRes
       const out = await ctx.actions.saveTemplate(args as Parameters<typeof ctx.actions.saveTemplate>[0]);
       if (out.ref) actions.push(out.ref);
       return { ok: out.ok, result: out.message };
+    }
+    if (name === "list_templates" && ctx?.actions) {
+      const out = await ctx.actions.listTemplates(); // read-only — no action ref to surface
+      return { ok: out.ok, content: out.message };
     }
     return { ok: false, content: `Unknown tool: ${name || "(unnamed)"}` };
   }

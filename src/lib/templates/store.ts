@@ -230,6 +230,36 @@ export async function saveDriveTemplate(
   return { templateId: data.id as string, name };
 }
 
+/**
+ * Save a template the user typed or uploaded themselves (source = "user"). Like saveDriveTemplate it
+ * applies NO scrubbing — the privacy contract only governs Jarvis-GENERATED templates; a template the
+ * user authored is stored verbatim. Placeholders are derived from subject + body.
+ */
+export async function saveUserTemplate(
+  supabase: SupabaseClient,
+  userId: string,
+  args: { name: string; subject?: string; body: string },
+): Promise<{ templateId: string; name: string }> {
+  const body = args.body.trim();
+  if (!body) throw new Error("A template needs some body text.");
+  const subject = args.subject?.trim() || undefined;
+  const name = args.name.trim() || "Untitled template";
+  const { data, error } = await supabase
+    .from("email_templates")
+    .insert({
+      user_id: userId,
+      name,
+      subject: subject ?? null,
+      body,
+      placeholders: extractPlaceholders(subject ? `${subject}\n${body}` : body),
+      source: "user",
+    })
+    .select("id")
+    .single();
+  if (error) throw new Error(`Could not save template: ${error.message}`);
+  return { templateId: data.id as string, name };
+}
+
 export async function deleteTemplate(supabase: SupabaseClient, userId: string, id: string): Promise<void> {
   await supabase.from("email_templates").delete().eq("user_id", userId).eq("id", id);
 }
