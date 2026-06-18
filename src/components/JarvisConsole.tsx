@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Mic, Send, Globe, FileText, ExternalLink, Square, Volume2, VolumeX, Headphones, CalendarPlus, Mail, BookmarkPlus, CheckCircle2 } from "lucide-react";
+import { Mic, Send, Globe, FileText, ExternalLink, Square, Volume2, VolumeX, Headphones, CalendarPlus, Mail, BookmarkPlus, CheckCircle2, Loader2 } from "lucide-react";
 import { JarvisOrb, type OrbState } from "@/components/JarvisOrb";
 import { JarvisSphere } from "@/components/JarvisSphere";
 import { LiveClock } from "@/components/LiveClock";
@@ -29,10 +29,17 @@ const EXAMPLES = [
   "Summarize the newest file in my fineprint folder",
 ];
 
+// Conversation mode keeps re-opening the mic across natural pauses, but a muted/dead mic must not
+// loop forever — cap consecutive silent turns, resetting whenever real speech is captured.
+const MAX_EMPTY_TURNS = 3;
+
 export function JarvisConsole({ hero = false }: { hero?: boolean }) {
   const [input, setInput] = useState("");
   const [phase, setPhase] = useState<OrbState>("idle");
   const [answer, setAnswer] = useState<AskResponse | null>(null);
+  // The question currently being answered — echoed on-screen so the long /api/ask call never looks
+  // like the screen went blank ("it disappears once I finish talking").
+  const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [voiceSupported, setVoiceSupported] = useState(false);
   // Spoken replies (ElevenLabs via /api/voice). On by default; the preference is remembered.
@@ -47,6 +54,11 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   const finalTranscriptRef = useRef("");
+  // Browsers often end a session WITHOUT promoting the last (or only) words to "final" — esp. for
+  // short/quiet utterances — so keep the latest interim text too and fall back to it on end.
+  const interimTranscriptRef = useRef("");
+  // Consecutive empty listening turns in conversation mode (the silent-loop backstop).
+  const emptyTurnsRef = useRef(0);
   // Mirror of phase so submit() can guard re-entry without being recreated each render.
   const phaseRef = useRef<OrbState>("idle");
   // Mirrors so callbacks/audio handlers read live values without being recreated (and without
@@ -164,10 +176,14 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
 
   const submit = useCallback(async (text: string) => {
     const message = text.trim();
-    if (!message || phaseIsBusy(phaseRef.current)) return;
+    // Only an in-flight request blocks a new one. Crucially we must NOT block on "listening": the
+    // voice path calls submit() from recognition's onend while phase is still "listening" (phaseRef
+    // lags one commit behind setPhase), and blocking there is exactly why spoken questions almost
+    // never got answered — it raced, slipping through only for very short utterances.
+    if (!message || phaseRef.current === "thinking") return;
     setPhase("thinking");
     setError(null);
-    setAnswer(null);
+    setPending(message); // show the question + a thinking indicator for the whole multi-second call
     try {
       const res = await fetch("/api/ask", {
         method: "POST",
@@ -176,7 +192,9 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
       });
       const data = await res.json();
       if (!res.ok) {
+        setAnswer(null);
         setError(data?.error ?? "Jarvis couldn't answer that.");
+        setPending(null);
         setPhase("idle");
         // Keep a hands-free conversation going even after a stumble.
         if (convoModeRef.current) startListeningRef.current();
@@ -184,10 +202,13 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
         // Success: the speak effect takes over (and, in convo mode, re-opens the mic when it ends).
         // If voice is off and we're not conversing, settle to idle now.
         setAnswer(data as AskResponse);
+        setPending(null);
         if (!speechOnRef.current && !convoModeRef.current) setPhase("idle");
       }
     } catch {
+      setAnswer(null);
       setError("Network error reaching the assistant.");
+      setPending(null);
       setPhase("idle");
       if (convoModeRef.current) startListeningRef.current();
     }
@@ -221,6 +242,10 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
     rec.interimResults = true;
     rec.lang = "en-US";
     finalTranscriptRef.current = "";
+    interimTranscriptRef.current = "";
+    // A permission/hardware/network failure this session: don't auto-restart the convo loop into the
+    // same wall. Lives in the closure so onend (which always fires after onerror) can read it.
+    let fatal = false;
     rec.onresult = (e) => {
       // e.results is CUMULATIVE — it contains every result for the session, and finalized ones keep
       // their isFinal flag on later events. So rebuild the transcript from scratch each event rather
@@ -234,31 +259,56 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
         else interim += text;
       }
       finalTranscriptRef.current = finalText;
+      interimTranscriptRef.current = interim;
       setInput((finalText + interim).trimStart());
     };
     rec.onend = () => {
       recognitionRef.current = null;
-      const said = finalTranscriptRef.current.trim();
-      if (said) {
+      // Combine finalized + trailing interim text. Browsers routinely end a session (short or quiet
+      // utterances especially) WITHOUT promoting the last words to "final", so the interim tail is
+      // all we have — submitting it recovers the dominant "it didn't hear me" case. The two refs are
+      // complementary (onresult splits each cumulative event), so concatenating never double-counts.
+      const said = `${finalTranscriptRef.current} ${interimTranscriptRef.current}`.replace(/\s+/g, " ").trim();
+      if (said && !fatal) {
+        emptyTurnsRef.current = 0; // captured speech — reset the silent-turn backstop
         setInput("");
         void submit(said);
+        return;
+      }
+      // Heard nothing. In conversation mode, keep the hands-free loop alive across a natural pause by
+      // re-opening the mic — but cap consecutive silent turns so a muted/dead mic can't spin forever.
+      // (A fatal error never re-arms; the user taps the orb to resume.)
+      if (!fatal && convoModeRef.current && emptyTurnsRef.current < MAX_EMPTY_TURNS) {
+        emptyTurnsRef.current += 1;
+        startListeningRef.current();
       } else {
-        // Heard nothing — settle to idle. In conversation mode this is the natural way to end the
-        // back-and-forth (you simply stop talking); tap the orb to start a new turn.
         setPhase("idle");
       }
     };
     rec.onerror = (e) => {
-      setPhase("idle");
       recognitionRef.current = null;
       const err = e?.error;
-      // Surface the failures the user can actually act on; "no-speech"/"aborted" are normal — stay quiet.
+      // Surface only the failures the user can act on, and mark them fatal so the loop doesn't re-arm
+      // into the same error. "no-speech"/"aborted" are normal — leave phase alone and let onend (which
+      // always fires next) decide whether to re-listen (convo mode) or idle.
       if (err === "not-allowed" || err === "service-not-allowed") {
+        fatal = true;
         setError("Microphone access is blocked. Allow mic permission for this site in your browser, then tap the orb again.");
       } else if (err === "audio-capture") {
+        fatal = true;
         setError("No microphone was found. Check that one is connected and not in use by another app.");
       } else if (err === "network") {
+        fatal = true;
         setError("Speech recognition needs a network connection and couldn't reach the service.");
+      }
+      // A fatal error also drops hands-free mode so the headphones button reflects that the loop has
+      // stopped (rather than reading "on" over a dead mic).
+      if (fatal) {
+        setPhase("idle");
+        if (convoModeRef.current) {
+          convoModeRef.current = false;
+          setConvoMode(false);
+        }
       }
     };
     recognitionRef.current = rec;
@@ -303,6 +353,7 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
     convoModeRef.current = next;
     setConvoMode(next);
     if (next) {
+      emptyTurnsRef.current = 0;
       if (voiceSupported && !phaseIsBusy(phaseRef.current)) startListeningRef.current();
     } else {
       stopListening();
@@ -320,7 +371,10 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
       return;
     }
     if (phaseRef.current === "speaking") stopSpeaking();
-    if (voiceSupported) startListeningRef.current();
+    if (voiceSupported) {
+      emptyTurnsRef.current = 0; // a manual tap gets a fresh silent-turn budget
+      startListeningRef.current();
+    }
   }, [voiceSupported, stopListening, stopSpeaking]);
 
   const listening = phase === "listening";
@@ -333,7 +387,9 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
   const idleStatus = hero
     ? convoMode
       ? "Conversation mode — tap the orb and speak"
-      : ""
+      : answer
+        ? "Answered — see below"
+        : ""
     : "Ask about your email, calendar, meetings & tasks — or search the web and your files";
   const statusText = thinking
     ? "Thinking…"
@@ -412,7 +468,13 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
         {voiceSupported && (
           <button
             type="button"
-            onClick={() => (listening ? stopListening() : startListening())}
+            onClick={() => {
+              if (listening) stopListening();
+              else {
+                emptyTurnsRef.current = 0;
+                startListening();
+              }
+            }}
             disabled={thinking}
             aria-label={listening ? "Stop" : "Talk"}
             className={`rounded-lg p-1.5 transition-colors ${listening ? "text-danger" : "text-muted hover:text-accent"}`}
@@ -452,13 +514,28 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
         </div>
       )}
 
-      {error && (
+      {/* While Jarvis works, echo the question + an explicit thinking indicator so the screen never
+          looks blank after you speak/send (and the prior answer is hidden until the new one lands). */}
+      {pending && (
+        <div className="mt-5 w-full space-y-3">
+          <div className="rounded-xl border border-border/70 bg-surface/40 px-4 py-2.5">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-muted">You asked</p>
+            <p className="mt-0.5 text-sm text-foreground">{pending}</p>
+          </div>
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-muted-strong">
+            <Loader2 className="h-4 w-4 animate-spin text-accent" />
+            Jarvis is thinking…
+          </div>
+        </div>
+      )}
+
+      {error && !pending && (
         <p className="mt-5 w-full rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
           {error}
         </p>
       )}
 
-      {answer && (
+      {answer && !pending && (
         <div className="mt-5 w-full space-y-4">
           <div className="rounded-xl border border-border bg-surface-2 p-4">
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">

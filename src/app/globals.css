@@ -118,12 +118,18 @@ body {
 .orb-breathe { animation: orb-breathe 4s ease-in-out infinite; }
 .orb-pulse-ring { animation: orb-pulse-ring 2.4s ease-out infinite; }
 
-/* ---- Jarvis orb (layered morphing blob) ----------------------------------- */
-/* A living orb: layered gradient blobs that morph (border-radius), rotate 360°, drift, and glow —
-   richer and faster when Jarvis is talking ([data-active="true"]). Speed/scale scale off two custom
-   props (--orb-spin, --orb-morph, --orb-amp) so one attribute toggles "idle" vs "talking". */
+/* ---- Jarvis orb (layered pulsating sphere) -------------------------------- */
+/* A living orb: round gradient layers that rotate 360° and glow while the whole orb gently PULSATES
+   (swells then eases back — no shape change), richer and faster when Jarvis is talking
+   ([data-active="true"]). Speed/scale scale off custom props (--orb-spin, --orb-pulse, --orb-amp). */
 @keyframes jarvis-spin   { to { transform: rotate(360deg); } }
 @keyframes jarvis-spin-r { to { transform: rotate(-360deg); } }
+/* Pulsate: the whole orb gradually swells then eases back to size — no shape change. The grow phase
+   is half the cycle (≈1s idle, faster when active); amplitude scales with --orb-amp. */
+@keyframes jarvis-pulsate {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(calc(1 + 0.06 * var(--orb-amp, 1))); }
+}
 @keyframes jarvis-morph {
   0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
   33%      { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
@@ -150,14 +156,16 @@ body {
 
 .jarvis-orb {
   --orb-spin: 26s;   /* full-rotation period   (smaller = faster) */
-  --orb-morph: 9s;   /* shape-morph period */
+  --orb-morph: 9s;   /* glow-cycle period */
+  --orb-pulse: 2s;   /* pulsate period — grow phase is half this (≈1s) */
   --orb-amp: 1;      /* motion amplitude multiplier */
   position: relative;
   display: grid;
   place-items: center;
   isolation: isolate;
+  animation: jarvis-pulsate var(--orb-pulse) ease-in-out infinite;
 }
-.jarvis-orb[data-active="true"] { --orb-spin: 11s; --orb-morph: 4.5s; --orb-amp: 2.1; }
+.jarvis-orb[data-active="true"] { --orb-spin: 11s; --orb-morph: 4.5s; --orb-pulse: 1.5s; --orb-amp: 2.1; }
 
 .jarvis-orb__glow {
   position: absolute;
@@ -167,44 +175,38 @@ body {
   filter: blur(22px);
   animation: jarvis-glow calc(var(--orb-morph) * 0.7) ease-in-out infinite;
 }
-/* Two morphing gradient blobs, counter-rotating + drifting, blended for depth. */
+/* Two round gradient layers, counter-rotating, blended for depth. Fixed circles — the rotation spins
+   the conic gradient (the energy "sheen") without ever changing the orb's shape. */
 .jarvis-orb__blob {
   position: absolute;
   inset: 7%;
+  border-radius: 9999px;
   background-size: 200% 200%;
   mix-blend-mode: screen;
   filter: blur(6px);
-  will-change: transform, border-radius;
+  will-change: transform;
 }
 .jarvis-orb__blob--a {
   background: conic-gradient(from 0deg, #38bdf8, #0ea5e9, #67e8f9, #0c4a6e, #38bdf8);
   opacity: 0.85;
-  animation:
-    jarvis-spin var(--orb-spin) linear infinite,
-    jarvis-morph var(--orb-morph) ease-in-out infinite,
-    jarvis-drift calc(var(--orb-morph) * 1.3) ease-in-out infinite;
+  animation: jarvis-spin var(--orb-spin) linear infinite;
 }
 .jarvis-orb__blob--b {
   inset: 14%;
   background: conic-gradient(from 180deg, #0ea5e9, #a5f3fc, #0369a1, #38bdf8, #0ea5e9);
   opacity: 0.6;
-  animation:
-    jarvis-spin-r calc(var(--orb-spin) * 1.4) linear infinite,
-    jarvis-morph-2 calc(var(--orb-morph) * 1.15) ease-in-out infinite,
-    jarvis-drift var(--orb-morph) ease-in-out infinite reverse;
+  animation: jarvis-spin-r calc(var(--orb-spin) * 1.4) linear infinite;
 }
-/* The luminous core — morphs gently and breathes; holds the wordmark. */
+/* The luminous core — a steady round disc; holds the wordmark. The whole orb pulsates via .jarvis-orb. */
 .jarvis-orb__core {
   position: relative;
   width: 64%;
   height: 64%;
   display: grid;
   place-items: center;
+  border-radius: 9999px;
   background: radial-gradient(circle at 36% 30%, rgba(230,247,255,0.95), rgba(56,189,248,0.5) 42%, rgba(8,30,45,0.85) 78%);
   box-shadow: 0 0 44px 8px rgba(56,189,248,0.5), inset 0 0 26px rgba(230,247,255,0.45);
-  animation:
-    jarvis-morph-2 calc(var(--orb-morph) * 1.05) ease-in-out infinite,
-    jarvis-breathe calc(var(--orb-morph) * 0.8) ease-in-out infinite;
 }
 /* Rotating conic highlight ring (the "360" sheen). */
 .jarvis-orb__sheen {
@@ -227,5 +229,5 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .orb-spin, .orb-spin-fast, .orb-spin-rev, .orb-breathe, .orb-pulse-ring,
-  .jarvis-orb__glow, .jarvis-orb__blob, .jarvis-orb__core, .jarvis-orb__sheen { animation: none; }
+  .jarvis-orb, .jarvis-orb__glow, .jarvis-orb__blob, .jarvis-orb__core, .jarvis-orb__sheen { animation: none; }
 }

@@ -5,6 +5,7 @@ import { Card } from "@/components/Card";
 import { AddToGoal } from "@/components/goals/AddToGoal";
 import { DraftToContact } from "@/components/google/DraftToContact";
 import { ContactStatusControl } from "@/components/ContactStatusControl";
+import { RemoveContactButton } from "@/components/RemoveContactButton";
 import type { CardFieldSource, CardSource } from "@/lib/types";
 import type { DiscoveredPerson } from "@/lib/research/types";
 
@@ -120,6 +121,7 @@ export function PersonCard({
       <ContactStatusControl contactId={person.id} initial={person.outreachStatus} />
       <DraftToContact name={person.fullName} email={emailChannel} />
       <AddToGoal entityType="contact" entityId={person.id} />
+      <RemoveContactButton contactId={person.id} name={person.fullName} />
     </>
   ) : person.reviewStatus === "review" ? (
     <>

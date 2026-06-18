@@ -45,3 +45,26 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ id: contact.id });
 }
+
+/**
+ * DELETE /api/contacts?id=<contactId> — remove a contact and its channels. User-driven; RLS scopes
+ * the delete to the signed-in user's own rows, so it can never touch another user's contacts.
+ */
+export async function DELETE(request: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+
+  const id = new URL(request.url).searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "id is required." }, { status: 400 });
+
+  // Remove channels first — contact_channels.contact_id references contacts, so without a guaranteed
+  // ON DELETE CASCADE deleting the contact while channels still reference it would fail.
+  await supabase.from("contact_channels").delete().eq("contact_id", id);
+  const { error } = await supabase.from("contacts").delete().eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ ok: true });
+}
