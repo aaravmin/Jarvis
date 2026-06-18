@@ -135,6 +135,20 @@ export async function runPeopleSearch(
             confidence: g.confidence ?? null,
           })),
         );
+        // Also write the universal anchor so research-linked contacts show under their goals.
+        // L0: these land as suggested links the user approves on the goal page.
+        await supabase.from("goal_links").insert(
+          c.goalLinks.map((g) => ({
+            user_id: userId,
+            goal_id: g.goalId,
+            entity_type: "contact",
+            entity_id: contactId,
+            rationale: g.rationale ?? null,
+            confidence: g.confidence ?? null,
+            review_status: "review",
+            created_by: "jarvis",
+          })),
+        );
       }
 
       people.push(candidateToPerson(contactId, c));

@@ -88,9 +88,10 @@ export async function setLinkReview(
     .select("entity_type, entity_id")
     .eq("id", linkId)
     .maybeSingle();
+  if (!link) return { ok: false, error: "Link not found." }; // RLS-filtered or missing — don't fake success
   const { error } = await supabase.from("goal_links").update({ review_status: status }).eq("id", linkId);
   if (error) return { ok: false, error: error.message };
-  if (link) await refreshIntersection(supabase, userId, link.entity_type as GoalEntityType, link.entity_id as string);
+  await refreshIntersection(supabase, userId, link.entity_type as GoalEntityType, link.entity_id as string);
   return { ok: true };
 }
 
@@ -105,8 +106,9 @@ export async function unlinkById(
     .select("entity_type, entity_id")
     .eq("id", linkId)
     .maybeSingle();
+  if (!link) return { ok: false, error: "Link not found." };
   const { error } = await supabase.from("goal_links").delete().eq("id", linkId);
   if (error) return { ok: false, error: error.message };
-  if (link) await refreshIntersection(supabase, userId, link.entity_type as GoalEntityType, link.entity_id as string);
+  await refreshIntersection(supabase, userId, link.entity_type as GoalEntityType, link.entity_id as string);
   return { ok: true };
 }

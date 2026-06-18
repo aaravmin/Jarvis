@@ -28,6 +28,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "goalId, entityType, entityId are required." }, { status: 400 });
   }
 
+  // Verify the GOAL belongs to the user (RLS also enforces this; this gives a clean 404).
+  const { data: ownGoal } = await supabase.from("goals").select("id").eq("id", body.goalId).maybeSingle();
+  if (!ownGoal) return NextResponse.json({ error: "Goal not found." }, { status: 404 });
+
   // Verify the entity belongs to the user (entity_id is polymorphic — no FK — so check ownership here).
   const table = { contact: "contacts", opportunity: "opportunities", item: "items", source: "sources" }[
     body.entityType as GoalEntityType

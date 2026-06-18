@@ -120,7 +120,7 @@ export async function ingestGmail(supabase: SupabaseClient, userId: string): Pro
     const c = cls.get(i);
     if (!c || !c.keep || seen.has(e.id)) continue;
 
-    const { data: src } = await supabase
+    const { data: src, error: srcErr } = await supabase
       .from("sources")
       .insert({
         user_id: userId,
@@ -136,10 +136,12 @@ export async function ingestGmail(supabase: SupabaseClient, userId: string): Pro
       })
       .select("id")
       .single();
+    if (srcErr || !src) continue; // skip on insert failure (e.g. a dedup race) — don't count it
     imported++;
     groups.set(c.group, (groups.get(c.group) ?? 0) + 1);
 
     // Important person / opportunity sender → add to Contacts (L0 review), deduped by email.
+    // A jarvis contact MUST carry source_id (provenance CHECK), which src guarantees here.
     if (c.addContact && e.fromEmail && !knownEmails.has(e.fromEmail) && (c.category === "person" || c.category === "opportunity")) {
       const { data: contact } = await supabase
         .from("contacts")
@@ -147,7 +149,7 @@ export async function ingestGmail(supabase: SupabaseClient, userId: string): Pro
           user_id: userId,
           full_name: e.fromName,
           notes: `From email: ${e.subject}`,
-          source_id: src?.id ?? null,
+          source_id: src.id,
           source_quote: `${e.subject} — ${e.snippet}`.slice(0, 500),
           review_status: "review",
           created_by: "jarvis",
