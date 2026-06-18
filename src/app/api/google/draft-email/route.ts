@@ -23,14 +23,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
   const template = (body.template ?? "").trim();
-  if (!template) {
-    return NextResponse.json({ error: "Name your Drive template (or paste its link)." }, { status: 400 });
+  const context = (body.context ?? "").trim();
+  if (!template && !context) {
+    return NextResponse.json({ error: "Add a template or some context to draft from." }, { status: 400 });
   }
 
   try {
-    const draft = await draftEmailFromTemplate(supabase, user.id, template, {
+    const draft = await draftEmailFromTemplate(supabase, user.id, template || undefined, {
       to: body.to?.trim() || undefined,
-      context: body.context?.trim() || undefined,
+      context: context || undefined,
     });
     return NextResponse.json(draft);
   } catch (err) {

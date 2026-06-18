@@ -38,37 +38,38 @@ function getClient(): Anthropic {
   return new Anthropic({ apiKey });
 }
 
-export type EmailDraft = { subject: string; body: string; templateName: string; templateUrl?: string };
+export type EmailDraft = { subject: string; body: string; templateName?: string; templateUrl?: string };
 
+/**
+ * Draft an email. With a Drive template, fill its placeholders; WITHOUT one, draft from scratch given
+ * the recipient + context. Draft-only (no send — that needs the gmail.send write scope).
+ */
 export async function draftEmailFromTemplate(
   supabase: SupabaseClient,
   userId: string,
-  templateRef: string,
+  templateRef: string | undefined,
   opts: { to?: string; context?: string } = {},
 ): Promise<EmailDraft> {
-  const token = await getValidAccessToken(supabase, userId);
-
-  // Resolve the template: an explicit Drive/Docs link/id, or a name to search for.
-  const fileId = extractFileId(templateRef);
-  let doc: { name: string; text: string; webViewLink?: string };
-  if (fileId) {
-    doc = await readDocText(token, fileId);
-  } else {
-    const matches = await findDocsByName(token, templateRef);
-    if (!matches.length) throw new Error(`No Google Doc found matching "${templateRef}".`);
-    doc = await readDocText(token, matches[0].id);
+  let doc: { name: string; text: string; webViewLink?: string } | null = null;
+  if (templateRef && templateRef.trim()) {
+    const token = await getValidAccessToken(supabase, userId);
+    const fileId = extractFileId(templateRef);
+    if (fileId) {
+      doc = await readDocText(token, fileId);
+    } else {
+      const matches = await findDocsByName(token, templateRef);
+      if (!matches.length) throw new Error(`No Google Doc found matching "${templateRef}".`);
+      doc = await readDocText(token, matches[0].id);
+    }
+    if (!doc.text.trim()) throw new Error(`The template "${doc.name}" appears to be empty.`);
   }
-  if (!doc.text.trim()) throw new Error(`The template "${doc.name}" appears to be empty.`);
 
   const client = getClient();
   const model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
   const userMsg = [
-    `TEMPLATE (from Google Doc "${doc.name}"):`,
-    "---",
-    doc.text.slice(0, 12000),
-    "---",
+    doc ? `TEMPLATE (from Google Doc "${doc.name}"):\n---\n${doc.text.slice(0, 12000)}\n---` : "Draft a concise, warm email from scratch (no template).",
     opts.to ? `Recipient: ${opts.to}` : "",
-    opts.context ? `Context to use when filling the template:\n${opts.context}` : "",
+    opts.context ? `Context:\n${opts.context}` : "",
     "Draft the email now via the email_draft tool.",
   ]
     .filter(Boolean)
@@ -90,9 +91,9 @@ export async function draftEmailFromTemplate(
   const out = block.input as { subject?: string; body?: string };
 
   return {
-    subject: (out.subject ?? "").trim() || `Re: ${doc.name}`,
+    subject: (out.subject ?? "").trim() || (doc ? `Re: ${doc.name}` : "Hello"),
     body: (out.body ?? "").trim(),
-    templateName: doc.name,
-    templateUrl: doc.webViewLink,
+    templateName: doc?.name,
+    templateUrl: doc?.webViewLink,
   };
 }
