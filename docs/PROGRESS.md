@@ -25,6 +25,31 @@ People / Opportunities / Review / Auto-Populate are live. The **Google connector
 Drive/Sheets) is built; it activates once the user connects Google on the Connections tab.
 
 ## Task log (most recent first)
+- **Jarvis write-actions + manual contacts fix + user templates** — ✅ shipped to `main`, build green.
+  Three commits this session:
+  1. **Write-actions** (`62e119e`): the orb can now `create_calendar_event`, `draft_email`, and
+     `save_drive_template`, wired into `ask()`'s Gemini tool loop via `src/lib/assistant/actions.ts`
+     (`buildAskActions`). Calendar times resolve in code with chrono (hard rule #2) — the model passes
+     the user's verbatim phrase in `when`. Timed-vs-all-day is decided by clock intent
+     (`isCertain('hour') || meridiem !== null`, so "tonight"/"this morning" → timed, "June 20" →
+     all-day). All-day range ends get a +1 day (Google's all-day end is exclusive; chrono's is
+     inclusive), and the confirmation date is formatted from the resolved YYYY-MM-DD (no UTC
+     round-trip → no off-by-one in negative-offset zones). Email is **DRAFT only** (gmail.compose;
+     no send path — autonomy L0). Save-template reads a named/linked Doc (drive.readonly) → Supabase.
+     Each action returns a receipt (`AskActionRef` w/ `detail`) surfaced under "Done by Jarvis";
+     missing scope → "Reconnect Google…". `/api/agent` now propagates citations/files/actions.
+  2. **Manual contacts fix** (`71616c6`): `loadAcceptedPeople` was filtering out every contact with
+     no `source_quote` — i.e. every manually-added one. Removed the filter; `PersonCard` renders
+     manual contacts (no provenance) via a non-`<Card>` tile with an "Added by you" badge, keeping
+     the `<Card>` source-chip invariant (rule 4) intact for researched people. (Write path was
+     already correct — contact row + email/linkedin channels.)
+  3. **User templates** (`8e6286a`): "New template" form on the Templates page (type or upload a
+     .txt/.md) → `POST /api/templates/create` → `saveUserTemplate` (source "user", verbatim, no
+     scrub). New read-only `list_templates` assistant tool hands Jarvis each saved template's full
+     name/subject/body so it can MEANINGFULLY adapt one (fill placeholders, change tone/content)
+     and then `draft_email` the edited result — prompt instructs it not to echo verbatim.
+  - **tsc + full `npm run build` clean** after each commit. Adversarial review (workflow `wj8vppg39`)
+    run over the session diff — outcome folded in below.
 - **Gemini switch + Tavily web search + ElevenLabs voice + bare-orb home** — ✅ shipped (local), build green.
   Four user requests in one push:
   1. **Runtime LLM → Gemini** (commit `cc0b3d5`): all model calls go through `src/lib/llm/gemini.ts`

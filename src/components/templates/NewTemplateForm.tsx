@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FilePlus2, Upload, Loader2, X } from "lucide-react";
 
+const MAX_BODY = 50_000; // mirror the server cap so we reject before reading/uploading a huge file
+
 const input =
   "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted";
 
@@ -26,8 +28,18 @@ export function NewTemplateForm() {
     const file = e.target.files?.[0];
     if (!file) return;
     setErr(null);
+    // Reject oversized files BEFORE reading megabytes into the browser (server caps at the same size).
+    if (file.size > MAX_BODY) {
+      setErr(`That file is too large — keep templates under ${Math.round(MAX_BODY / 1000)}KB.`);
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
     try {
       const text = await file.text();
+      if (!text.trim()) {
+        setErr("That file looks empty. Pick a .txt or .md file with some text.");
+        return;
+      }
       setF((p) => ({
         ...p,
         body: text,
@@ -50,13 +62,16 @@ export function NewTemplateForm() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(f),
       });
-      const data = await res.json();
+      // Tolerate a non-JSON error body (gateway/timeout HTML page) without throwing.
+      const data = await res.json().catch(() => null);
       if (!res.ok) setErr(data?.error ?? "Could not save the template.");
       else {
         setF({ name: "", subject: "", body: "" });
         setOpen(false);
         router.refresh();
       }
+    } catch {
+      setErr("Couldn't reach the server. Check your connection and try again.");
     } finally {
       setBusy(false);
     }

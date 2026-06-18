@@ -57,6 +57,12 @@ function nextDayYmd(d: Date): string {
   return ymdLocal(new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1));
 }
 
+/** Turn an EXCLUSIVE all-day end (YYYY-MM-DD) back into the last INCLUDED day, for display. */
+function prevDayYmd(ymd: string): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return ymdLocal(new Date(y, m - 1, d - 1));
+}
+
 /**
  * Format a YYYY-MM-DD as a plain calendar date for display, WITHOUT a timezone round-trip. Parsing a
  * bare date as UTC-midnight and rendering it in a negative-offset zone (e.g. America/New_York) would
@@ -70,12 +76,37 @@ function formatYmdLabel(ymd: string): string {
 }
 
 /**
- * Has chrono pinned an actual time-of-day? True when the hour is explicit ("3pm") OR when a
- * day-segment word implied one ("tonight"/"this morning" leave isCertain('hour') false but set a
- * meridiem). A pure date ("June 20", "next Friday") sets neither, so it stays all-day.
+ * A human label for a resolved time. Handles all-day RANGES and multi-day TIMED spans so the
+ * confirmation never understates a multi-day booking by showing only its first day (hard rule #7).
  */
-function hasClockIntent(c: chrono.ParsedComponents): boolean {
-  return c.isCertain("hour") || c.get("meridiem") !== null;
+function describeResolved(t: { startISO?: string; endISO?: string; startDate?: string; endDate?: string }): string {
+  if (t.startDate) {
+    if (t.endDate) {
+      const last = prevDayYmd(t.endDate); // endDate is exclusive → the last INCLUDED day is the day before
+      if (last !== t.startDate) return `${formatYmdLabel(t.startDate)} – ${formatYmdLabel(last)}`;
+    }
+    return formatYmdLabel(t.startDate);
+  }
+  const start = formatWhen(t.startISO ?? "");
+  if (t.endISO && t.endISO.slice(0, 10) !== (t.startISO ?? "").slice(0, 10)) {
+    return `${start} – ${formatWhen(t.endISO)}`; // multi-day timed span — show the end too
+  }
+  return start;
+}
+
+/** Day-segment words that genuinely imply a time-of-day (chrono sets a meridiem for them). */
+const SEGMENT_WORDS = /\b(tonight|morning|afternoon|evening|night|noon|midnight|midday)\b/i;
+
+/**
+ * Does this component carry an actual time-of-day? True when chrono pinned an explicit hour ("3pm"),
+ * OR when a meridiem was implied AND the phrase contains a day-segment word ("tonight", "this
+ * morning"). A meridiem WITHOUT a segment word does NOT count: chrono attaches a default meridiem to
+ * bare relative phrases ("next week", "next month", "in 2 weeks"), and treating those as timed would
+ * fabricate a clock time the user never gave (hard rules #2/#7) — they must stay all-day.
+ */
+function isTimedComponent(c: chrono.ParsedComponents, text: string): boolean {
+  if (c.isCertain("hour")) return true;
+  return c.get("meridiem") !== null && SEGMENT_WORDS.test(text);
 }
 
 /**
@@ -105,9 +136,22 @@ function resolveEventTime(raw: string, refISO: string): ResolvedTime {
   const first = results[0];
   if (!first) return { ok: false };
 
-  if (hasClockIntent(first.start)) {
+  if (isTimedComponent(first.start, text)) {
     const startISO = first.start.date().toISOString();
-    const endISO = first.end && hasClockIntent(first.end) ? first.end.date().toISOString() : undefined;
+    let endISO: string | undefined;
+    if (first.end) {
+      if (isTimedComponent(first.end, text)) {
+        endISO = first.end.date().toISOString(); // explicit end time ("2-3pm")
+      } else {
+        // Start is timed but the end is a date-only boundary ("tomorrow 9am to next Friday"). Don't
+        // drop it (which would collapse to a default 1-hour event) — span to the end day at the
+        // start's time-of-day, so the multi-day extent the user gave is preserved.
+        const s = first.start.date();
+        const e = first.end.date();
+        const combined = new Date(e.getFullYear(), e.getMonth(), e.getDate(), s.getHours(), s.getMinutes(), s.getSeconds());
+        if (combined.getTime() > s.getTime()) endISO = combined.toISOString();
+      }
+    }
     return { ok: true, startISO, endISO };
   }
   // Day-only → all-day event. chrono's range end is INCLUSIVE ("June 20 to June 22" means through the
@@ -162,9 +206,9 @@ export function buildAskActions(supabase: SupabaseClient, userId: string): AskAc
           description: description?.trim() || undefined,
           location: location?.trim() || undefined,
         });
-        // All-day: format from the resolved YYYY-MM-DD directly (never round-trip through a UTC Date,
-        // which would show the prior day in a negative-offset zone). Timed: formatWhen on the instant.
-        const whenLabel = t.startDate ? formatYmdLabel(t.startDate) : formatWhen(ev.startISO);
+        // describeResolved handles all-day vs timed AND multi-day ranges, formatting all-day dates from
+        // the resolved YYYY-MM-DD directly (no UTC round-trip → no off-by-one in negative-offset zones).
+        const whenLabel = describeResolved(t);
         return {
           ok: true,
           message: `Created "${title}" on your calendar for ${whenLabel}${ev.location ? ` at ${ev.location}` : ""}.`,
@@ -223,18 +267,39 @@ export function buildAskActions(supabase: SupabaseClient, userId: string): AskAc
 
       try {
         // Accept a Drive/Docs URL or bare id directly; otherwise search the user's Docs by name.
-        let fileId = extractFileId(docRef);
+        const looksLikeUrl = /https?:\/\//i.test(docRef) || docRef.includes("/");
+        const idGuess = extractFileId(docRef);
+        let fileId = idGuess;
         let note = "";
-        if (!fileId) {
+
+        const resolveByName = async (): Promise<string | null> => {
           const matches = await findDocsByName(token, docRef);
-          if (matches.length === 0) {
+          if (matches.length === 0) return null;
+          if (matches.length > 1) note = ` (I matched the most recent of ${matches.length} docs named like that)`;
+          return matches[0].id; // most-recently-modified match
+        };
+
+        if (!fileId) {
+          fileId = await resolveByName();
+          if (!fileId) {
             return { ok: false, message: `I couldn't find a Google Doc named "${docRef}" in your Drive. Check the name, or paste the document's link.` };
           }
-          fileId = matches[0].id; // most-recently-modified match
-          if (matches.length > 1) note = ` (I matched the most recent of ${matches.length} docs named like that)`;
         }
 
-        const doc = await readDocText(token, fileId);
+        let doc;
+        try {
+          doc = await readDocText(token, fileId);
+        } catch (readErr) {
+          // extractFileId treats any 20+ char single token as an id, so a space-free doc NAME
+          // ("OutreachTemplateV2") can be misread as one. If the read fails on an id we GUESSED from a
+          // non-URL string, fall back to a name search before giving up.
+          if (!idGuess || looksLikeUrl) throw readErr;
+          const byName = await resolveByName();
+          if (!byName) throw readErr;
+          fileId = byName;
+          doc = await readDocText(token, fileId);
+        }
+
         const saved = await saveDriveTemplate(supabase, userId, {
           name: name?.trim() || doc.name,
           body: doc.text,
