@@ -10,6 +10,7 @@ import {
   Target,
   Inbox,
   Plug,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -48,6 +49,13 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Mail,
     description: "The Email agent: triage Gmail into sourced tasks, replies, and follow-ups.",
     deliveredBy: "Email agent · needs Gmail connected",
+  },
+  {
+    label: "Templates",
+    href: "/templates",
+    icon: FileText,
+    description: "Reusable email templates and the connection types they fit — adapt one to a contact, save a generalized version.",
+    deliveredBy: "Email agent · connection-aware templates",
   },
   {
     label: "Calendar",
@@ -102,7 +110,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Connections",
     href: "/connections",
     icon: Plug,
-    description: "Connect Google (read-only) so agents can use your Drive, Sheets, Gmail and Calendar.",
+    description: "Connect Google so agents can read your Gmail, Calendar, Drive & Sheets — and save drafts, add events, and export contacts.",
     deliveredBy: "Google connector",
   },
 ];
