@@ -1,5 +1,5 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
+import { geminiStructured } from "@/lib/llm/gemini";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getValidAccessToken } from "@/lib/google/store";
 import { listMessageIds, getMessage, gmailLink, type GmailMessage } from "@/lib/google/gmail";
@@ -8,15 +8,36 @@ import { loadGoalDigests } from "@/lib/goals/facts";
 import { loadProfile, profileDigest } from "@/lib/profile";
 
 /**
- * Gmail + Calendar ingestion. Gmail is triaged by Claude relative to the user's goals/profile: only
+ * Gmail + Calendar ingestion. Gmail is triaged by Gemini relative to the user's goals/profile: only
  * genuinely important mail is kept (spam/promotions/noise dropped entirely), grouped by sender/org,
  * and important senders / opportunity threads add the sender to Contacts (L0 review). Calendar is kept
  * as-is (no filtering). Everything is stored as `sources` (the provenance anchor), deduped by id.
  */
 
-const DEFAULT_MODEL = "claude-sonnet-4-6";
-
 type Classification = { idx: number; keep: boolean; category: string; group: string; addContact: boolean };
+
+const CLASSIFY_SCHEMA = {
+  type: "object" as const,
+  additionalProperties: false,
+  properties: {
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          idx: { type: "number" },
+          keep: { type: "boolean" },
+          category: { type: "string", enum: ["opportunity", "person", "update", "other"] },
+          group: { type: "string" },
+          add_contact: { type: "boolean" },
+        },
+        required: ["idx", "keep", "group"],
+      },
+    },
+  },
+  required: ["items"],
+};
 
 async function relevance(supabase: SupabaseClient): Promise<string> {
   const [profile, goals] = await Promise.all([loadProfile(supabase), loadGoalDigests(supabase)]);
@@ -26,50 +47,18 @@ async function relevance(supabase: SupabaseClient): Promise<string> {
 }
 
 async function classifyEmails(emails: GmailMessage[], who: string): Promise<Map<number, Classification>> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set.");
-  const client = new Anthropic({ apiKey });
   const list = emails
     .map((e, i) => `[${i}] from: ${e.fromName} <${e.fromEmail}> | subject: ${e.subject} | ${e.snippet.slice(0, 160)}`)
     .join("\n");
 
-  const resp = await client.messages.create({
-    model: process.env.ANTHROPIC_MODEL || DEFAULT_MODEL,
-    max_tokens: 4000,
+  const out = await geminiStructured<{ items?: Record<string, unknown>[] }>({
     system: `You triage a person's inbox. KEEP only genuinely important emails; DROP promotions, marketing, newsletters, social notifications, automated noise, and spam (keep=false for those). For kept emails, GROUP by the sender's organization or person (e.g. "Brown University", "Jane Smith", "YC"). Set add_contact=true when the sender is a real person worth tracking, or the email is a real opportunity/intro. Judge importance relative to the user below.${who ? `\n\n${who}` : ""}`,
-    tools: [
-      {
-        name: "classify_emails",
-        input_schema: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            items: {
-              type: "array",
-              items: {
-                type: "object",
-                additionalProperties: false,
-                properties: {
-                  idx: { type: "number" },
-                  keep: { type: "boolean" },
-                  category: { type: "string", enum: ["opportunity", "person", "update", "other"] },
-                  group: { type: "string" },
-                  add_contact: { type: "boolean" },
-                },
-                required: ["idx", "keep", "group"],
-              },
-            },
-          },
-          required: ["items"],
-        },
-      } as unknown as Anthropic.Tool,
-    ],
-    tool_choice: { type: "tool", name: "classify_emails" },
-    messages: [{ role: "user", content: `Triage these inbox emails:\n${list}` }],
-  } as unknown as Anthropic.MessageCreateParamsNonStreaming);
+    user: `Triage these inbox emails:\n${list}`,
+    schema: CLASSIFY_SCHEMA,
+    maxTokens: 4000,
+  });
 
-  const block = resp.content.find((b) => b.type === "tool_use") as Anthropic.ToolUseBlock | undefined;
-  const items = ((block?.input as { items?: Record<string, unknown>[] })?.items ?? []) as Record<string, unknown>[];
+  const items = (out?.items ?? []) as Record<string, unknown>[];
   const map = new Map<number, Classification>();
   for (const it of items) {
     const idx = Number(it.idx);

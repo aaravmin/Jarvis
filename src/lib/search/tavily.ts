@@ -16,7 +16,7 @@ import "server-only";
 const TAVILY_ENDPOINT = "https://api.tavily.com/search";
 const TIMEOUT_MS = 8000;
 
-export type TavilyResult = { title: string; url: string; content: string; score?: number };
+export type TavilyResult = { title: string; url: string; content: string; raw_content?: string; score?: number };
 
 /** True when a TAVILY_API_KEY is configured. Callers can branch UI/telemetry on this. */
 export function tavilyEnabled(): boolean {
@@ -26,7 +26,7 @@ export function tavilyEnabled(): boolean {
 /** Raw Tavily search. Returns [] on any error or when no key is set. */
 export async function tavilySearch(
   query: string,
-  opts: { maxResults?: number; searchDepth?: "basic" | "advanced" } = {},
+  opts: { maxResults?: number; searchDepth?: "basic" | "advanced"; includeRawContent?: boolean } = {},
 ): Promise<TavilyResult[]> {
   const apiKey = process.env.TAVILY_API_KEY;
   if (!apiKey || !query.trim()) return [];
@@ -42,7 +42,9 @@ export async function tavilySearch(
         search_depth: opts.searchDepth ?? "basic",
         max_results: Math.min(Math.max(opts.maxResults ?? 8, 1), 20),
         include_answer: false,
-        include_raw_content: false,
+        // Richer page text lets the research engines back a model's VERBATIM quote against a real
+        // source (hard rule #3) — the citation gate checks the quote is a substring of this content.
+        include_raw_content: opts.includeRawContent ?? false,
       }),
       signal: controller.signal,
     });
@@ -54,6 +56,31 @@ export async function tavilySearch(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * The web-search "tool" Jarvis's agent loops call. Returns compact, citation-shaped hits the model can
+ * read and quote from. Tavily is now the app's web search (replacing Anthropic's native web_search):
+ * the model only ever sees what this returns, so every quote it produces traces to a real result URL.
+ */
+export type WebHit = { title: string; url: string; content: string };
+
+export async function webSearch(
+  query: string,
+  opts: { maxResults?: number; deep?: boolean } = {},
+): Promise<WebHit[]> {
+  const results = await tavilySearch(query, {
+    maxResults: opts.maxResults ?? 6,
+    searchDepth: opts.deep ? "advanced" : "basic",
+    includeRawContent: opts.deep ?? false,
+  });
+  return results.map((r) => ({
+    title: r.title,
+    url: r.url,
+    // Prefer raw page text (richer, better for verbatim quoting) but cap it so a few hits don't blow
+    // the context budget.
+    content: (r.raw_content || r.content || "").slice(0, 4000),
+  }));
 }
 
 /** Bias the seed search toward the buckets the user asked for. */

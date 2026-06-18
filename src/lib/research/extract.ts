@@ -1,33 +1,38 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
+import { geminiToolLoop, geminiStructured } from "@/lib/llm/gemini";
+import { webSearch } from "@/lib/search/tavily";
 
 /**
- * The cohort research engine. Given a natural-language query + the user's goals, it asks Claude to
- * find real people via web search, then VALIDATES every claim against the web_search tool's own
- * citation objects before anything is returned for persistence.
+ * The cohort research engine. Given a natural-language query + the user's goals, it asks Gemini to
+ * find real people via Tavily web search, then VALIDATES every claim against the actual page content
+ * Tavily returned before anything is returned for persistence.
  *
- * The load-bearing rule (hard rule #3): the model's reported URLs and quotes are UNTRUSTED. We
- * harvest the real citations the server-side web_search tool produced (url + cited_text), build a
- * per-run allowlist, and:
- *   - DROP any candidate whose source_quote is not backed by a real citation, and
+ * The load-bearing rule (hard rule #3): the model's reported URLs and quotes are UNTRUSTED. The model
+ * never browses on its own — every page it sees comes from webSearch() (Tavily), and we keep each
+ * result's real page text as the citation corpus + a per-run URL allowlist, then:
+ *   - DROP any candidate whose source_quote is not a real substring of a retrieved page, and
  *   - null any field/channel source URL not in the allowlist.
  * That makes provenance verifiable rather than cosmetic. Nothing here computes dates.
  */
 
-// Stable web search tool (no code-execution dependency). 'web_search_20260209' also exists and adds
-// dynamic filtering, but requires the code execution tool; the stable version is enough here.
-const WEB_SEARCH_TOOL = {
-  type: "web_search_20250305",
+const WEB_SEARCH_FN = {
   name: "web_search",
-  max_uses: 8,
-} as const;
+  description:
+    "Search the public web for real, named people who match the cohort. Returns result pages (title, url, content). Issue focused queries; you may search several times. Only facts present in these results may be reported.",
+  parameters: {
+    type: "object" as const,
+    properties: { query: { type: "string", description: "The search query." } },
+    required: ["query"],
+  },
+};
 
-const DEFAULT_MODEL = "claude-sonnet-4-6";
-const MAX_PAUSE_CONTINUATIONS = 6;
+const MAX_TURNS = 8;
 const MAX_TOKENS = 8000;
 // Phase 2 (the structured report) needs more room: a cohort of people, each with verbatim quotes
-// and channels, can be large, and a truncated tool input would silently drop candidates.
+// and channels, can be large, and truncated output would silently drop candidates.
 const REPORT_MAX_TOKENS = 16000;
+// Per-result page text shown to the model (full text is kept in the citation corpus for validation).
+const RESULT_SNIPPET = 1800;
 
 export type GoalDigest = { id: string; title: string };
 
@@ -140,16 +145,6 @@ const REPORT_TOOL = {
   },
 };
 
-function getClient(): Anthropic {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "ANTHROPIC_API_KEY is not set. The research engine runs server-side and needs it in .env.local.",
-    );
-  }
-  return new Anthropic({ apiKey });
-}
-
 function norm(s: string): string {
   return s.toLowerCase().replace(/\s+/g, " ").trim();
 }
@@ -172,33 +167,6 @@ function backs(citedText: string, quote: string): boolean {
 function clamp01(n: unknown): number | undefined {
   if (typeof n !== "number" || Number.isNaN(n)) return undefined;
   return Math.max(0, Math.min(1, n));
-}
-
-/** Scan assistant content blocks for the web_search tool's real citations + result URLs. */
-function harvestCitations(blocks: unknown[]): { citations: Citation[]; urls: Set<string> } {
-  const citations: Citation[] = [];
-  const urls = new Set<string>();
-  for (const raw of blocks) {
-    const block = raw as {
-      type?: string;
-      content?: Array<{ type?: string; url?: string }>;
-      citations?: Array<{ type?: string; url?: string; cited_text?: string }>;
-    };
-    if (block.type === "web_search_tool_result" && Array.isArray(block.content)) {
-      for (const r of block.content) {
-        if (r.type === "web_search_result" && r.url) urls.add(r.url);
-      }
-    }
-    if (block.type === "text" && Array.isArray(block.citations)) {
-      for (const c of block.citations) {
-        if (c.type === "web_search_result_location" && c.url) {
-          urls.add(c.url);
-          citations.push({ url: c.url, citedText: c.cited_text ?? "" });
-        }
-      }
-    }
-  }
-  return { citations, urls };
 }
 
 /**
@@ -291,97 +259,87 @@ export type ResearchOutcome = {
   citationCount: number;
 };
 
-/** Run the two-phase research: (1) search the web, (2) force a structured, validated report. */
+/** Run the two-phase research: (1) agentic Tavily web search, (2) a structured, validated report. */
 export async function runPeopleResearch(
   query: string,
   goals: GoalDigest[],
 ): Promise<ResearchOutcome> {
-  const client = getClient();
-  const model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
   const goalsDigest = goals.length
     ? goals.map((g) => `- (${g.id}) ${g.title}`).join("\n")
     : "(no goals on file)";
 
-  // Phase 1 — research with web search. Loop through any pause_turn server-tool continuations.
-  const messages: Anthropic.MessageParam[] = [
-    {
-      role: "user",
-      content: `Cohort to find: ${query}
+  // Citation corpus: every page Tavily returns, kept with its FULL text so a model quote can be
+  // validated as a real substring. `searchLog` is a trimmed view shown to the report model.
+  const citations: Citation[] = [];
+  const urls = new Set<string>();
+  const searchLog: string[] = [];
+  const seenUrls = new Set<string>();
+
+  async function execute(name: string, args: Record<string, unknown>): Promise<Record<string, unknown>> {
+    if (name !== "web_search") return { error: `Unknown tool: ${name}` };
+    const q = String(args.query ?? "").trim();
+    if (!q) return { results: [] };
+    const hits = await webSearch(q, { deep: true, maxResults: 6 });
+    for (const h of hits) {
+      if (!h.url || seenUrls.has(h.url)) continue;
+      seenUrls.add(h.url);
+      urls.add(h.url);
+      citations.push({ url: h.url, citedText: h.content });
+      if (searchLog.length < 40) {
+        searchLog.push(`SOURCE: ${h.title}\nURL: ${h.url}\nCONTENT: ${h.content.slice(0, RESULT_SNIPPET)}`);
+      }
+    }
+    return {
+      results: hits.map((h) => ({ title: h.title, url: h.url, content: h.content.slice(0, RESULT_SNIPPET) })),
+    };
+  }
+
+  // Phase 1 — let the model drive Tavily searches (it picks the queries; Tavily returns real pages).
+  await geminiToolLoop({
+    system: RESEARCH_SYSTEM,
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: `Cohort to find: ${query}
 
 The user's goals (reference these ids in goal_links; do not invent ids):
 ${goalsDigest}
 
-Search the web and identify real, named people who match this cohort. For each person, quote the exact short sentence from a source that proves they match.`,
-    },
-  ];
+Search the web (call web_search, possibly several times) and identify real, named people who match this cohort. For each person, note the exact short sentence from a result that proves they match.`,
+          },
+        ],
+      },
+    ],
+    functions: [WEB_SEARCH_FN],
+    execute,
+    maxTurns: MAX_TURNS,
+    maxTokens: MAX_TOKENS,
+  });
 
-  const collected: unknown[] = [];
-  // The SDK's tool union types drift across versions; this glue passes well-formed objects.
-  const searchParams = {
-    model,
-    max_tokens: MAX_TOKENS,
-    system: RESEARCH_SYSTEM,
-    tools: [WEB_SEARCH_TOOL],
-    messages,
-  } as unknown as Anthropic.MessageCreateParamsNonStreaming;
+  // Phase 2 — force a structured report over ONLY the harvested results. Nothing else is in scope, so
+  // the model cannot invent a source; validate() then drops anything whose quote/URL isn't backed.
+  let rawCandidates: RawCandidate[] = [];
+  if (citations.length) {
+    const corpus = searchLog.join("\n\n---\n\n");
+    const report = await geminiStructured<{ candidates?: RawCandidate[] }>({
+      system: RESEARCH_SYSTEM,
+      user: `Cohort to find: ${query}
 
-  let resp = await client.messages.create(searchParams);
-  collected.push(...resp.content);
+The user's goals (reference these ids in goal_links; do not invent ids):
+${goalsDigest}
 
-  let guard = 0;
-  while (resp.stop_reason === "pause_turn" && guard++ < MAX_PAUSE_CONTINUATIONS) {
-    messages.push({ role: "assistant", content: resp.content });
-    resp = await client.messages.create({
-      ...searchParams,
-      messages,
-    } as Anthropic.MessageCreateParamsNonStreaming);
-    collected.push(...resp.content);
+Here are the web search results you retrieved. Use ONLY these — do not introduce any other source:
+
+${corpus}
+
+Report every qualifying person. Each source_quote MUST be an exact verbatim substring of one source's CONTENT above (never a paraphrase). Set channel/field source_url values only to URLs that appear above. Omit any field you cannot back. Do not include any dates.`,
+      schema: REPORT_TOOL.input_schema,
+      maxTokens: REPORT_MAX_TOKENS,
+    });
+    rawCandidates = report?.candidates ?? [];
   }
-
-  const { citations, urls } = harvestCitations(collected);
-
-  // Phase 2 — force the structured report. Citations are already harvested from phase 1.
-  const phase2Messages: Anthropic.MessageParam[] = [
-    ...messages,
-    { role: "assistant", content: resp.content },
-    {
-      role: "user",
-      content:
-        "Now call report_candidates with every qualifying person. Each source_quote must be copied verbatim from a search result you cited above. Omit any field you cannot back with a citation. Do not include any dates.",
-    },
-  ];
-
-  const reportParams = {
-    model,
-    max_tokens: REPORT_MAX_TOKENS,
-    // web_search stays declared so the replayed phase-1 history (which contains web_search blocks)
-    // validates; tool_choice forces the report, so no new search runs.
-    tools: [WEB_SEARCH_TOOL, REPORT_TOOL],
-    tool_choice: { type: "tool", name: "report_candidates" },
-    messages: phase2Messages,
-  } as unknown as Anthropic.MessageCreateParamsNonStreaming;
-
-  const structured = await client.messages.create(reportParams);
-  const toolBlock = structured.content.find(
-    (b) => b.type === "tool_use" && b.name === "report_candidates",
-  ) as Anthropic.ToolUseBlock | undefined;
-
-  // A missing report block is NOT an empty result — distinguish refusal / truncation / pause so the
-  // run is finalized as an error rather than a misleading "0 verified matches".
-  if (!toolBlock) {
-    if (structured.stop_reason === "max_tokens") {
-      throw new Error("Research report was truncated (max_tokens) before it completed.");
-    }
-    if (structured.stop_reason === "refusal") {
-      throw new Error("The model declined to produce a research report for this query.");
-    }
-    throw new Error(
-      `Research produced no structured report (stop_reason=${structured.stop_reason ?? "unknown"}).`,
-    );
-  }
-
-  const rawCandidates: RawCandidate[] =
-    (toolBlock.input as { candidates?: RawCandidate[] } | undefined)?.candidates ?? [];
 
   const goalIds = new Set(goals.map((g) => g.id));
   const candidates = rawCandidates

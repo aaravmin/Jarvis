@@ -1,5 +1,5 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
+import { geminiStructured } from "@/lib/llm/gemini";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getValidAccessToken } from "@/lib/google/store";
 import { readDocText, findDocsByName, extractFileId } from "@/lib/google/drive";
@@ -17,8 +17,6 @@ import type { ComposeResult } from "./types";
  * The personal detail is used only to write (1) and is never returned inside (2). A server-side
  * scrubber backstops the model in case it echoes a name/company into the generalized output.
  */
-
-const DEFAULT_MODEL = "claude-sonnet-4-6";
 
 const COMPOSE_TOOL = {
   name: "connection_email",
@@ -71,12 +69,6 @@ HARD PRIVACY RULE for the generalized outputs (generalized_*, connection_type_*)
   future contact with that same kind of connection — so it must contain zero specifics.
 
 Keep the concrete email tight and genuine. Keep the generalized template a clean, fill-in-the-blanks skeleton.`;
-
-function getClient(): Anthropic {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set.");
-  return new Anthropic({ apiKey });
-}
 
 export type ComposeInput = {
   contactName: string;
@@ -140,27 +132,18 @@ export async function composeConnectionEmail(
     typeGuidance,
     input.context ? `Additional context:\n${input.context.trim()}` : "",
     input.tone ? `Tone: ${input.tone.trim()}` : "",
-    "Produce both outputs via the connection_email tool now.",
+    "Produce both outputs now.",
   ]
     .filter(Boolean)
     .join("\n\n");
 
-  const client = getClient();
-  const model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
-  const resp = await client.messages.create({
-    model,
-    max_tokens: 3000,
+  const out = await geminiStructured<Record<string, string>>({
     system: SYSTEM,
-    tools: [COMPOSE_TOOL],
-    tool_choice: { type: "tool", name: "connection_email" },
-    messages: [{ role: "user", content: userMsg }],
-  } as unknown as Anthropic.MessageCreateParamsNonStreaming);
-
-  const block = resp.content.find((b) => b.type === "tool_use" && b.name === "connection_email") as
-    | Anthropic.ToolUseBlock
-    | undefined;
-  if (!block) throw new Error("The model did not return a draft. Try again or simplify the inputs.");
-  const out = block.input as Record<string, string>;
+    user: userMsg,
+    schema: COMPOSE_TOOL.input_schema,
+    maxTokens: 3000,
+  });
+  if (!out) throw new Error("The model did not return a draft. Try again or simplify the inputs.");
 
   // 3. Scrub the generalized outputs as a backstop, then derive the placeholder list from the result.
   const detail = input.connectionDetail;

@@ -1,31 +1,42 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
-import {
-  backs,
-  clamp01,
-  harvestCitations,
-  type Citation,
-} from "@/lib/agents/citation-gate";
+import { geminiToolLoop, geminiStructured } from "@/lib/llm/gemini";
+import { webSearch } from "@/lib/search/tavily";
+import { backs, clamp01, type Citation } from "@/lib/agents/citation-gate";
 import type { OpportunityCategory, OpportunityKindFilter } from "@/lib/agents/opportunity/types";
 
 /**
- * The Opportunity research engine. Given a natural-language query, it asks Claude to find REAL
- * programs / jobs / hackathons / fellowships via web search, then VALIDATES every claim against the
- * web_search tool's own citation objects before anything is returned for persistence (hard rule #3).
+ * The Opportunity research engine. Given a natural-language query, it asks Gemini to find REAL
+ * programs / jobs / hackathons / fellowships via Tavily web search, then VALIDATES every claim against
+ * the actual page content Tavily returned before anything is persisted (hard rule #3).
+ *
+ * Why this is still provenance-safe after the Claude→Gemini switch: the model never browses on its
+ * own. Every web result it sees comes from webSearch() (Tavily), and we keep each result's real page
+ * text as the citation corpus. A reported source_quote only survives if it's a genuine substring of
+ * one of those real pages — exactly the gate the Anthropic citation objects used to provide.
  *
  * Dates (hard rule #2): the model is forbidden from computing or resolving a date. It returns only
  * the VERBATIM string it saw (raw_deadline, raw_event_dates). Our code (deadline.ts) resolves those
  * to timestamps deterministically with chrono-node — never here, never the model.
  */
 
-const WEB_SEARCH_TOOL = { type: "web_search_20250305", name: "web_search", max_uses: 8 } as const;
+const WEB_SEARCH_FN = {
+  name: "web_search",
+  description:
+    "Search the public web for real, currently-open opportunities. Returns result pages (title, url, content). Issue focused queries; you may search several times. Only facts present in these results may be reported.",
+  parameters: {
+    type: "object" as const,
+    properties: { query: { type: "string", description: "The search query." } },
+    required: ["query"],
+  },
+};
 
-const DEFAULT_MODEL = "claude-sonnet-4-6";
-const MAX_PAUSE_CONTINUATIONS = 6;
+const MAX_TURNS = 8;
 const MAX_TOKENS = 8000;
 // The structured report carries many opportunities each with verbatim quotes; give it room so a
-// truncated tool input never silently drops results.
+// truncated output never silently drops results.
 const REPORT_MAX_TOKENS = 16000;
+// Per-result page text shown to the model (full text is kept in the citation corpus for validation).
+const RESULT_SNIPPET = 1800;
 
 const VALID_CATEGORIES: OpportunityCategory[] = [
   "program", "job", "internship", "hackathon", "fellowship",
@@ -135,16 +146,6 @@ const REPORT_TOOL = {
   },
 };
 
-function getClient(): Anthropic {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "ANTHROPIC_API_KEY is not set. The opportunity engine runs server-side and needs it in .env.local.",
-    );
-  }
-  return new Anthropic({ apiKey });
-}
-
 function normalizeCategory(c?: string): OpportunityCategory {
   const v = (c ?? "").toLowerCase().trim();
   return (VALID_CATEGORIES as string[]).includes(v) ? (v as OpportunityCategory) : "other";
@@ -251,16 +252,13 @@ export type OpportunityOutcome = {
   citationCount: number;
 };
 
-/** Run the two-phase search: (1) web search, (2) force a structured, validated report. */
+/** Run the two-phase search: (1) agentic Tavily web search, (2) a structured, validated report. */
 export async function runOpportunityResearch(
   query: string,
   kindFilter: OpportunityKindFilter = "all",
   seedHints?: string[],
   relevance?: string,
 ): Promise<OpportunityOutcome> {
-  const client = getClient();
-  const model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
-
   const relevanceBlock = relevance
     ? `\n\nTune results to THIS person — strongly prefer opportunities that fit their level/age and advance their goals; drop ones that don't (e.g. internships not senior roles for a student; programs open to undergrads, not PhD-only):\n${relevance}`
     : "";
@@ -273,83 +271,76 @@ export async function runOpportunityResearch(
           .join("\n")}`
       : "";
 
-  const messages: Anthropic.MessageParam[] = [
-    {
-      role: "user",
-      content: `Find opportunities matching: ${query}
+  // Citation corpus: every page Tavily returns, kept with its FULL text so a model quote can be
+  // validated as a real substring. `searchLog` is a trimmed view shown to the report model.
+  const citations: Citation[] = [];
+  const urls = new Set<string>();
+  const searchLog: string[] = [];
+  const seenUrls = new Set<string>();
+
+  async function execute(name: string, args: Record<string, unknown>): Promise<Record<string, unknown>> {
+    if (name !== "web_search") return { error: `Unknown tool: ${name}` };
+    const q = String(args.query ?? "").trim();
+    if (!q) return { results: [] };
+    const hits = await webSearch(q, { deep: true, maxResults: 6 });
+    for (const h of hits) {
+      if (!h.url || seenUrls.has(h.url)) continue;
+      seenUrls.add(h.url);
+      urls.add(h.url);
+      citations.push({ url: h.url, citedText: h.content });
+      if (searchLog.length < 40) {
+        searchLog.push(`SOURCE: ${h.title}\nURL: ${h.url}\nCONTENT: ${h.content.slice(0, RESULT_SNIPPET)}`);
+      }
+    }
+    return {
+      results: hits.map((h) => ({ title: h.title, url: h.url, content: h.content.slice(0, RESULT_SNIPPET) })),
+    };
+  }
+
+  // Phase 1 — let the model drive Tavily searches (it picks the queries; Tavily returns real pages).
+  await geminiToolLoop({
+    system: SYSTEM,
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: `Find opportunities matching: ${query}
 
 ${kindGuidance(kindFilter)}
 
-Search the web and identify real, currently-open opportunities. For each, quote the exact short sentence from a source that proves it matches, and copy any deadline/date text VERBATIM (never resolve it to a date).${relevanceBlock}${seedBlock}`,
-    },
-  ];
+Search the web (call web_search, possibly several times) and identify real, currently-open opportunities. For each, note the exact short sentence from a result that proves it matches, and copy any deadline/date text VERBATIM (never resolve it to a date).${relevanceBlock}${seedBlock}`,
+          },
+        ],
+      },
+    ],
+    functions: [WEB_SEARCH_FN],
+    execute,
+    maxTurns: MAX_TURNS,
+    maxTokens: MAX_TOKENS,
+  });
 
-  const collected: unknown[] = [];
-  const searchParams = {
-    model,
-    max_tokens: MAX_TOKENS,
-    system: SYSTEM,
-    tools: [WEB_SEARCH_TOOL],
-    messages,
-  } as unknown as Anthropic.MessageCreateParamsNonStreaming;
+  // Phase 2 — force a structured report over ONLY the harvested results. Nothing else is in scope, so
+  // the model cannot invent a source; validate() then drops anything whose quote/URL isn't backed.
+  let rawOpps: RawOpportunity[] = [];
+  if (citations.length) {
+    const corpus = searchLog.join("\n\n---\n\n");
+    const report = await geminiStructured<{ opportunities?: RawOpportunity[] }>({
+      system: SYSTEM,
+      user: `Original request: ${query}
 
-  let resp = await client.messages.create(searchParams);
-  collected.push(...resp.content);
+${kindGuidance(kindFilter)}
 
-  let guard = 0;
-  while (resp.stop_reason === "pause_turn" && guard++ < MAX_PAUSE_CONTINUATIONS) {
-    messages.push({ role: "assistant", content: resp.content });
-    resp = await client.messages.create({
-      ...searchParams,
-      messages,
-    } as Anthropic.MessageCreateParamsNonStreaming);
-    collected.push(...resp.content);
+Here are the web search results you retrieved. Use ONLY these — do not introduce any other source:
+
+${corpus}
+
+Report every qualifying opportunity. Each source_quote MUST be an exact verbatim substring of one source's CONTENT above (never a paraphrase). Set how_to_apply_url / field_sources urls only to URLs that appear above. Copy deadline/date text VERBATIM into raw_deadline / raw_event_dates — never resolve a date. Omit any field you cannot back.`,
+      schema: REPORT_TOOL.input_schema,
+      maxTokens: REPORT_MAX_TOKENS,
+    });
+    rawOpps = report?.opportunities ?? [];
   }
-
-  const { citations, urls } = harvestCitations(collected);
-
-  // Phase 2 — force the structured report. Citations are already harvested from phase 1.
-  const phase2Messages: Anthropic.MessageParam[] = [
-    ...messages,
-    { role: "assistant", content: resp.content },
-    {
-      role: "user",
-      content:
-        "Now call report_opportunities with every qualifying opportunity. Each source_quote must be copied verbatim from a search result you cited above. Copy deadline/date text verbatim into raw_deadline / raw_event_dates — never resolve a date. Omit any field you cannot back with a citation.",
-    },
-  ];
-
-  const reportParams = {
-    model,
-    max_tokens: REPORT_MAX_TOKENS,
-    // web_search stays declared so the replayed phase-1 history validates; tool_choice forces the
-    // report so no new search runs.
-    tools: [WEB_SEARCH_TOOL, REPORT_TOOL],
-    tool_choice: { type: "tool", name: "report_opportunities" },
-    messages: phase2Messages,
-  } as unknown as Anthropic.MessageCreateParamsNonStreaming;
-
-  const structured = await client.messages.create(reportParams);
-  const toolBlock = structured.content.find(
-    (b) => b.type === "tool_use" && b.name === "report_opportunities",
-  ) as Anthropic.ToolUseBlock | undefined;
-
-  // A missing report block is NOT an empty result — distinguish refusal / truncation / pause so the
-  // run finalizes as an error rather than a misleading "0 verified matches".
-  if (!toolBlock) {
-    if (structured.stop_reason === "max_tokens") {
-      throw new Error("Opportunity report was truncated (max_tokens) before it completed.");
-    }
-    if (structured.stop_reason === "refusal") {
-      throw new Error("The model declined to produce an opportunity report for this query.");
-    }
-    throw new Error(
-      `Opportunity search produced no structured report (stop_reason=${structured.stop_reason ?? "unknown"}).`,
-    );
-  }
-
-  const rawOpps: RawOpportunity[] =
-    (toolBlock.input as { opportunities?: RawOpportunity[] } | undefined)?.opportunities ?? [];
 
   const opportunities = rawOpps
     .map((r) => validate(r, citations, urls))

@@ -1,54 +1,64 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
+import { geminiToolLoop, type GeminiContent } from "@/lib/llm/gemini";
+import { webSearch } from "@/lib/search/tavily";
 import { listDir, readFile, allowedRootsLabel } from "@/lib/assistant/fs-tools";
 import type { AskCitation, AskFileRef, AskResponse } from "@/lib/assistant/types";
 import type { AskDataContext } from "@/lib/assistant/data-tools";
 
 /**
- * The Jarvis "brain": an agentic loop over Claude with four tools —
- *  - web_search      (server-side; "search up X", current facts) → real citations
+ * The Jarvis "brain": an agentic loop over Gemini (function-calling) with four tools —
+ *  - web_search      (Tavily-backed; "search up X", current facts) → real citations
  *  - search_my_data  (the user's OWN Gmail/Calendar/meetings/tasks/contacts/opportunities) → answers
  *                     questions about their connected data; only present when a data context is passed
- *  - list_dir        (client-side; browse the user's allowed local folders)
- *  - read_file       (client-side; read a local file the user references)
+ *  - list_dir        (browse the user's allowed local folders)
+ *  - read_file       (read a local file the user references)
  * When a data context is supplied, a compact digest of the user's world is also folded into the
  * system prompt so simple questions ("what's on my plate today?") answer without a tool round-trip.
  * Returns the answer plus provenance (web citations + files read). Read-only and server-only.
+ *
+ * Web search is Tavily, not the model's own browsing: the model only ever sees what webSearch()
+ * returns, so every source it can cite traces to a real result URL (hard rule #3 stays intact).
  */
 
-const WEB_SEARCH_TOOL = { type: "web_search_20250305", name: "web_search", max_uses: 6 } as const;
+const WEB_SEARCH_FN = {
+  name: "web_search",
+  description:
+    "Search the public web for anything current, changing, or outside your knowledge (news, prices, facts about specific people/companies). Returns real result pages — ground your answer in them and cite their URLs. Never invent a source.",
+  parameters: {
+    type: "object" as const,
+    properties: { query: { type: "string", description: "The search query." } },
+    required: ["query"],
+  },
+};
 
-const LIST_DIR_TOOL = {
+const LIST_DIR_FN = {
   name: "list_dir",
   description:
     "List the entries (files and sub-folders) of a folder on the user's computer. Use this to locate a file the user mentions (e.g. 'my fineprint folder'). Read-only.",
-  input_schema: {
+  parameters: {
     type: "object" as const,
-    additionalProperties: false,
     properties: { path: { type: "string", description: "Absolute path or ~/… path to a folder." } },
     required: ["path"],
   },
 };
 
-const READ_FILE_TOOL = {
+const READ_FILE_FN = {
   name: "read_file",
   description:
     "Read the text contents of a single file on the user's computer so you can answer questions about it. Read-only; you cannot modify anything.",
-  input_schema: {
+  parameters: {
     type: "object" as const,
-    additionalProperties: false,
     properties: { path: { type: "string", description: "Absolute path or ~/… path to a file." } },
     required: ["path"],
   },
 };
 
-const SEARCH_MY_DATA_TOOL = {
+const SEARCH_MY_DATA_FN = {
   name: "search_my_data",
   description:
     "Search the user's OWN connected data — their Gmail, Google Calendar events, meeting notes, tasks, contacts, and opportunities — to answer questions about their inbox, schedule, meetings, to-dos, people, or applications. Read-only. Use this whenever the question is about the user's own world (e.g. 'what's on my calendar this week', 'did anyone email me about the internship', 'what do I owe a reply to', 'who am I tracking at OpenAI'). Returns real rows with dates and links — never invent any.",
-  input_schema: {
+  parameters: {
     type: "object" as const,
-    additionalProperties: false,
     properties: {
       keywords: { type: "string", description: "Words to match — a sender, subject, person, org, or topic. Optional; omit to list recent items." },
       kinds: {
@@ -62,17 +72,8 @@ const SEARCH_MY_DATA_TOOL = {
   },
 };
 
-const DEFAULT_MODEL = "claude-opus-4-8";
 const MAX_TURNS = 8;
 const MAX_TOKENS = 8000;
-
-function getClient(): Anthropic {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error("ANTHROPIC_API_KEY is not set. The assistant runs server-side and needs it in .env.local.");
-  }
-  return new Anthropic({ apiKey });
-}
 
 function systemPrompt(todayISO: string, dataDigest?: string): string {
   const dataCap = dataDigest
@@ -93,115 +94,81 @@ Rules:
 - Never compute or assert exact dates from reasoning; rely on the dates in the data or sources. Today is ${todayISO}.${dataBlock}`;
 }
 
-type Block = {
-  type?: string;
-  id?: string;
-  name?: string;
-  input?: unknown;
-  text?: string;
-  citations?: Array<{ type?: string; url?: string; title?: string; cited_text?: string }>;
-};
-
-function harvest(content: Block[], citations: AskCitation[], seen: Set<string>) {
-  for (const b of content) {
-    if (b.type === "text" && Array.isArray(b.citations)) {
-      for (const c of b.citations) {
-        if (c.type === "web_search_result_location" && c.url && !seen.has(c.url)) {
-          seen.add(c.url);
-          citations.push({ url: c.url, title: c.title, quote: c.cited_text });
-        }
-      }
-    }
-  }
-}
-
 export async function ask(message: string, ctx?: AskDataContext): Promise<AskResponse> {
-  const client = getClient();
-  const model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
   const system = systemPrompt(new Date().toISOString().slice(0, 10), ctx?.dataDigest);
-  const tools = ctx?.searchData
-    ? [WEB_SEARCH_TOOL, SEARCH_MY_DATA_TOOL, LIST_DIR_TOOL, READ_FILE_TOOL]
-    : [WEB_SEARCH_TOOL, LIST_DIR_TOOL, READ_FILE_TOOL];
+  const functions = ctx?.searchData
+    ? [WEB_SEARCH_FN, SEARCH_MY_DATA_FN, LIST_DIR_FN, READ_FILE_FN]
+    : [WEB_SEARCH_FN, LIST_DIR_FN, READ_FILE_FN];
 
-  const messages: Anthropic.MessageParam[] = [{ role: "user", content: message }];
   const citations: AskCitation[] = [];
   const seenUrls = new Set<string>();
   const files: AskFileRef[] = [];
 
-  for (let turn = 0; turn < MAX_TURNS; turn++) {
-    const params = {
-      model,
-      max_tokens: MAX_TOKENS,
-      system,
-      tools,
-      messages,
-    } as unknown as Anthropic.MessageCreateParamsNonStreaming;
-
-    const resp = await client.messages.create(params);
-    const content = resp.content as unknown as Block[];
-    harvest(content, citations, seenUrls);
-
-    // Branch on the authoritative signal (stop_reason), not on content shape.
-
-    // Server tool (web_search) paused mid-loop: resume by echoing the assistant turn back.
-    if (resp.stop_reason === "pause_turn") {
-      messages.push({ role: "assistant", content: resp.content });
-      continue;
-    }
-
-    // The model declined. Surface it instead of returning an empty "(no answer)".
-    if (resp.stop_reason === "refusal") {
-      return { answer: "I can't help with that request.", citations, files: dedupeFiles(files) };
-    }
-
-    // The model wants client tools. Every tool_use block MUST get a matching tool_result, or the
-    // next call 400s — so answer ALL of them (unknown names get an is_error result so the model can
-    // recover). Server tool blocks (server_tool_use/web_search_tool_result) are a different type and
-    // are excluded here; they ride along in the echoed assistant content.
-    if (resp.stop_reason === "tool_use") {
-      messages.push({ role: "assistant", content: resp.content });
-      const results: Anthropic.ToolResultBlockParam[] = [];
-      for (const tu of content.filter((b) => b.type === "tool_use")) {
-        const p = (tu.input as { path?: string } | undefined)?.path ?? "";
-        let out: { ok: boolean; text: string; path?: string; bytes?: number };
-        if (tu.name === "read_file") out = await readFile(p);
-        else if (tu.name === "list_dir") out = await listDir(p);
-        else if (tu.name === "search_my_data" && ctx?.searchData)
-          out = await ctx.searchData((tu.input as Parameters<NonNullable<AskDataContext["searchData"]>>[0]) ?? {});
-        else out = { ok: false, text: `Unknown tool: ${tu.name ?? "(unnamed)"}` };
-        if (tu.name === "read_file" && out.ok && out.path) {
-          files.push({ path: out.path, bytes: out.bytes ?? 0 });
+  // Each tool runs server-side; its return value is fed back to the model as a functionResponse.
+  // We harvest provenance as a side effect: web_search results become citations, read_file paths
+  // become file refs. The model only ever sees what these return — it can't cite a source we didn't
+  // fetch, which keeps every claim traceable (hard rule #3).
+  async function execute(name: string, args: Record<string, unknown>): Promise<Record<string, unknown>> {
+    if (name === "web_search") {
+      const query = String(args.query ?? "").trim();
+      if (!query) return { results: [] };
+      const hits = await webSearch(query, { deep: true, maxResults: 6 });
+      for (const h of hits) {
+        if (h.url && !seenUrls.has(h.url)) {
+          seenUrls.add(h.url);
+          citations.push({ url: h.url, title: h.title, quote: h.content.slice(0, 280) });
         }
-        results.push({
-          type: "tool_result",
-          tool_use_id: tu.id as string,
-          content: out.text,
-          is_error: !out.ok,
-        });
       }
-      messages.push({ role: "user", content: results });
-      continue;
+      return { results: hits.map((h) => ({ title: h.title, url: h.url, content: h.content })) };
     }
+    if (name === "read_file") {
+      const out = await readFile(String(args.path ?? ""));
+      if (out.ok && out.path) files.push({ path: out.path, bytes: out.bytes ?? 0 });
+      return { ok: out.ok, content: out.text };
+    }
+    if (name === "list_dir") {
+      const out = await listDir(String(args.path ?? ""));
+      return { ok: out.ok, content: out.text };
+    }
+    if (name === "search_my_data" && ctx?.searchData) {
+      const out = await ctx.searchData(
+        (args as Parameters<NonNullable<AskDataContext["searchData"]>>[0]) ?? {},
+      );
+      return { ok: out.ok, content: out.text };
+    }
+    return { ok: false, content: `Unknown tool: ${name || "(unnamed)"}` };
+  }
 
-    // end_turn / max_tokens / stop_sequence / unknown → final answer.
-    const answer = content
-      .filter((b) => b.type === "text" && b.text)
-      .map((b) => b.text)
-      .join("\n")
-      .trim();
-    const truncated = resp.stop_reason === "max_tokens" ? " …(response was cut off)" : "";
+  const contents: GeminiContent[] = [{ role: "user", parts: [{ text: message }] }];
+
+  let result: Awaited<ReturnType<typeof geminiToolLoop>>;
+  try {
+    result = await geminiToolLoop({
+      system,
+      contents,
+      functions,
+      execute,
+      maxTurns: MAX_TURNS,
+      maxTokens: MAX_TOKENS,
+    });
+  } catch {
     return {
-      answer: answer ? answer + truncated : "(no answer)",
+      answer: "I couldn't reach the assistant just now — please try again in a moment.",
       citations,
       files: dedupeFiles(files),
     };
   }
 
-  return {
-    answer: "I wasn't able to finish that — it took too many steps. Try narrowing the question.",
-    citations,
-    files: dedupeFiles(files),
-  };
+  const answer = result.text.trim();
+  if (!answer) {
+    const reason =
+      result.finishReason === "max_turns"
+        ? "I wasn't able to finish that — it took too many steps. Try narrowing the question."
+        : "(no answer)";
+    return { answer: reason, citations, files: dedupeFiles(files) };
+  }
+  const truncated = result.finishReason === "MAX_TOKENS" ? " …(response was cut off)" : "";
+  return { answer: answer + truncated, citations, files: dedupeFiles(files) };
 }
 
 function dedupeFiles(files: AskFileRef[]): AskFileRef[] {

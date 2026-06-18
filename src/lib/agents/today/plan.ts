@@ -1,5 +1,5 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
+import { geminiStructured } from "@/lib/llm/gemini";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CardSource, SourceType } from "@/lib/types";
 import { formatWhen } from "@/lib/format";
@@ -18,7 +18,6 @@ import { loadProfile, profileDigest } from "@/lib/profile";
  * Every block still carries a working source (hard rule #4) so the Today UI can render it in a <Card>.
  */
 
-const DEFAULT_MODEL = "claude-sonnet-4-6";
 const MAX_TOKENS = 3000;
 const DAY_MS = 86_400_000;
 
@@ -51,12 +50,6 @@ type PlanItem = {
   context: string; // line shown to the model
   source: CardSource;
 };
-
-function getClient(): Anthropic {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set.");
-  return new Anthropic({ apiKey });
-}
 
 const SOURCE_TYPES: SourceType[] = ["email", "meeting", "calendar", "manual", "research"];
 function toSourceType(s: string | null | undefined): SourceType {
@@ -273,22 +266,12 @@ CRITICAL RULES:
 - Put high-stakes and time-sensitive things first; protect time before fixed events for anything that needs prep. Overdue tasks are high priority.
 - Be concise. Drop pure noise (e.g. newsletters) rather than padding the plan.`;
 
-  const client = getClient();
-  let parsed: { summary?: string; blocks?: RawBlock[] } | null = null;
-  try {
-    const resp = await client.messages.create({
-      model: process.env.ANTHROPIC_MODEL || DEFAULT_MODEL,
-      max_tokens: MAX_TOKENS,
-      system,
-      tools: [PLAN_TOOL as unknown as Anthropic.Tool],
-      tool_choice: { type: "tool", name: "build_day_plan" },
-      messages: [{ role: "user", content: userMsg }],
-    } as unknown as Anthropic.MessageCreateParamsNonStreaming);
-    const block = resp.content.find((b) => b.type === "tool_use" && b.name === "build_day_plan") as Anthropic.ToolUseBlock | undefined;
-    parsed = (block?.input as { summary?: string; blocks?: RawBlock[] }) ?? null;
-  } catch {
-    parsed = null;
-  }
+  const parsed = await geminiStructured<{ summary?: string; blocks?: RawBlock[] }>({
+    system,
+    user: userMsg,
+    schema: PLAN_TOOL.input_schema,
+    maxTokens: MAX_TOKENS,
+  });
 
   const start = new Date();
   start.setHours(0, 0, 0, 0);

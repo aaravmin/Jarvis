@@ -1,39 +1,17 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
+import { geminiStructured } from "@/lib/llm/gemini";
 
 /**
- * The Claude flows for the goals-anchor system (all forced-tool, structured output, following the
- * existing extract.ts pattern). The model never computes dates and never decides whether an
- * intersection exists (that's deterministic SQL) — it only writes prose: goal titles, link rationales,
- * combined-ask suggestions, and goal-connection guidance.
+ * The Gemini flows for the goals-anchor system (all forced structured output, following the existing
+ * extract.ts pattern). The model never computes dates and never decides whether an intersection exists
+ * (that's deterministic SQL) — it only writes prose: goal titles, link rationales, combined-ask
+ * suggestions, and goal-connection guidance.
  */
 
-const DEFAULT_MODEL = "claude-sonnet-4-6";
 const MAX_TOKENS = 2000;
 
-function getClient(): Anthropic {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set.");
-  return new Anthropic({ apiKey });
-}
-function model(): string {
-  return process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
-}
-
 async function forceTool<T>(system: string, user: string, tool: { name: string; input_schema: object }): Promise<T | null> {
-  const client = getClient();
-  const resp = await client.messages.create({
-    model: model(),
-    max_tokens: MAX_TOKENS,
-    system,
-    tools: [tool as unknown as Anthropic.Tool],
-    tool_choice: { type: "tool", name: tool.name },
-    messages: [{ role: "user", content: user }],
-  } as unknown as Anthropic.MessageCreateParamsNonStreaming);
-  const block = resp.content.find((b) => b.type === "tool_use" && b.name === tool.name) as
-    | Anthropic.ToolUseBlock
-    | undefined;
-  return block ? (block.input as T) : null;
+  return geminiStructured<T>({ system, user, schema: tool.input_schema, maxTokens: MAX_TOKENS });
 }
 
 function clamp01(n: unknown): number | undefined {

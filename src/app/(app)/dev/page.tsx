@@ -84,7 +84,7 @@ const errorRun: ResearchRunView = {
   targetKind: "people",
   status: "error",
   resultCount: 0,
-  error: "ANTHROPIC_API_KEY is not set.",
+  error: "GEMINI_API_KEY is not set.",
   createdAt: new Date(0).toISOString(),
   people: [],
 };

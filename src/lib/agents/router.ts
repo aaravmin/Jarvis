@@ -1,19 +1,16 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
+import { geminiStructured } from "@/lib/llm/gemini";
 import { AGENTS, AGENT_KINDS } from "@/lib/agents/registry";
 import type { AgentKind, RouteDecision } from "@/lib/agents/types";
 
 /**
  * The intent router. Classifies one free-text request into exactly ONE agent so we never run all of
- * them in conjunction. Uses a small/fast Claude model (Haiku by default) with a forced tool call —
- * classification is cheap and shouldn't burn the heavy model the research agents use.
+ * them in conjunction. A cheap forced-JSON classification on Gemini Flash — fast, and it shouldn't
+ * burn the heavier reasoning the research agents use.
  *
  * Safe by construction: any failure (no key, refusal, malformed output, unknown agent) falls back to
  * the 'assistant' agent, which is the general catch-all and always available.
  */
-
-// Routing is a cheap classification task — default to Haiku, overridable for experimentation.
-const ROUTER_MODEL = process.env.JARVIS_ROUTER_MODEL || "claude-haiku-4-5-20251001";
 
 const ROUTE_TOOL = {
   name: "route_task",
@@ -58,12 +55,6 @@ Guidance:
 Normalize the query to the actionable task. Always return a confidence.`;
 }
 
-function getClient(): Anthropic {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set.");
-  return new Anthropic({ apiKey });
-}
-
 function clampConfidence(n: unknown): number {
   if (typeof n !== "number" || Number.isNaN(n)) return 0.5;
   return Math.max(0, Math.min(1, n));
@@ -78,35 +69,20 @@ export async function routeTask(message: string): Promise<RouteDecision> {
   const trimmed = (message ?? "").trim();
   if (!trimmed) return fallback("", "Empty request.");
 
-  let client: Anthropic;
   try {
-    client = getClient();
-  } catch {
-    return fallback(trimmed, "Router unavailable; using the general assistant.");
-  }
-
-  try {
-    const params = {
-      model: ROUTER_MODEL,
-      max_tokens: 512,
-      system: buildSystem(),
-      tools: [ROUTE_TOOL],
-      tool_choice: { type: "tool", name: "route_task" },
-      messages: [{ role: "user", content: trimmed }],
-    } as unknown as Anthropic.MessageCreateParamsNonStreaming;
-
-    const resp = await client.messages.create(params);
-    const block = resp.content.find(
-      (b) => b.type === "tool_use" && b.name === "route_task",
-    ) as Anthropic.ToolUseBlock | undefined;
-    if (!block) return fallback(trimmed, "Router returned no decision; using the general assistant.");
-
-    const input = block.input as {
+    const input = await geminiStructured<{
       agent?: string;
       normalized_query?: string;
       reason?: string;
       confidence?: number;
-    };
+    }>({
+      system: buildSystem(),
+      user: trimmed,
+      schema: ROUTE_TOOL.input_schema,
+      maxTokens: 512,
+    });
+    if (!input) return fallback(trimmed, "Router returned no decision; using the general assistant.");
+
     const agent = (AGENT_KINDS as string[]).includes(input.agent ?? "")
       ? (input.agent as AgentKind)
       : "assistant";
