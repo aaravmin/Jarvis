@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadProfile, profileDigest } from "@/lib/profile";
 import { loadGoalDigests } from "@/lib/goals/facts";
 import { formatWhen, formatDate } from "@/lib/format";
+import { buildAskActions, type AskActions } from "@/lib/assistant/actions";
 
 /**
  * The bridge that lets the Jarvis assistant ANSWER QUESTIONS about the user's own connected data —
@@ -31,10 +32,12 @@ export type DataQuery = {
 
 export type DataSearchResult = { ok: boolean; text: string };
 
-/** What the assistant route hands to ask(): a prose digest + a callable search over the user's data. */
+/** What the assistant route hands to ask(): a prose digest + a callable search over the user's data,
+ *  plus the write actions Jarvis can take (create events, draft emails, save Drive templates). */
 export type AskDataContext = {
   dataDigest: string;
   searchData: (q: DataQuery) => Promise<DataSearchResult>;
+  actions?: AskActions;
 };
 
 const DAY_MS = 86_400_000;
@@ -321,8 +324,12 @@ export async function searchMyData(supabase: SupabaseClient, q: DataQuery): Prom
   return { ok: true, text: out.join("\n\n").slice(0, 6000) };
 }
 
-/** Bundle the digest + search closure for ask(). One call per assistant request. */
-export async function buildAskDataContext(supabase: SupabaseClient): Promise<AskDataContext> {
+/** Bundle the digest + search closure + write actions for ask(). One call per assistant request. */
+export async function buildAskDataContext(supabase: SupabaseClient, userId: string): Promise<AskDataContext> {
   const dataDigest = await buildDataDigest(supabase);
-  return { dataDigest, searchData: (query: DataQuery) => searchMyData(supabase, query) };
+  return {
+    dataDigest,
+    searchData: (query: DataQuery) => searchMyData(supabase, query),
+    actions: buildAskActions(supabase, userId),
+  };
 }

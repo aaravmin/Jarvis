@@ -189,6 +189,47 @@ async function typeUsage(supabase: SupabaseClient, userId: string, id: string): 
   return (data?.times_used as number | null) ?? 0;
 }
 
+/** Pull {{placeholder}} tokens out of a body so the templates UI can show what needs filling in. */
+function extractPlaceholders(body: string): string[] {
+  const found = new Set<string>();
+  for (const m of body.matchAll(/\{\{\s*([\w .\-/]+?)\s*\}\}/g)) {
+    const key = m[1].trim();
+    if (key) found.add(key); // skip stray "{{   }}" — a whitespace-only token isn't a placeholder
+  }
+  return [...found];
+}
+
+/**
+ * Save a Google Drive document's text as a reusable template (source = "drive"). Unlike
+ * saveGeneralizedTemplate, this has no connection type and applies NO scrubbing — the privacy contract
+ * only governs Jarvis-GENERATED templates; a document the user authored and explicitly chose to keep is
+ * stored verbatim. drive_file_id records where it came from so we can re-sync or link back later.
+ */
+export async function saveDriveTemplate(
+  supabase: SupabaseClient,
+  userId: string,
+  args: { name: string; subject?: string; body: string; driveFileId?: string },
+): Promise<{ templateId: string; name: string }> {
+  const body = args.body.trim();
+  if (!body) throw new Error("That document is empty — there's nothing to save as a template.");
+  const name = args.name.trim() || "Untitled template";
+  const { data, error } = await supabase
+    .from("email_templates")
+    .insert({
+      user_id: userId,
+      name,
+      subject: args.subject?.trim() || null,
+      body,
+      placeholders: extractPlaceholders(body),
+      source: "drive",
+      drive_file_id: args.driveFileId ?? null,
+    })
+    .select("id")
+    .single();
+  if (error) throw new Error(`Could not save template: ${error.message}`);
+  return { templateId: data.id as string, name };
+}
+
 export async function deleteTemplate(supabase: SupabaseClient, userId: string, id: string): Promise<void> {
   await supabase.from("email_templates").delete().eq("user_id", userId).eq("id", id);
 }

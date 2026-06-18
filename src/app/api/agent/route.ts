@@ -80,12 +80,19 @@ export async function POST(request: Request) {
   try {
     let dataCtx: AskDataContext | undefined;
     try {
-      dataCtx = await buildAskDataContext(supabase);
+      dataCtx = await buildAskDataContext(supabase, user.id);
     } catch {
       dataCtx = undefined;
     }
     const answer = await ask(query, dataCtx);
-    const result: AgentDispatchResult = { decision, outcome: "answer", answer: answer.answer };
+    const result: AgentDispatchResult = {
+      decision,
+      outcome: "answer",
+      answer: answer.answer,
+      citations: answer.citations,
+      files: answer.files,
+      actions: answer.actions,
+    };
     return NextResponse.json(result);
   } catch (err) {
     const error = err instanceof Error ? err.message : "The assistant failed.";

@@ -6,6 +6,8 @@
  * registry describes what each agent does and whether it can run yet; /api/agent dispatches.
  */
 
+import type { AskActionRef, AskCitation, AskFileRef } from "@/lib/assistant/types";
+
 export type AgentKind =
   | "opportunity" // find programs / jobs / hackathons (LIVE)
   | "contact" // find/research people (LIVE — the people agent)
@@ -50,6 +52,9 @@ export type AgentDispatchResult = {
   resultCount?: number;
   redirectTo?: string; // where the client should navigate to see results, e.g. "/review"
   answer?: string; // assistant inline answer
+  citations?: AskCitation[]; // web sources behind an "answer" outcome
+  files?: AskFileRef[]; // local files the assistant read for an "answer" outcome
+  actions?: AskActionRef[]; // things the assistant DID (event/draft/template) for an "answer" outcome
   message?: string; // human-facing explanation (needs-connection / paste)
   error?: string;
 };

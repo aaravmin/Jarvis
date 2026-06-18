@@ -35,7 +35,13 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(draft);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Draft failed.";
+    // Pass through our actionable "Reconnect Google…" guidance; otherwise return a generic message so
+    // we don't leak Google/Drive internals to the client.
+    const raw = err instanceof Error ? err.message : "";
+    const message =
+      raw.startsWith("Reconnect Google") || raw.startsWith("Google account not connected")
+        ? raw
+        : "Draft failed. Please try again.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

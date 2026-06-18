@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Mic, Send, Globe, FileText, ExternalLink, Square, Volume2, VolumeX, Headphones } from "lucide-react";
+import { Mic, Send, Globe, FileText, ExternalLink, Square, Volume2, VolumeX, Headphones, CalendarPlus, Mail, BookmarkPlus, CheckCircle2 } from "lucide-react";
 import { JarvisOrb, type OrbState } from "@/components/JarvisOrb";
 import { JarvisSphere } from "@/components/JarvisSphere";
 import { LiveClock } from "@/components/LiveClock";
@@ -486,6 +486,41 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
                     </a>
                   </li>
                 ))}
+              </ul>
+            </div>
+          )}
+
+          {answer.actions.length > 0 && (
+            <div>
+              <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted">
+                <CheckCircle2 className="h-3.5 w-3.5 text-accent" /> Done by Jarvis
+              </p>
+              <ul className="space-y-1.5">
+                {answer.actions.map((a, i) => {
+                  const Icon = a.kind === "event" ? CalendarPlus : a.kind === "draft" ? Mail : BookmarkPlus;
+                  return (
+                    <li key={`${a.kind}-${i}`}>
+                      {a.url ? (
+                        <a
+                          href={a.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex max-w-full items-center gap-1.5 text-xs text-accent hover:underline"
+                        >
+                          <Icon className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{a.label}</span>
+                          <ExternalLink className="h-3 w-3 shrink-0 opacity-70" />
+                        </a>
+                      ) : (
+                        <span className="inline-flex max-w-full items-center gap-1.5 text-xs text-muted-strong">
+                          <Icon className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{a.label}</span>
+                        </span>
+                      )}
+                      {a.detail && <p className="ml-5 truncate text-[11px] text-muted">{a.detail}</p>}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}

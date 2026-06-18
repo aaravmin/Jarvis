@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   // answer — fall back to the web/files-only assistant if the context can't be built.
   let dataCtx: AskDataContext | undefined;
   try {
-    dataCtx = await buildAskDataContext(supabase);
+    dataCtx = await buildAskDataContext(supabase, user.id);
   } catch {
     dataCtx = undefined;
   }
