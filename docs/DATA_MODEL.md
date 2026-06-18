@@ -172,10 +172,19 @@ provenance, landing in Review) mirrors the people agent's shape:
    `opportunities_provenance_chk`); `review_feed` view re-created to also union `opportunities`.
 5. **Google connector (`0005_connected_accounts.sql`):** `connected_accounts` (RLS-scoped Google token
    storage); `sources.source_type` extended with `sheet` + `drive`.
-6. **Phase 7:** `applications` (Kanban) — schema TBD when we reach P7-T1.
+6. **Goals anchors (`0006_goals_anchors.sql`):** `goal_links` (polymorphic entity↔goal, entity_type ∈
+   contact|opportunity|item|source), `goal_connections` (goal↔goal), `goal_intersections` (entity in
+   2+ goals + AI combined-ask). RLS owner-only.
+7. **Goals provenance (`0007_goals_provenance.sql`):** `goals` gains created_by/review_status/source_*/
+   confidence (L0 for AI goals); back-fills `contact_goals` → `goal_links`.
+8. **Profile (`0008_profile.sql`):** `profiles` (headline/age/level/looking_for) for relevance.
+9. **Email ingest (`0009_email_ingest.sql`):** `sources` gains from_name/from_email/group_label + a
+   partial-unique (user, type, external_id) for idempotent re-sync.
+10. **Phase 7:** `applications` (Kanban) — schema TBD when we reach P7-T1.
 
-**Applied to the live project on 2026-06-17:** `0001→0005` via the Supabase MCP. RLS verified on all 12
-tables; advisors clean.
+**Applied to the live project on 2026-06-17:** `0001→0009` via the Supabase MCP. RLS verified; advisors
+clean. (`0006→0009` add the goals-anchor tables, goals L0/provenance, the profile, and email-ingest
+columns on `sources`.)
 
 ## Changelog
 - _2026-06-17_ — Initial data model documented from roadmap Sections 3.4 & 3.7 (P0-T1). No migrations

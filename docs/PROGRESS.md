@@ -25,7 +25,17 @@ People / Opportunities / Review / Auto-Populate are live. The **Google connector
 Drive/Sheets) is built; it activates once the user connects Google on the Connections tab.
 
 ## Task log (most recent first)
-- **Goals as ANCHORS (in progress — backend+API done, UI next)** — Migrations `0006_goals_anchors`
+- **Goals anchors UI + manual entry + Gmail/Calendar ingestion + drafting + orb/nav polish** — ✅ shipped
+  (migrations `0006→0009` live). Highlights: Goals page/detail + global goal filter (`?goal=`) + per-tab
+  filtering + add-to-goal on cards + AI goals-from-context + intersections (combined-ask) + goal
+  connections. Manual entry for contacts/opportunities/tasks + a user `profiles` row (age/level/looking-for)
+  that makes opportunity auto-population goal+profile-aware. **Gmail ingestion** (`lib/google/ingest.ts`):
+  Claude triages inbox relative to goals/profile, keeps only important mail, groups by sender/org, adds
+  important senders/opportunity threads to Contacts (L0); **Calendar** kept as-is; both stored as `sources`
+  (deduped by external_id). Email drafting to a contact → "Open in Gmail" compose (no send scope). Orb
+  rebuilt as a layered morphing blob (moves more when talking); persistent left sidebar nav; all page
+  explainer text stripped; logo → home. tsc + eslint clean; routes gate. Adversarial review run wwaqknovi.
+- **Goals as ANCHORS (backend+API)** — Migrations `0006_goals_anchors`
   (polymorphic `goal_links` entity↔goal + `goal_connections` + `goal_intersections`) and
   `0007_goals_provenance` (goals get `created_by`/`review_status`/`source_*`/`confidence` for L0 AI
   goals; back-filled `contact_goals` → `goal_links`) are **applied live**. Backend lib in
