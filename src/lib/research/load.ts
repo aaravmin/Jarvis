@@ -47,6 +47,21 @@ export async function loadAcceptedPeople(supabase: SupabaseClient): Promise<Disc
   return people.filter((p) => p.sourceQuote);
 }
 
+/**
+ * Every accepted contact — manual AND provenanced. Unlike loadAcceptedPeople (which filters to
+ * source-quoted contacts for the provenance <Card>), this includes user-created contacts with no
+ * source quote, because the Sheets export is the user's full contact list.
+ */
+export async function loadAllAcceptedContacts(supabase: SupabaseClient): Promise<DiscoveredPerson[]> {
+  const { data } = await supabase
+    .from("contacts")
+    .select(CONTACT_COLS)
+    .eq("review_status", "accepted")
+    .order("created_at", { ascending: false });
+  const rows = (data ?? []) as unknown as ContactRow[];
+  return attachChildren(supabase, rows);
+}
+
 /** Research runs that still have people awaiting review (or errored), newest first. */
 export async function loadReviewRuns(supabase: SupabaseClient): Promise<ResearchRunView[]> {
   const { data: runs } = await supabase
