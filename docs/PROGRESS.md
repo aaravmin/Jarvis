@@ -25,6 +25,20 @@ People / Opportunities / Review / Auto-Populate are live. The **Google connector
 Drive/Sheets) is built; it activates once the user connects Google on the Connections tab.
 
 ## Task log (most recent first)
+- **Gemini switch + Tavily web search + ElevenLabs voice + bare-orb home** — ✅ shipped (local), build green.
+  Four user requests in one push:
+  1. **Runtime LLM → Gemini** (commit `cc0b3d5`): all model calls go through `src/lib/llm/gemini.ts`
+     (direct REST, no SDK) — `geminiStructured`/`geminiToolLoop`/`geminiText`, default `gemini-2.5-flash`,
+     `thinkingBudget:0`, retry-on-overload. Migrated 9 logical sites (goals/router/today-plan/draft-email/
+     ingest/compose structured; ask/opportunity/research agentic). Anthropic SDK now unused. Verified live.
+  2. **Tavily is now the web search** (same commit): `webSearch()` feeds the agent loops; the citation gate
+     is preserved against Tavily page text (quote must be a real substring; URL must be in the allowlist).
+  3. **ElevenLabs voice** (commit `9d47bdb`): `src/lib/voice/elevenlabs.ts` + `POST /api/voice` speak each
+     answer; `JarvisConsole` plays it with a speaker toggle (localStorage-persisted). Server-only key.
+     Degrades silently with no key. **⚠ Needs `ELEVENLABS_API_KEY` to actually speak — see SESSION_HANDOFF.**
+  4. **Bare-orb home + hamburger-only nav** (commits `365d56b`/`ddcf133`/`5ce870e`): home is just the
+     particle sphere + military clock on pure black; nav is a slide-in drawer behind a hamburger; the
+     "Ask about your email" explainer and the duplicate top-right "Ask Jarvis" are gone on the home.
 - **Daily Plan (Today) + Jarvis Q&A over connected data** — ✅ shipped (local). Two features:
   1. **Daily Plan** (`/today`): `src/lib/agents/today/plan.ts` loads today's calendar events + open/overdue/
      undated tasks + recent emails, then a forced Claude `build_day_plan` tool returns **only**

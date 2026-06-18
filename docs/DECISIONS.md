@@ -164,3 +164,36 @@
   fact; the agent must still cite a real `web_search` result for a claim to survive. With no key,
   `src/lib/search/tavily.ts` is a safe no-op. It also never throws (an outage degrades recall, never
   aborts a run). Webhooks remain deferred to the Gmail/Calendar connectors (they need OAuth first).
+
+- **2026-06-18 — Runtime LLM switched from Claude (Anthropic) to Gemini Flash.** Why: the Anthropic
+  key kept hitting quota mid-task, which the working method (one atomic task per session) can't absorb.
+  All model calls now go through a small direct-REST provider (`src/lib/llm/gemini.ts`, no SDK) exposing
+  three primitives: `geminiStructured<T>()` (forced JSON against a schema — the drop-in for the old
+  forced-tool pattern), `geminiToolLoop()` (function-calling agent loop), `geminiText()`. Default model
+  `gemini-2.5-flash` (GA, reliable under load); `gemini-3.5-flash` exists but is frequently overloaded,
+  so it's opt-in via `GEMINI_MODEL`. `thinkingConfig.thinkingBudget:0` on extraction calls (these are
+  thinking models that otherwise burn the token budget before emitting JSON). The provider retries
+  transient overload/rate-limit (429/503/"high demand") — exactly the failure the switch was meant to
+  dodge. Untrusted-output discipline is unchanged: every call site validates/clamps, and dates are still
+  resolved by chrono, never the model. Migrated sites: goals/generate, agents/router, agents/today/plan,
+  google/draft-email, google/ingest, templates/compose (structured); assistant/ask, agents/opportunity/
+  extract, research/extract (agentic). `@anthropic-ai/sdk` is now unused (left installed; harmless).
+
+- **2026-06-18 — Tavily is now the PRIMARY web search, and it preserves the citation gate.** Why: this
+  SUPERSEDES the 2026-06-17 "Tavily is an optional recall seed" decision. Claude's native `web_search`
+  (which produced the citation objects hard rule #3 relied on) went away with the Gemini switch, so
+  Tavily (`src/lib/search/tavily.ts` `webSearch()`) is the only web search now. Provenance is preserved
+  by construction: the agent loops feed the model ONLY what Tavily returns, and we keep each result's
+  real page text as the citation corpus + a per-run URL allowlist. A reported `source_quote` survives
+  only if it's a genuine substring of a retrieved page (`backs()`), and a source URL only if it's in the
+  allowlist — the same gate, now anchored to Tavily pages instead of Anthropic citation objects. With no
+  `TAVILY_API_KEY`, web search is a safe no-op (the agents simply find nothing to cite).
+
+- **2026-06-18 — ElevenLabs gives Jarvis a spoken voice; it's a progressive enhancement.** Why: the
+  user asked for ElevenLabs voice. TTS of each answer runs server-side (`src/lib/voice/elevenlabs.ts`
+  + `POST /api/voice`); the key lives only on the server (hard rule #6). The client plays the audio for
+  each new answer and offers a speaker toggle (preference persisted to localStorage). Everything degrades
+  silently: no `ELEVENLABS_API_KEY` → the route 503s and the UI just shows the text answer, so voice is
+  never a hard dependency. Default voice "Rachel" (premade, on every account) + `eleven_turbo_v2_5`
+  (low latency), both overridable via env. This completes the voice loop — we already had browser
+  speech-to-text for input.
