@@ -126,11 +126,13 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
   const listening = phase === "listening";
   const thinking = phase === "thinking";
 
-  const statusText = thinking
-    ? "Thinking…"
-    : listening
-      ? "Listening… speak, then pause"
-      : "Ask about your email, calendar, meetings & tasks — or search the web and your files";
+  // On the home/hero screen we deliberately show NO explainer when idle — just the orb and the
+  // clock. Status text only appears transiently while listening or thinking. Elsewhere (the compact
+  // console) the idle line still hints at what Jarvis can do.
+  const idleStatus = hero
+    ? ""
+    : "Ask about your email, calendar, meetings & tasks — or search the web and your files";
+  const statusText = thinking ? "Thinking…" : listening ? "Listening… speak, then pause" : idleStatus;
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col items-center">

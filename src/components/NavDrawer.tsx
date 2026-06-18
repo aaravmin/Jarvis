@@ -8,9 +8,10 @@ import { NAV_ITEMS } from "@/lib/nav";
 import { Brand } from "@/components/Brand";
 
 /**
- * The slide-in navigation drawer + its hamburger trigger. Replaces the always-on sidebar: the tab
- * list lives behind a left hamburger and overlays on demand (any screen size). Closes on Escape,
- * overlay click, and route change; locks body scroll while open.
+ * The slide-in navigation drawer + its hamburger trigger — the app's ONLY nav surface. There is no
+ * always-on rail: the tab list lives behind a left hamburger and overlays on demand at every screen
+ * size, so Jarvis opens to just the orb and the clock. Closes on Escape, overlay click, and route
+ * change; locks body scroll while open.
  */
 export function NavDrawer({ userEmail }: { userEmail?: string }) {
   const [open, setOpen] = useState(false);
@@ -42,16 +43,16 @@ export function NavDrawer({ userEmail }: { userEmail?: string }) {
         onClick={() => setOpen(true)}
         aria-label="Open navigation"
         aria-expanded={open}
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-2 text-muted transition-colors hover:border-accent/50 hover:text-foreground md:hidden"
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-2 text-muted transition-colors hover:border-accent/50 hover:text-foreground"
       >
         <Menu className="h-[18px] w-[18px]" />
       </button>
 
       {open && (
         <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Navigation">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          <div className="drawer-overlay absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
 
-          <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-border bg-surface shadow-2xl">
+          <aside className="drawer-panel absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-border bg-surface shadow-2xl">
             <div className="flex h-16 items-center justify-between px-5 border-b border-border">
               <Link href="/jarvis" aria-label="Jarvis home">
                 <Brand />
@@ -111,7 +112,7 @@ export function NavDrawer({ userEmail }: { userEmail?: string }) {
                     <p className="truncate text-xs font-medium text-foreground" title={userEmail}>
                       {userEmail}
                     </p>
-                    <p className="text-[11px] text-muted">Phase 0 · Foundations</p>
+                    <p className="text-[11px] text-muted">Signed in</p>
                   </div>
                   <form action="/auth/signout" method="post">
                     <button

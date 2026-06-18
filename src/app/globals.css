@@ -81,6 +81,21 @@ body {
     radial-gradient(50rem 40rem at 100% 0%, rgba(14, 165, 233, 0.05), transparent 55%);
 }
 
+/* ---- Nav drawer (slide-in) ------------------------------------------------- */
+@keyframes drawer-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes drawer-panel-in {
+  from { transform: translateX(-100%); opacity: 0.4; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+.drawer-overlay { animation: drawer-overlay-in 0.18s ease-out; }
+.drawer-panel { animation: drawer-panel-in 0.26s cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .drawer-overlay, .drawer-panel { animation: none; }
+}
+
 /* ---- Jarvis orb ------------------------------------------------------------ */
 @keyframes orb-spin {
   to { transform: rotate(360deg); }
