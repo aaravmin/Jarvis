@@ -4,11 +4,23 @@ import { runOpportunityResearch } from "@/lib/agents/opportunity/extract";
 import { resolveDeadline, resolveDateRange } from "@/lib/agents/opportunity/deadline";
 import { validatedToOpportunity } from "@/lib/agents/opportunity/map";
 import { tavilySeedHints } from "@/lib/search/tavily";
+import { loadGoalDigests } from "@/lib/goals/facts";
+import { loadProfile, profileDigest } from "@/lib/profile";
 import type {
   DiscoveredOpportunity,
   OpportunityKindFilter,
   OpportunityRunView,
 } from "@/lib/agents/opportunity/types";
+
+/** Build the "who is this for" context (profile + goals) that tunes a search to the user. */
+async function relevanceContext(supabase: SupabaseClient): Promise<string | undefined> {
+  const [profile, goals] = await Promise.all([loadProfile(supabase), loadGoalDigests(supabase)]);
+  const parts: string[] = [];
+  const pd = profileDigest(profile);
+  if (pd) parts.push(pd);
+  if (goals.length) parts.push(`Their goals:\n${goals.map((g) => `- ${g.title}${g.description ? `: ${g.description}` : ""}`).join("\n")}`);
+  return parts.length ? parts.join("\n\n") : undefined;
+}
 
 /**
  * Run-and-persist for the Opportunity agent. Owns the full flow so both /api/opportunities (the page
@@ -95,9 +107,12 @@ export async function runOpportunitySearch(
   try {
     // Optional recall boost: a preliminary Tavily search seeds candidate URLs into the agent's
     // context. No-op (returns []) when TAVILY_API_KEY is unset. Seeds never bypass the citation gate.
-    const seedHints = await tavilySeedHints(query, kindFilter);
+    const [seedHints, relevance] = await Promise.all([
+      tavilySeedHints(query, kindFilter),
+      relevanceContext(supabase),
+    ]);
 
-    const outcome = await runOpportunityResearch(query, kindFilter, seedHints);
+    const outcome = await runOpportunityResearch(query, kindFilter, seedHints, relevance);
 
     const opportunities: DiscoveredOpportunity[] = [];
     for (const v of outcome.opportunities) {

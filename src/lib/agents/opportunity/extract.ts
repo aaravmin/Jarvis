@@ -256,9 +256,14 @@ export async function runOpportunityResearch(
   query: string,
   kindFilter: OpportunityKindFilter = "all",
   seedHints?: string[],
+  relevance?: string,
 ): Promise<OpportunityOutcome> {
   const client = getClient();
   const model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
+
+  const relevanceBlock = relevance
+    ? `\n\nTune results to THIS person — strongly prefer opportunities that fit their level/age and advance their goals; drop ones that don't (e.g. internships not senior roles for a student; programs open to undergrads, not PhD-only):\n${relevance}`
+    : "";
 
   const seedBlock =
     seedHints && seedHints.length
@@ -275,7 +280,7 @@ export async function runOpportunityResearch(
 
 ${kindGuidance(kindFilter)}
 
-Search the web and identify real, currently-open opportunities. For each, quote the exact short sentence from a source that proves it matches, and copy any deadline/date text VERBATIM (never resolve it to a date).${seedBlock}`,
+Search the web and identify real, currently-open opportunities. For each, quote the exact short sentence from a source that proves it matches, and copy any deadline/date text VERBATIM (never resolve it to a date).${relevanceBlock}${seedBlock}`,
     },
   ];
 
