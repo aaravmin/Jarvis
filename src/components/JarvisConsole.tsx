@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Mic, Send, Globe, FileText, ExternalLink, Square, Volume2, VolumeX } from "lucide-react";
+import { Mic, Send, Globe, FileText, ExternalLink, Square, Volume2, VolumeX, Headphones } from "lucide-react";
 import { JarvisOrb, type OrbState } from "@/components/JarvisOrb";
 import { JarvisSphere } from "@/components/JarvisSphere";
 import { LiveClock } from "@/components/LiveClock";
@@ -37,6 +37,10 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
   // Spoken replies (ElevenLabs via /api/voice). On by default; the preference is remembered.
   const [speechOn, setSpeechOn] = useState(true);
   const [speaking, setSpeaking] = useState(false);
+  // Hands-free conversation: you speak → pause → Jarvis answers ALOUD → the mic re-opens for your
+  // next turn, looping until you stop talking or toggle it off. Ephemeral (needs a tap to start, so
+  // it's never restored "on" but idle on reload). Voice output is forced on while it's active.
+  const [convoMode, setConvoMode] = useState(false);
 
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -44,9 +48,18 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
   const finalTranscriptRef = useRef("");
   // Mirror of phase so submit() can guard re-entry without being recreated each render.
   const phaseRef = useRef<OrbState>("idle");
+  // Mirrors so callbacks/audio handlers read live values without being recreated (and without
+  // re-running the speak effect when only a preference toggles).
+  const convoModeRef = useRef(false);
+  const speechOnRef = useRef(true);
+  // Late-bound ref to startListening so speak()'s "next turn" can re-open the mic without a cycle.
+  const startListeningRef = useRef<() => void>(() => {});
   useEffect(() => {
     phaseRef.current = phase;
   }, [phase]);
+  useEffect(() => {
+    speechOnRef.current = speechOn;
+  }, [speechOn]);
 
   useEffect(() => {
     const w = window as unknown as {
@@ -69,6 +82,10 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
   const stopSpeaking = useCallback(() => {
     const a = audioRef.current;
     if (a) {
+      // Detach handlers BEFORE clearing src — otherwise setting src="" can fire onerror, which would
+      // re-trigger afterSpeaking() and spuriously re-open the mic.
+      a.onended = null;
+      a.onerror = null;
       a.pause();
       a.src = "";
       audioRef.current = null;
@@ -80,12 +97,20 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
     setSpeaking(false);
   }, []);
 
+  // When Jarvis finishes (or fails to) speak: in conversation mode, re-open the mic for the next turn;
+  // otherwise just settle back to idle. This is the loop's hinge.
+  const afterSpeaking = useCallback(() => {
+    stopSpeaking();
+    if (convoModeRef.current) startListeningRef.current();
+    else setPhase("idle");
+  }, [stopSpeaking]);
+
   // Speak `text` with Jarvis's voice. Server holds the ElevenLabs key; a 503 (no key) or any other
   // failure just leaves the answer silent — speaking is a progressive enhancement, never required.
   const speak = useCallback(
     async (text: string) => {
       const clean = text.trim();
-      if (!clean) return;
+      if (!clean) return afterSpeaking();
       stopSpeaking();
       try {
         const res = await fetch("/api/voice", {
@@ -93,28 +118,30 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ text: clean }),
         });
-        if (!res.ok) return; // not configured / outage — stay silent
+        if (!res.ok) return afterSpeaking(); // not configured / outage — stay silent, keep the loop alive
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         audioUrlRef.current = url;
         const audio = new Audio(url);
         audioRef.current = audio;
-        audio.onended = stopSpeaking;
-        audio.onerror = stopSpeaking;
+        audio.onended = afterSpeaking;
+        audio.onerror = afterSpeaking;
         setSpeaking(true);
-        // Autoplay may be blocked if the browser doesn't tie this to the recent gesture — fail quietly.
-        await audio.play().catch(stopSpeaking);
+        setPhase("speaking");
+        // Autoplay may be blocked if the browser doesn't tie this to the recent gesture — fail quietly
+        // but still advance the conversation loop.
+        await audio.play().catch(afterSpeaking);
       } catch {
-        stopSpeaking();
+        afterSpeaking();
       }
     },
-    [stopSpeaking],
+    [stopSpeaking, afterSpeaking],
   );
 
-  // Speak each NEW answer (only when voice is on). Intentionally keyed on `answer` alone so toggling
-  // the preference doesn't replay an old reply.
+  // Speak each NEW answer (when voice is on, or always in conversation mode). Keyed on `answer` alone
+  // so toggling a preference never replays an old reply; live prefs are read via refs.
   useEffect(() => {
-    if (answer?.answer && speechOn) void speak(answer.answer);
+    if (answer?.answer && (speechOnRef.current || convoModeRef.current)) void speak(answer.answer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [answer]);
 
@@ -149,13 +176,19 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
       const data = await res.json();
       if (!res.ok) {
         setError(data?.error ?? "Jarvis couldn't answer that.");
+        setPhase("idle");
+        // Keep a hands-free conversation going even after a stumble.
+        if (convoModeRef.current) startListeningRef.current();
       } else {
+        // Success: the speak effect takes over (and, in convo mode, re-opens the mic when it ends).
+        // If voice is off and we're not conversing, settle to idle now.
         setAnswer(data as AskResponse);
+        if (!speechOnRef.current && !convoModeRef.current) setPhase("idle");
       }
     } catch {
       setError("Network error reaching the assistant.");
-    } finally {
       setPhase("idle");
+      if (convoModeRef.current) startListeningRef.current();
     }
   }, []);
 
@@ -187,10 +220,16 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
       setInput((finalText + interim).trimStart());
     };
     rec.onend = () => {
-      setPhase("idle");
       recognitionRef.current = null;
       const said = finalTranscriptRef.current.trim();
-      if (said) void submit(said);
+      if (said) {
+        setInput("");
+        void submit(said);
+      } else {
+        // Heard nothing — settle to idle. In conversation mode this is the natural way to end the
+        // back-and-forth (you simply stop talking); tap the orb to start a new turn.
+        setPhase("idle");
+      }
     };
     rec.onerror = () => {
       setPhase("idle");
@@ -206,22 +245,67 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
     recognitionRef.current?.stop();
   }, []);
 
+  // Keep the late-bound ref pointing at the latest startListening so afterSpeaking()/submit() can
+  // re-open the mic for the next conversational turn without a render-time dependency cycle.
+  useEffect(() => {
+    startListeningRef.current = startListening;
+  }, [startListening]);
+
+  // Toggle hands-free conversation. Turning it ON (a real user gesture) immediately starts listening,
+  // which also unlocks audio autoplay for the spoken replies that follow. Turning it OFF halts both
+  // the mic and any in-flight speech.
+  const toggleConvo = useCallback(() => {
+    const next = !convoModeRef.current;
+    convoModeRef.current = next;
+    setConvoMode(next);
+    if (next) {
+      if (voiceSupported && !phaseIsBusy(phaseRef.current)) startListeningRef.current();
+    } else {
+      stopListening();
+      stopSpeaking();
+      setPhase("idle");
+    }
+  }, [voiceSupported, stopListening, stopSpeaking]);
+
+  // The big orb/sphere is the primary push-to-talk control. While Jarvis is speaking, tapping it
+  // interrupts and starts a new turn (barge-in); while listening it stops; when idle it listens.
+  const onOrbClick = useCallback(() => {
+    if (phaseRef.current === "thinking") return;
+    if (phaseRef.current === "listening") {
+      stopListening();
+      return;
+    }
+    if (phaseRef.current === "speaking") stopSpeaking();
+    if (voiceSupported) startListeningRef.current();
+  }, [voiceSupported, stopListening, stopSpeaking]);
+
   const listening = phase === "listening";
   const thinking = phase === "thinking";
 
   // On the home/hero screen we deliberately show NO explainer when idle — just the orb and the
   // clock. Status text only appears transiently while listening or thinking. Elsewhere (the compact
   // console) the idle line still hints at what Jarvis can do.
+  const speakingNow = phase === "speaking";
   const idleStatus = hero
-    ? ""
+    ? convoMode
+      ? "Conversation mode — tap the orb and speak"
+      : ""
     : "Ask about your email, calendar, meetings & tasks — or search the web and your files";
-  const statusText = thinking ? "Thinking…" : listening ? "Listening… speak, then pause" : idleStatus;
+  const statusText = thinking
+    ? "Thinking…"
+    : speakingNow
+      ? "Jarvis is speaking…"
+      : listening
+        ? convoMode
+          ? "Listening… speak, then pause (conversation mode)"
+          : "Listening… speak, then pause"
+        : idleStatus;
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col items-center">
       <button
         type="button"
-        onClick={() => (listening ? stopListening() : voiceSupported ? startListening() : undefined)}
+        onClick={onOrbClick}
         disabled={thinking}
         aria-label={listening ? "Stop listening" : "Talk to Jarvis"}
         className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-default"
@@ -251,6 +335,24 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
             : "w-full border-border bg-surface-2",
         ].join(" ")}
       >
+        {voiceSupported && (
+          <button
+            type="button"
+            onClick={toggleConvo}
+            aria-label={convoMode ? "Turn off conversation mode" : "Start a hands-free conversation"}
+            aria-pressed={convoMode}
+            title={
+              convoMode
+                ? "Conversation mode on — speak, pause, and Jarvis replies aloud, then listens again. Click to stop."
+                : "Conversation mode: talk hands-free — Jarvis listens, answers aloud, then listens again"
+            }
+            className={`rounded-lg p-1.5 transition-colors ${
+              convoMode ? "bg-accent/15 text-accent" : "text-muted hover:text-accent"
+            }`}
+          >
+            <Headphones className="h-4 w-4" />
+          </button>
+        )}
         <button
           type="button"
           onClick={() => (speaking ? stopSpeaking() : toggleSpeech())}

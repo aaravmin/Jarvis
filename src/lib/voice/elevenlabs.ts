@@ -11,9 +11,11 @@ import "server-only";
  */
 
 const ENDPOINT = "https://api.elevenlabs.io/v1/text-to-speech";
-// "Rachel" — a premade voice available on every account, so it works the moment a key is added.
-// Override with ELEVENLABS_VOICE_ID to use any other voice from the user's library.
-const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
+// "George — Warm, Captivating Storyteller": one of the default voices present on a fresh (incl. free)
+// account, so it works via the API the moment a key is added. NOTE: most *library* voices (e.g.
+// "Rachel") return 402 paid_plan_required for free users — that was the original silent-voice bug.
+// Override with ELEVENLABS_VOICE_ID to use any voice that appears in YOUR account's voice list.
+const DEFAULT_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb";
 // Turbo v2.5: low-latency, good quality — the right default for a snappy assistant reply.
 const DEFAULT_MODEL = "eleven_turbo_v2_5";
 // Cap the spoken text: long answers would cost a lot and take forever to synthesize. The on-screen
