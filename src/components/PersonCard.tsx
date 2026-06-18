@@ -4,6 +4,7 @@ import { Check, X } from "lucide-react";
 import { Card } from "@/components/Card";
 import { AddToGoal } from "@/components/goals/AddToGoal";
 import { DraftToContact } from "@/components/google/DraftToContact";
+import { ContactStatusControl } from "@/components/ContactStatusControl";
 import type { CardFieldSource, CardSource } from "@/lib/types";
 import type { DiscoveredPerson } from "@/lib/research/types";
 
@@ -112,6 +113,7 @@ export function PersonCard({
   const emailChannel = person.channels.find((c) => c.kind === "email")?.value;
   const actions = !showActions ? (
     <>
+      <ContactStatusControl contactId={person.id} initial={person.outreachStatus} />
       <DraftToContact name={person.fullName} email={emailChannel} />
       <AddToGoal entityType="contact" entityId={person.id} />
     </>

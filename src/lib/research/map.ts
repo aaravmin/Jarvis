@@ -1,4 +1,4 @@
-import type { DiscoveredPerson } from "@/lib/research/types";
+import type { ContactOutreachStatus, DiscoveredPerson } from "@/lib/research/types";
 import type { ValidatedCandidate } from "@/lib/research/extract";
 
 /** Loose shapes for the Supabase rows we read back (only the columns we use). */
@@ -14,6 +14,7 @@ export type ContactRow = {
   source_quote: string | null;
   confidence: number | null;
   review_status: "review" | "accepted" | "dismissed";
+  outreach_status: ContactOutreachStatus | null;
   field_sources: Record<string, { url?: string; quote?: string; confidence?: number }> | null;
 };
 export type ChannelRow = {
@@ -44,6 +45,7 @@ export function candidateToPerson(id: string, c: ValidatedCandidate): Discovered
     sourceUrl: c.sourceUrl,
     confidence: c.confidence,
     reviewStatus: "review",
+    outreachStatus: "not_emailed",
     channels: c.channels,
     goalLinks: c.goalLinks,
     fieldSources: c.fieldSources,
@@ -72,6 +74,7 @@ export function rowsToPerson(
     sourceUrl: primaryUrl,
     confidence: contact.confidence ?? undefined,
     reviewStatus: contact.review_status,
+    outreachStatus: contact.outreach_status ?? "not_emailed",
     channels: channels
       .filter((ch) => ch.contact_id === contact.id)
       .map((ch) => ({ kind: ch.kind, value: ch.value, verified: true })),

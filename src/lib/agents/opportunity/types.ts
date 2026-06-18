@@ -26,6 +26,28 @@ export type OpportunityKindFilter = "all" | "programs" | "jobs" | "hackathons";
 /** Lifecycle of an opportunity search, mirrors opportunity_runs.status. */
 export type OpportunityRunStatus = "running" | "done" | "error";
 
+/**
+ * Where the user is in actually pursuing an opportunity (opportunities.application_status).
+ * Distinct from reviewStatus (which only gates the Review queue). User-driven, never set by the LLM.
+ */
+export type ApplicationStatus =
+  | "not_applied"
+  | "waiting_to_open"
+  | "applied"
+  | "interviewing"
+  | "accepted"
+  | "rejected";
+
+/** Ordered list + labels for the application-status control (single source of truth for the UI). */
+export const APPLICATION_STATUSES: { value: ApplicationStatus; label: string }[] = [
+  { value: "not_applied", label: "Not applied" },
+  { value: "waiting_to_open", label: "Waiting to open" },
+  { value: "applied", label: "Applied" },
+  { value: "interviewing", label: "Interviewing" },
+  { value: "accepted", label: "Accepted" },
+  { value: "rejected", label: "Rejected" },
+];
+
 /** Provenance for a single auto-filled field (validated against real web_search citations). */
 export type FieldSource = { url?: string; quote?: string; confidence?: number };
 
@@ -59,6 +81,7 @@ export type DiscoveredOpportunity = {
   sourceUrl?: string; // primary backing citation
   confidence?: number; // 0..1 match confidence
   reviewStatus: "review" | "accepted" | "dismissed";
+  applicationStatus: ApplicationStatus; // pipeline state; defaults to "not_applied"
   fieldSources: Record<string, FieldSource>;
 };
 

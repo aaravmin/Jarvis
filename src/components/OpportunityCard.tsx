@@ -3,6 +3,7 @@
 import { Check, X, ExternalLink, MapPin, CalendarClock } from "lucide-react";
 import { Card } from "@/components/Card";
 import { AddToGoal } from "@/components/goals/AddToGoal";
+import { OpportunityStatusControl } from "@/components/OpportunityStatusControl";
 import { formatDate, daysUntil } from "@/lib/format";
 import type { CardFieldSource, CardSource } from "@/lib/types";
 import type { DiscoveredOpportunity, OpportunityCategory } from "@/lib/agents/opportunity/types";
@@ -125,7 +126,10 @@ export function OpportunityCard({
   );
 
   const actions = !showActions ? (
-    <AddToGoal entityType="opportunity" entityId={o.id} />
+    <>
+      <OpportunityStatusControl opportunityId={o.id} initial={o.applicationStatus} />
+      <AddToGoal entityType="opportunity" entityId={o.id} />
+    </>
   ) : o.reviewStatus === "review" ? (
     <>
       <button

@@ -1,4 +1,4 @@
-import type { DiscoveredOpportunity, OpportunityCategory } from "@/lib/agents/opportunity/types";
+import type { ApplicationStatus, DiscoveredOpportunity, OpportunityCategory } from "@/lib/agents/opportunity/types";
 import type { ValidatedOpportunity } from "@/lib/agents/opportunity/extract";
 
 /** The opportunities columns we read back (only what the UI uses). */
@@ -23,12 +23,13 @@ export type OpportunityRow = {
   source_quote: string | null;
   confidence: number | null;
   review_status: "review" | "accepted" | "dismissed";
+  application_status: ApplicationStatus;
   field_sources: Record<string, { url?: string; quote?: string; confidence?: number }> | null;
 };
 
 /** The columns string for SELECTs (kept in one place so reads stay consistent). */
 export const OPPORTUNITY_COLS =
-  "id, title, organization, category, description, location, is_remote, how_to_apply_url, requirements, required_skills, comp_or_prize, notes, raw_deadline, deadline_at, raw_event_dates, starts_at, ends_at, source_quote, confidence, review_status, field_sources";
+  "id, title, organization, category, description, location, is_remote, how_to_apply_url, requirements, required_skills, comp_or_prize, notes, raw_deadline, deadline_at, raw_event_dates, starts_at, ends_at, source_quote, confidence, review_status, application_status, field_sources";
 
 /** Build the UI shape from an in-memory validated opportunity + the dates our code resolved. */
 export function validatedToOpportunity(
@@ -58,6 +59,7 @@ export function validatedToOpportunity(
     sourceUrl: v.sourceUrl,
     confidence: v.confidence,
     reviewStatus: "review",
+    applicationStatus: "not_applied",
     fieldSources: v.fieldSources,
   };
 }
@@ -88,6 +90,7 @@ export function rowToOpportunity(row: OpportunityRow): DiscoveredOpportunity {
     sourceUrl: primaryUrl,
     confidence: row.confidence ?? undefined,
     reviewStatus: row.review_status,
+    applicationStatus: row.application_status ?? "not_applied",
     fieldSources: fs,
   };
 }

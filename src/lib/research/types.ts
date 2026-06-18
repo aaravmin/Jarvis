@@ -3,6 +3,21 @@ import type { ResearchTarget } from "@/lib/types";
 /** Lifecycle of a research run, mirrors research_runs.status. */
 export type ResearchRunStatus = "running" | "done" | "error";
 
+/**
+ * Outreach pipeline state for a contact (contacts.outreach_status). User-facing toggle; our code can
+ * auto-populate it from ingested email, but the LLM never sets it. "Manual wins": auto-sync only ever
+ * moves a contact forward on real evidence and never overwrites a more-advanced manual value.
+ */
+export type ContactOutreachStatus = "not_emailed" | "emailed" | "spoke" | "follow_up";
+
+/** Ordered list + labels for the outreach-status control (single source of truth for the UI). */
+export const CONTACT_OUTREACH_STATUSES: { value: ContactOutreachStatus; label: string }[] = [
+  { value: "not_emailed", label: "Not emailed" },
+  { value: "emailed", label: "Emailed" },
+  { value: "spoke", label: "Spoke" },
+  { value: "follow_up", label: "Follow up" },
+];
+
 /** Provenance for a single auto-filled field (validated against real web_search citations). */
 export type FieldSource = { url?: string; quote?: string; confidence?: number };
 
@@ -41,6 +56,7 @@ export type DiscoveredPerson = {
   sourceUrl?: string; // primary backing citation
   confidence?: number; // 0..1 match confidence
   reviewStatus: "review" | "accepted" | "dismissed";
+  outreachStatus: ContactOutreachStatus; // pipeline state; defaults to "not_emailed"
   channels: DiscoveredChannel[];
   goalLinks: DiscoveredGoalLink[];
   fieldSources: Record<string, FieldSource>;

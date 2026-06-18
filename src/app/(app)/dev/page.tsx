@@ -46,6 +46,7 @@ const fakePerson: DiscoveredPerson = {
   sourceUrl: "https://www.ycombinator.com/companies/helix-bio",
   confidence: 0.88,
   reviewStatus: "review",
+  outreachStatus: "not_emailed",
   channels: [
     { kind: "linkedin", value: "linkedin.com/in/mayachen", verified: true, sourceUrl: "https://www.linkedin.com/in/mayachen", confidence: 0.9 },
     { kind: "email", value: "maya@helixbio.com", verified: false, confidence: 0.4 },

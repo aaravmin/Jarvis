@@ -9,7 +9,7 @@ import {
 import type { DiscoveredPerson, ResearchRunView } from "@/lib/research/types";
 
 const CONTACT_COLS =
-  "id, full_name, company, role_title, background, relevance, the_ask, notes, source_quote, confidence, review_status, field_sources";
+  "id, full_name, company, role_title, background, relevance, the_ask, notes, source_quote, confidence, review_status, outreach_status, field_sources";
 
 async function attachChildren(
   supabase: SupabaseClient,
