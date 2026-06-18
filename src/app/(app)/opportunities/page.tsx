@@ -20,12 +20,6 @@ export default async function OpportunitiesPage() {
             <Compass className="h-5 w-5 text-accent" />
           </span>
           <h2 className="text-sm font-semibold text-foreground">No opportunities yet</h2>
-          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-            Ask the Opportunity agent above — e.g. &ldquo;biotech hackathons with upcoming
-            deadlines.&rdquo; It researches the web and surfaces each one with its deadline, how to
-            apply, requirements, location, dates, and required skills — every field carrying the exact
-            source. You approve them in Review before they land here.
-          </p>
         </div>
       ) : (
         <div className="space-y-3">

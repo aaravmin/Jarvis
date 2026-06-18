@@ -1,18 +1,15 @@
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 type EmptyStateProps = {
   icon: LucideIcon;
   title: string;
-  description: string;
-  /** Roadmap phase/task that fills this section, shown as a small badge. */
-  deliveredBy?: string;
+  /** Optional action (e.g. an "Add" button) — no explanatory copy. */
+  action?: ReactNode;
 };
 
-/**
- * Consistent placeholder for a section that has no data yet.
- * Every section in the Phase 0 shell renders one of these so the app feels complete.
- */
-export function EmptyState({ icon: Icon, title, description, deliveredBy }: EmptyStateProps) {
+/** Minimal placeholder for a section with no data: an icon, a short title, and an optional action. */
+export function EmptyState({ icon: Icon, title, action }: EmptyStateProps) {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
       <div className="relative mb-5 inline-flex h-16 w-16 items-center justify-center">
@@ -22,13 +19,7 @@ export function EmptyState({ icon: Icon, title, description, deliveredBy }: Empt
         </span>
       </div>
       <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-      <p className="mt-2 max-w-md text-sm leading-relaxed text-muted">{description}</p>
-      {deliveredBy && (
-        <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-border bg-surface-2 px-3 py-1 text-xs text-muted-strong">
-          <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-          Delivered by {deliveredBy}
-        </span>
-      )}
+      {action && <div className="mt-5">{action}</div>}
     </div>
   );
 }

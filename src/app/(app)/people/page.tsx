@@ -20,11 +20,6 @@ export default async function PeoplePage() {
             <Users className="h-5 w-5 text-accent" />
           </span>
           <h2 className="text-sm font-semibold text-foreground">No people yet</h2>
-          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-            Ask Jarvis to find a cohort above (or press ⌘K) — e.g. &ldquo;Brown alumni at a YC biotech
-            startup.&rdquo; It researches the web, and each person it surfaces carries the exact source
-            that justifies them. You approve them in Review before they land here.
-          </p>
         </div>
       ) : (
         <div className="space-y-3">

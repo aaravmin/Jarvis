@@ -31,9 +31,6 @@ export function Topbar({ userEmail }: { userEmail?: string }) {
         <h1 className="truncate text-base font-semibold tracking-tight text-foreground">
           {item?.label ?? "Jarvis"}
         </h1>
-        {item?.description && (
-          <p className="truncate text-xs text-muted">{item.description}</p>
-        )}
       </div>
 
       {/* Ask Jarvis — auto-populate command surface. Text now; the same handler takes voice in Phase 8. */}
