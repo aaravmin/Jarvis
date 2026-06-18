@@ -111,6 +111,10 @@ export function PersonCard({
     ) : undefined;
 
   const emailChannel = person.channels.find((c) => c.kind === "email")?.value;
+  // A manually-added contact carries no source quote. It legitimately has no provenance, so it must
+  // NOT render through <Card> (which throws without a source chip — hard rule #4). It gets its own
+  // tile below with an "Added by you" badge instead of a source chip.
+  const isManual = !person.sourceQuote.trim();
   const actions = !showActions ? (
     <>
       <ContactStatusControl contactId={person.id} initial={person.outreachStatus} />
@@ -144,42 +148,69 @@ export function PersonCard({
     </span>
   );
 
+  const body = (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+      {person.roleTitle && (
+        <>
+          <dt className="text-muted">Role</dt>
+          <dd className="text-foreground">{person.roleTitle}</dd>
+        </>
+      )}
+      {person.company && (
+        <>
+          <dt className="text-muted">Company</dt>
+          <dd className="text-foreground">{person.company}</dd>
+        </>
+      )}
+      {person.background && (
+        <>
+          <dt className="text-muted">Background</dt>
+          <dd className="text-muted-strong">{person.background}</dd>
+        </>
+      )}
+      {person.theAsk && (
+        <>
+          <dt className="text-muted">The ask</dt>
+          <dd className="text-muted-strong">{person.theAsk}</dd>
+        </>
+      )}
+      {person.channels.length > 0 && (
+        <>
+          <dt className="text-muted">Contact</dt>
+          <dd className="text-muted-strong">
+            {person.channels.map((c) => `${c.kind}: ${c.value}`).join(" · ")}
+          </dd>
+        </>
+      )}
+    </dl>
+  );
+
+  // Manual contact: a non-Card tile (no source chip) styled to match Card so the People grid is
+  // consistent. "Added by you" stands in for the provenance chip.
+  if (isManual) {
+    return (
+      <article className="rounded-xl border border-border bg-surface-2 p-4 transition-colors hover:border-border-strong">
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="text-sm font-semibold leading-snug text-foreground">{person.fullName}</h3>
+          <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[11px] text-muted">
+            Added by you
+          </span>
+        </div>
+        <div className="mt-2">{body}</div>
+        {reasoning && (
+          <p className="mt-2 text-xs italic text-muted">
+            <span className="not-italic text-muted-strong">Notes: </span>
+            {reasoning}
+          </p>
+        )}
+        {actions && <div className="mt-3 flex items-center justify-end gap-2">{actions}</div>}
+      </article>
+    );
+  }
+
   return (
     <Card title={person.fullName} source={source} reasoning={reasoning} meta={meta} actions={actions}>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-        {person.roleTitle && (
-          <>
-            <dt className="text-muted">Role</dt>
-            <dd className="text-foreground">{person.roleTitle}</dd>
-          </>
-        )}
-        {person.company && (
-          <>
-            <dt className="text-muted">Company</dt>
-            <dd className="text-foreground">{person.company}</dd>
-          </>
-        )}
-        {person.background && (
-          <>
-            <dt className="text-muted">Background</dt>
-            <dd className="text-muted-strong">{person.background}</dd>
-          </>
-        )}
-        {person.theAsk && (
-          <>
-            <dt className="text-muted">The ask</dt>
-            <dd className="text-muted-strong">{person.theAsk}</dd>
-          </>
-        )}
-        {person.channels.length > 0 && (
-          <>
-            <dt className="text-muted">Contact</dt>
-            <dd className="text-muted-strong">
-              {person.channels.map((c) => `${c.kind}: ${c.value}`).join(" · ")}
-            </dd>
-          </>
-        )}
-      </dl>
+      {body}
     </Card>
   );
 }

@@ -33,7 +33,7 @@ async function attachChildren(
   return contactRows.map((c) => rowsToPerson(c, channels, goalLinks));
 }
 
-/** Accepted, provenanced people for the People tab (RLS scopes to the signed-in user). */
+/** Every accepted contact for the People tab — manual AND provenanced (RLS scopes to the user). */
 export async function loadAcceptedPeople(supabase: SupabaseClient): Promise<DiscoveredPerson[]> {
   const { data } = await supabase
     .from("contacts")
@@ -41,16 +41,14 @@ export async function loadAcceptedPeople(supabase: SupabaseClient): Promise<Disc
     .eq("review_status", "accepted")
     .order("created_at", { ascending: false });
   const rows = (data ?? []) as unknown as ContactRow[];
-  const people = await attachChildren(supabase, rows);
-  // Only contacts that carry a source quote render via the provenance <Card>. Manual (user-created)
-  // contacts without provenance arrive with P6-T1 and get their own non-Card UI then.
-  return people.filter((p) => p.sourceQuote);
+  // Manual (user-created) contacts carry no source quote — they're shown via PersonCard's non-Card
+  // path, so we no longer filter them out here (that filter was hiding every contact the user saved).
+  return attachChildren(supabase, rows);
 }
 
 /**
- * Every accepted contact — manual AND provenanced. Unlike loadAcceptedPeople (which filters to
- * source-quoted contacts for the provenance <Card>), this includes user-created contacts with no
- * source quote, because the Sheets export is the user's full contact list.
+ * Every accepted contact — manual AND provenanced — for the Sheets export (the user's full contact
+ * list). Same result set as loadAcceptedPeople; kept as a distinct name for the export call site.
  */
 export async function loadAllAcceptedContacts(supabase: SupabaseClient): Promise<DiscoveredPerson[]> {
   const { data } = await supabase
