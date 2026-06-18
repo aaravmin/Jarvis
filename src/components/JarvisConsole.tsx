@@ -15,9 +15,10 @@ type SpeechRecognitionLike = {
   lang: string;
   start: () => void;
   stop: () => void;
+  abort: () => void;
   onresult: ((e: { results: SpeechResultList }) => void) | null;
   onend: (() => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((e: { error?: string }) => void) | null;
 };
 
 const EXAMPLES = [
@@ -199,6 +200,22 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
     };
     const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
     if (!Ctor) return;
+    // Tear down any prior session first. Without this, a second start() (e.g. the conversation-mode
+    // re-listen firing before the old session fully ended) throws "recognition has already started",
+    // which used to leave the orb stuck on "listening" with no live mic — i.e. speech stopped
+    // registering entirely until reload.
+    const prev = recognitionRef.current;
+    if (prev) {
+      prev.onresult = null;
+      prev.onend = null;
+      prev.onerror = null;
+      try {
+        prev.abort();
+      } catch {
+        /* ignore */
+      }
+      recognitionRef.current = null;
+    }
     const rec = new Ctor();
     rec.continuous = false;
     rec.interimResults = true;
@@ -231,18 +248,45 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
         setPhase("idle");
       }
     };
-    rec.onerror = () => {
+    rec.onerror = (e) => {
       setPhase("idle");
       recognitionRef.current = null;
+      const err = e?.error;
+      // Surface the failures the user can actually act on; "no-speech"/"aborted" are normal — stay quiet.
+      if (err === "not-allowed" || err === "service-not-allowed") {
+        setError("Microphone access is blocked. Allow mic permission for this site in your browser, then tap the orb again.");
+      } else if (err === "audio-capture") {
+        setError("No microphone was found. Check that one is connected and not in use by another app.");
+      } else if (err === "network") {
+        setError("Speech recognition needs a network connection and couldn't reach the service.");
+      }
     };
     recognitionRef.current = rec;
-    setPhase("listening");
     setError(null);
-    rec.start();
+    // start() can throw synchronously (already-started, or insecure context). Only enter the
+    // "listening" state if the mic actually came up; otherwise reset and tell the user.
+    try {
+      rec.start();
+      setPhase("listening");
+    } catch {
+      recognitionRef.current = null;
+      setPhase("idle");
+      setError("Couldn't start the microphone. Make sure no other app is using it, then tap the orb again.");
+    }
   }, [submit]);
 
   const stopListening = useCallback(() => {
-    recognitionRef.current?.stop();
+    const rec = recognitionRef.current;
+    if (rec) {
+      try {
+        rec.stop();
+      } catch {
+        /* ignore */
+      }
+    } else {
+      // No live session but the UI thinks we're listening — clear the stale state so the next tap works.
+      setPhase("idle");
+    }
   }, []);
 
   // Keep the late-bound ref pointing at the latest startListening so afterSpeaking()/submit() can
