@@ -197,3 +197,39 @@
   never a hard dependency. Default voice "Rachel" (premade, on every account) + `eleven_turbo_v2_5`
   (low latency), both overridable via env. This completes the voice loop — we already had browser
   speech-to-text for input.
+
+- **2026-06-18 — Calendar events carry an exact, structured END time (and an all-day flag) so the
+  assistant never fabricates one.** Why: the user reported Jarvis inventing end times ("8 PM to 1 AM"
+  for an event that only had a start). Root cause: the end was buried in `raw_text` as a raw UTC ISO
+  and the start was local, so the model read the UTC hour as a local end. Fix (hard rules #2/#7): a
+  `sources.ends_at timestamptz` column (migration 0014) + `formatEventTime()` renders the resolved
+  start–end span deterministically and the assistant is handed that exact string, never raw ISO.
+  Separately, all-day events were collapsed through `new Date().toISOString()` to UTC midnight, which a
+  negative-offset zone renders as the PREVIOUS day at a fabricated clock time. Fix: a
+  `sources.is_all_day` flag (migration 0015) + all-day starts/ends stored anchored at LOCAL NOON
+  (skew-proof, DST-safe), with Google's EXCLUSIVE all-day end converted back to the last included day;
+  `formatEventTime(…, allDay=true)` then renders a plain DATE with no time. Calendar ingest now also
+  REFRESHES already-seen events on each sync (not just inserts new ones), so reschedules and legacy
+  rows self-heal. Every calendar consumer (calendar page, assistant digest + search, the Today agent)
+  passes `is_all_day` through; the digest/search prompts tell the model all-day events have no clock
+  time.
+
+- **2026-06-18 — Apollo.io is an optional, gated connector for finding contact emails + discovering
+  people.** Why: the user asked to use Apollo to find email contacts (both: enrich existing contacts'
+  missing emails AND search for new people). Mirrors the Tavily pattern: `src/lib/apollo.ts` is gated
+  on `APOLLO_API_KEY`, server-only, degrades silently (no key → the buttons don't appear). Two
+  capabilities: MATCH (`/people/match`) reveals one person's work email; SEARCH
+  (`/mixed_people/api_search` — the API endpoint; the plain `/mixed_people/search` 403s on lower plans)
+  is discovery only and per Apollo's docs returns NO emails. So the search→import flow ENRICHES each
+  selected person via MATCH (by Apollo person id) at import time to reveal the email — search alone
+  would yield names with no contact info. Imports are `created_by='user'` + `review_status='accepted'`
+  (honestly avoids the jarvis-provenance CHECK while still recording Apollo in `field_sources.email`
+  with `url='https://apollo.io'` + email_status-derived confidence, per hard rule #3). The email
+  channel write is insert-first-then-prune so a failed write never leaves a contact with no email.
+
+- **2026-06-18 — README documents every external API/service.** Why: the user noted ElevenLabs and
+  Apollo.io were missing from the README. Added an "APIs & services" table (Supabase, Gemini, Google
+  Workspace, Tavily, ElevenLabs, Apollo.io, Web Speech API) with each service's purpose, env var(s),
+  and required/optional status, plus `NEXT_PUBLIC_SITE_URL` and the optional `GOOGLE_OAUTH_REDIRECT` in
+  the env block and `.env.example` (which was also missing the Google connector vars entirely). Fixed
+  the Drive/Sheets attribution: Drive = draft-from-template, Sheets = contact import/export.

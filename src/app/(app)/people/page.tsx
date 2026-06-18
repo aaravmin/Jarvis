@@ -4,14 +4,17 @@ import { loadAcceptedPeople } from "@/lib/research/load";
 import { entityIdsForGoal } from "@/lib/goals/load";
 import { PersonCard } from "@/components/PersonCard";
 import { FindPeopleBar } from "@/components/FindPeopleBar";
+import { ApolloFinder } from "@/components/ApolloFinder";
 import { ManualContactForm } from "@/components/manual/ManualContactForm";
 import { ContactsToolbar } from "@/components/contacts/ContactsToolbar";
+import { apolloEnabled } from "@/lib/apollo";
 
 export const dynamic = "force-dynamic";
 
 export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ goal?: string }> }) {
   const { goal } = await searchParams;
   const supabase = await createClient();
+  const apolloOn = apolloEnabled();
   let people = await loadAcceptedPeople(supabase);
   if (goal) {
     const ids = new Set(await entityIdsForGoal(supabase, goal, "contact"));
@@ -21,7 +24,10 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <FindPeopleBar />
-      <ManualContactForm />
+      <div className="flex flex-wrap items-center gap-2">
+        <ManualContactForm apolloEnabled={apolloOn} />
+        {apolloOn && <ApolloFinder />}
+      </div>
       {people.length > 0 && <ContactsToolbar />}
 
       {people.length === 0 ? (
@@ -34,7 +40,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
       ) : (
         <div className="space-y-3">
           {people.map((p) => (
-            <PersonCard key={p.id} person={p} showActions={false} />
+            <PersonCard key={p.id} person={p} showActions={false} apolloEnabled={apolloOn} />
           ))}
         </div>
       )}

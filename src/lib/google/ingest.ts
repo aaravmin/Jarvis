@@ -176,17 +176,25 @@ export async function ingestCalendar(supabase: SupabaseClient, userId: string): 
 
   let imported = 0;
   for (const ev of events) {
-    if (seen.has(ev.id)) continue;
-    const detail = [ev.endISO ? `until ${ev.endISO}` : null, ev.location].filter(Boolean).join(" · ");
-    await supabase.from("sources").insert({
-      user_id: userId,
-      source_type: "calendar",
-      external_id: ev.id,
+    // End time lives in its own column (ends_at) so it stays a real timestamp the UI/assistant format
+    // deterministically — never a raw ISO buried in raw_text for the model to misread. raw_text now
+    // carries only the human detail (location); all-day-ness is flagged so display drops the time.
+    const fields = {
       title: ev.summary,
       permalink: ev.htmlLink ?? null,
       occurred_at: ev.startISO,
-      raw_text: detail || null,
-    });
+      ends_at: ev.endISO ?? null,
+      is_all_day: ev.allDay,
+      raw_text: ev.location || null,
+    };
+    if (seen.has(ev.id)) {
+      // Refresh an event we've already ingested: this picks up reschedules AND self-heals rows stored
+      // before ends_at / is_all_day existed. user_id is explicit (belt-and-suspenders with RLS) so a
+      // Google event id shared across calendars can never touch another user's row.
+      await supabase.from("sources").update(fields).eq("user_id", userId).eq("source_type", "calendar").eq("external_id", ev.id);
+      continue;
+    }
+    await supabase.from("sources").insert({ user_id: userId, source_type: "calendar", external_id: ev.id, ...fields });
     imported++;
   }
   return { imported };

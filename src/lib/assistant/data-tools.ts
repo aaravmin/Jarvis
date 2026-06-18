@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadProfile, profileDigest } from "@/lib/profile";
 import { loadGoalDigests } from "@/lib/goals/facts";
-import { formatWhen, formatDate } from "@/lib/format";
+import { formatWhen, formatDate, formatEventTime, calendarLocation } from "@/lib/format";
 import { buildAskActions, type AskActions } from "@/lib/assistant/actions";
 
 /**
@@ -104,6 +104,8 @@ type SourceRow = {
   group_label?: string | null;
   permalink: string | null;
   occurred_at: string | null;
+  ends_at?: string | null;
+  is_all_day?: boolean | null;
   raw_text: string | null;
 };
 type TaskRow = { title: string; due_at: string | null; status: string; reasoning: string | null };
@@ -119,7 +121,7 @@ export async function buildDataDigest(supabase: SupabaseClient): Promise<string>
     loadGoalDigests(supabase),
     supabase
       .from("sources")
-      .select("title, permalink, occurred_at, raw_text")
+      .select("title, permalink, occurred_at, ends_at, is_all_day, raw_text")
       .eq("source_type", "calendar")
       .gte("occurred_at", b.startISO)
       .order("occurred_at", { ascending: true })
@@ -166,9 +168,12 @@ export async function buildDataDigest(supabase: SupabaseClient): Promise<string>
   const evRows = (events.data ?? []) as SourceRow[];
   if (evRows.length) {
     sections.push(
-      `Upcoming calendar events (from today):\n` +
+      `Upcoming calendar events (from today). Each shows the exact start and end — use these times verbatim and never invent an end time. All-day events show a DATE only (no clock time); do not state a start or end time for them:\n` +
         evRows
-          .map((e) => `- ${formatWhen(e.occurred_at ?? undefined) || "(no time)"} — ${clip(e.title, 90) || "(untitled)"}${e.raw_text ? ` · ${clip(e.raw_text, 60)}` : ""}`)
+          .map((e) => {
+            const loc = calendarLocation(e.raw_text);
+            return `- ${formatEventTime(e.occurred_at ?? undefined, e.ends_at ?? undefined, e.is_all_day ?? false) || "(no time)"} — ${clip(e.title, 90) || "(untitled)"}${loc ? ` · ${clip(loc, 60)}` : ""}`;
+          })
           .join("\n"),
     );
   }
@@ -249,18 +254,26 @@ export async function searchMyData(supabase: SupabaseClient, q: DataQuery): Prom
   for (const sk of kinds.filter((k) => k === "email" || k === "calendar" || k === "meeting")) {
     let query = supabase
       .from("sources")
-      .select("title, from_name, from_email, group_label, permalink, occurred_at, raw_text")
+      .select("title, from_name, from_email, group_label, permalink, occurred_at, ends_at, is_all_day, raw_text")
       .eq("source_type", sk);
     query = applyWindow(query, "occurred_at", when, b);
     if (kw) query = query.or(`title.ilike.%${kw}%,raw_text.ilike.%${kw}%,from_name.ilike.%${kw}%,from_email.ilike.%${kw}%,group_label.ilike.%${kw}%`);
     const { data } = await query.order("occurred_at", { ascending: when === "upcoming" }).limit(perKind);
     const rows = (data ?? []) as (SourceRow & { from_email?: string | null })[];
     if (rows.length) {
-      const label = sk === "email" ? "Emails" : sk === "calendar" ? "Calendar events" : "Meetings";
+      const label = sk === "email" ? "Emails" : sk === "calendar" ? "Calendar events (exact start and end — use verbatim, never invent an end time; all-day events show a DATE only, with no clock time)" : "Meetings";
       out.push(
         `${label}:\n` +
           rows
             .map((r) => {
+              // Calendar rows show the resolved start–end range and parsed location; everything else
+              // shows its when + raw body. The model is never handed a raw end-time ISO.
+              if (sk === "calendar") {
+                const span = formatEventTime(r.occurred_at ?? undefined, r.ends_at ?? undefined, r.is_all_day ?? false) || "(no date)";
+                const loc = calendarLocation(r.raw_text);
+                const link = r.permalink ? ` [${r.permalink}]` : "";
+                return `- ${span} — ${clip(r.title, 90) || "(untitled)"}${loc ? ` · ${clip(loc, 80)}` : ""}${link}`;
+              }
               const from = sk === "email" && r.from_name ? ` — from ${r.from_name}` : "";
               const body = r.raw_text ? ` · ${clip(r.raw_text, 100)}` : "";
               const link = r.permalink ? ` [${r.permalink}]` : "";

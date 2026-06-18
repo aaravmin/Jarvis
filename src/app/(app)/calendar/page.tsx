@@ -2,12 +2,12 @@ import Link from "next/link";
 import { CalendarDays, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getConnection } from "@/lib/google/store";
-import { formatWhen } from "@/lib/format";
+import { formatEventTime, calendarLocation } from "@/lib/format";
 import { SyncButton } from "@/components/google/SyncButton";
 
 export const dynamic = "force-dynamic";
 
-type EventRow = { id: string; title: string | null; permalink: string | null; occurred_at: string | null; raw_text: string | null };
+type EventRow = { id: string; title: string | null; permalink: string | null; occurred_at: string | null; ends_at: string | null; is_all_day: boolean | null; raw_text: string | null };
 
 export default async function CalendarPage() {
   const supabase = await createClient();
@@ -18,7 +18,7 @@ export default async function CalendarPage() {
 
   const { data } = await supabase
     .from("sources")
-    .select("id, title, permalink, occurred_at, raw_text")
+    .select("id, title, permalink, occurred_at, ends_at, is_all_day, raw_text")
     .eq("source_type", "calendar")
     .order("occurred_at", { ascending: true })
     .limit(100);
@@ -46,7 +46,7 @@ export default async function CalendarPage() {
       ) : (
         <ul className="space-y-1.5">
           {events.map((ev) => {
-            const location = ev.raw_text?.includes("·") ? ev.raw_text.split("·").pop()?.trim() : ev.raw_text?.replace(/^until.*/, "").trim();
+            const location = calendarLocation(ev.raw_text);
             return (
               <li key={ev.id} className="rounded-lg border border-border bg-surface-2 px-3 py-2.5">
                 <div className="flex items-center justify-between gap-3">
@@ -57,7 +57,9 @@ export default async function CalendarPage() {
                   ) : (
                     <span className="truncate text-sm font-medium text-foreground">{ev.title}</span>
                   )}
-                  {ev.occurred_at && <span className="shrink-0 text-xs text-muted">{formatWhen(ev.occurred_at)}</span>}
+                  {ev.occurred_at && (
+                    <span className="shrink-0 text-xs text-muted">{formatEventTime(ev.occurred_at, ev.ends_at ?? undefined, ev.is_all_day ?? false)}</span>
+                  )}
                 </div>
                 {location && (
                   <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted">

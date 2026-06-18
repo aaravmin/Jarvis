@@ -2,7 +2,7 @@ import "server-only";
 import { geminiStructured } from "@/lib/llm/gemini";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CardSource, SourceType } from "@/lib/types";
-import { formatWhen } from "@/lib/format";
+import { formatWhen, formatEventTime, calendarLocation } from "@/lib/format";
 import { loadProfile, profileDigest } from "@/lib/profile";
 
 /**
@@ -47,6 +47,7 @@ type PlanItem = {
   title: string;
   fixed: boolean;
   whenISO?: string; // events: real start time (drives sort + display)
+  allDay?: boolean; // all-day events have no clock time — display a date / "All day", never a time
   context: string; // line shown to the model
   source: CardSource;
 };
@@ -69,7 +70,7 @@ function capitalize(s: string): string {
 // Load today's raw material (deterministic — real times come from the data).
 // ---------------------------------------------------------------------------
 
-type CalRow = { id: string; title: string | null; permalink: string | null; occurred_at: string | null; raw_text: string | null };
+type CalRow = { id: string; title: string | null; permalink: string | null; occurred_at: string | null; ends_at: string | null; is_all_day: boolean | null; raw_text: string | null };
 type TaskRow = { id: string; title: string; due_at: string | null; reasoning: string | null; source_id: string | null; source_quote: string | null };
 type EmailRow = { id: string; title: string | null; from_name: string | null; permalink: string | null; occurred_at: string | null; raw_text: string | null };
 type SourceLite = { id: string; source_type: string | null; title: string | null; permalink: string | null; occurred_at: string | null };
@@ -87,7 +88,7 @@ async function loadTodayItems(supabase: SupabaseClient): Promise<PlanItem[]> {
   const [events, tasks, emails] = await Promise.all([
     supabase
       .from("sources")
-      .select("id, title, permalink, occurred_at, raw_text")
+      .select("id, title, permalink, occurred_at, ends_at, is_all_day, raw_text")
       .eq("source_type", "calendar")
       .gte("occurred_at", startISO)
       .lte("occurred_at", endISO)
@@ -117,14 +118,16 @@ async function loadTodayItems(supabase: SupabaseClient): Promise<PlanItem[]> {
   const evRows = (events.data ?? []) as CalRow[];
   evRows.forEach((e, i) => {
     const title = clip(e.title, 120) || "(untitled event)";
-    const detail = clip(e.raw_text, 80);
+    const detail = clip(calendarLocation(e.raw_text), 80);
+    const allDay = e.is_all_day ?? false;
     items.push({
       ref: `e${i}`,
       kind: "event",
       title,
       fixed: true,
       whenISO: e.occurred_at ?? undefined,
-      context: `[e${i}] ${formatWhen(e.occurred_at ?? undefined) || "(no time)"} — ${title}${detail ? ` (${detail})` : ""}`,
+      allDay,
+      context: `[e${i}] ${formatEventTime(e.occurred_at ?? undefined, e.ends_at ?? undefined, allDay) || "(no time)"} — ${title}${detail ? ` (${detail})` : ""}`,
       source: {
         type: "calendar",
         quote: `${title}${detail ? ` — ${detail}` : ""}`,
@@ -252,7 +255,7 @@ export async function buildDayPlan(supabase: SupabaseClient): Promise<DayPlan> {
   const who = profileDigest(profile);
 
   const sections: string[] = [];
-  if (events.length) sections.push(`FIXED CALENDAR EVENTS (already scheduled at the given time — keep them at that time, never restate a new time):\n${events.map((e) => e.context).join("\n")}`);
+  if (events.length) sections.push(`FIXED CALENDAR EVENTS (already scheduled at the given time — keep them at that time, never restate a new time; an event shown with a DATE only is all-day, so don't give it a clock time):\n${events.map((e) => e.context).join("\n")}`);
   if (tasks.length) sections.push(`TASKS (flexible — assign a part of day and an order, never a clock time):\n${tasks.map((t) => t.context).join("\n")}`);
   if (emails.length) sections.push(`RECENT EMAILS THAT MAY NEED ACTION (flexible; include only the ones that warrant action today):\n${emails.map((m) => m.context).join("\n")}`);
 
@@ -294,7 +297,7 @@ CRITICAL RULES:
       action: (rb.action ?? "").trim() || it.title,
       why: (rb.why ?? "").trim() || undefined,
       priority: normPriority(rb.priority),
-      timeLabel: it.fixed && it.whenISO ? formatWhen(it.whenISO) : capitalize(part),
+      timeLabel: it.fixed ? (it.allDay ? "All day" : it.whenISO ? formatWhen(it.whenISO) : capitalize(part)) : capitalize(part),
       fixed: it.fixed,
       source: it.source,
       sortKey,
@@ -313,7 +316,7 @@ CRITICAL RULES:
         action: it.kind === "email" ? `Review and reply: ${it.title}` : it.title,
         why: undefined,
         priority: it.kind === "event" ? "high" : "medium",
-        timeLabel: it.fixed && it.whenISO ? formatWhen(it.whenISO) : "Anytime",
+        timeLabel: it.fixed ? (it.allDay ? "All day" : it.whenISO ? formatWhen(it.whenISO) : "Anytime") : "Anytime",
         fixed: it.fixed,
         source: it.source,
         sortKey,

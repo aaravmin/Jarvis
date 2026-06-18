@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserPlus, Loader2, X } from "lucide-react";
+import { FindEmailButton } from "@/components/FindEmailButton";
 
 const input =
   "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted";
 
-/** Manual "add a contact" form (collapsible) for the People page. */
-export function ManualContactForm() {
+/** Manual "add a contact" form (collapsible) for the People page. When Apollo is configured, a
+ *  "Find email" button looks up the work email from the name + company and prefills it. */
+export function ManualContactForm({ apolloEnabled = false }: { apolloEnabled?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -61,6 +63,16 @@ export function ManualContactForm() {
         <input className={input} placeholder="LinkedIn URL" value={f.linkedin} onChange={set("linkedin")} />
         <input className={input} placeholder="Notes" value={f.notes} onChange={set("notes")} />
       </div>
+      {apolloEnabled && (
+        <div className="mt-2">
+          <FindEmailButton
+            fullName={f.fullName}
+            company={f.company || undefined}
+            linkedin={f.linkedin || undefined}
+            onFound={(email) => setF((p) => ({ ...p, email }))}
+          />
+        </div>
+      )}
       {err && <p className="mt-2 text-xs text-danger">{err}</p>}
       <button
         type="button"

@@ -6,6 +6,7 @@ import { AddToGoal } from "@/components/goals/AddToGoal";
 import { DraftToContact } from "@/components/google/DraftToContact";
 import { ContactStatusControl } from "@/components/ContactStatusControl";
 import { EditContactForm } from "@/components/EditContactForm";
+import { FindEmailButton } from "@/components/FindEmailButton";
 import { RemoveContactButton } from "@/components/RemoveContactButton";
 import type { CardFieldSource, CardSource } from "@/lib/types";
 import type { DiscoveredPerson } from "@/lib/research/types";
@@ -58,12 +59,14 @@ export function PersonCard({
   onDismiss,
   pending = false,
   showActions = true,
+  apolloEnabled = false,
 }: {
   person: DiscoveredPerson;
   onAccept?: () => void;
   onDismiss?: () => void;
   pending?: boolean;
   showActions?: boolean;
+  apolloEnabled?: boolean;
 }) {
   const fields: CardFieldSource[] = [];
 
@@ -122,6 +125,9 @@ export function PersonCard({
     <>
       <ContactStatusControl contactId={person.id} initial={person.outreachStatus} />
       <DraftToContact name={person.fullName} email={emailChannel} />
+      {apolloEnabled && !emailChannel && (
+        <FindEmailButton contactId={person.id} fullName={person.fullName} company={person.company ?? undefined} linkedin={linkedinChannel} />
+      )}
       <AddToGoal entityType="contact" entityId={person.id} />
       <EditContactForm
         contactId={person.id}

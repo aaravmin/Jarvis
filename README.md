@@ -138,8 +138,25 @@ reply?").
 | **Web search** | Tavily (cohort + opportunity research; citations verified before persist) |
 | **Date resolution** | chrono-node — deterministic, never the model |
 | **Connectors** | Google Workspace — Gmail, Calendar, Drive, Sheets (narrowest OAuth scopes; tokens server-side only) |
+| **People enrichment** | Apollo.io — find work emails + discover people (optional) |
 | **Voice** | Web Speech API (speech-in) + ElevenLabs (speech-out) |
 | **Icons** | lucide-react |
+
+## APIs & services
+
+Every external service Jarvis talks to, what it's for, and the env var(s) that enable it. Each
+optional service is **gated on its key** — unset it and the feature simply doesn't appear; the rest
+of the app keeps working.
+
+| Service | What it does here | Env var(s) | Required? |
+|---------|-------------------|-----------|-----------|
+| **Supabase** | Postgres + Auth + Row-Level Security — the system of record | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Yes** |
+| **Google Gemini** | All runtime LLM calls — the assistant, the extractor, and the research/opportunity agents | `GEMINI_API_KEY` (+ `GEMINI_MODEL`) | **Yes** |
+| **Google Workspace** | OAuth connector — Gmail (read), Calendar (read + create), Drive (read-only, draft-from-template), Sheets (contact import/export) | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (+ optional `GOOGLE_OAUTH_REDIRECT`) | For the email/calendar/meeting agents |
+| **Tavily** | Web search the agents and the orb cite from (every quote traces to a real result URL) | `TAVILY_API_KEY` | Optional |
+| **ElevenLabs** | Text-to-speech — gives the orb a spoken voice (`/api/voice`) | `ELEVENLABS_API_KEY` (+ `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL`) | Optional |
+| **Apollo.io** | Find a contact's work email (enrich) + discover new people (search → email revealed on import) on the People page | `APOLLO_API_KEY` | Optional |
+| **Web Speech API** | Browser speech-to-text for voice input | — (runs in the browser, no key) | Optional |
 
 ## The hard rules
 
@@ -203,12 +220,17 @@ Environment (`.env.local`, gitignored — never commit it):
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=         # Supabase → Project Settings → API
 NEXT_PUBLIC_SUPABASE_ANON_KEY=    # the public anon key (RLS still applies)
+NEXT_PUBLIC_SITE_URL=             # app base URL (default http://localhost:3000) — used for the OAuth redirect
 GEMINI_API_KEY=                   # the assistant, extractor, and research agents
 TAVILY_API_KEY=                   # web search for the research agents
-GOOGLE_CLIENT_ID=                 # Gmail / Calendar / Drive connector
+GOOGLE_CLIENT_ID=                 # Gmail / Calendar / Drive / Sheets connector
 GOOGLE_CLIENT_SECRET=
+GOOGLE_OAUTH_REDIRECT=            # optional — defaults to ${NEXT_PUBLIC_SITE_URL}/api/connect/google/callback
 ELEVENLABS_API_KEY=               # optional — gives Jarvis a spoken voice
+APOLLO_API_KEY=                   # optional — find work emails + discover people
 ```
+
+See [APIs & services](#apis--services) above for the full list and what each key unlocks.
 
 Then apply the schema by running the files in [`supabase/migrations/`](supabase/migrations/) (`0001`
 → latest) in the Supabase SQL editor. Connect Google from the in-app **Connections** tab to unlock

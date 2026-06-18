@@ -9,9 +9,20 @@ export type CalEvent = {
   summary: string;
   startISO: string;
   endISO?: string;
+  allDay: boolean;
   location?: string;
   htmlLink?: string;
 };
+
+/**
+ * An all-day date (YYYY-MM-DD) anchored at LOCAL noon, ±dayOffset days. Noon-local is DST-safe and,
+ * unlike UTC-midnight, never skews to the previous day when rendered in a negative-offset zone — so an
+ * all-day event keeps its real date everywhere (hard rule #7). Used to store all-day starts/ends.
+ */
+function allDayNoonISO(ymd: string, dayOffset = 0): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(y, m - 1, d + dayOffset, 12, 0, 0).toISOString();
+}
 
 export async function listEvents(token: string, timeMinISO: string, max = 50): Promise<CalEvent[]> {
   const params = new URLSearchParams({
@@ -34,15 +45,28 @@ export async function listEvents(token: string, timeMinISO: string, max = 50): P
   };
   return (data.items ?? [])
     .map((e) => {
-      const start = e.start?.dateTime ?? e.start?.date;
-      if (!start) return null;
-      const startISO = new Date(start).toISOString();
-      const endRaw = e.end?.dateTime ?? e.end?.date;
+      // All-day events have start.date (YYYY-MM-DD) and NO start.dateTime; timed events have dateTime.
+      const allDay = !e.start?.dateTime && !!e.start?.date;
+      const startRaw = e.start?.dateTime ?? e.start?.date;
+      if (!startRaw) return null;
+      let startISO: string;
+      let endISO: string | undefined;
+      if (allDay) {
+        startISO = allDayNoonISO(e.start!.date!);
+        // Google's all-day end.date is EXCLUSIVE (the morning after) — step back to the last
+        // included day so a one-day event reads as a single date, not a two-day span.
+        endISO = e.end?.date ? allDayNoonISO(e.end.date, -1) : undefined;
+      } else {
+        startISO = new Date(startRaw).toISOString();
+        const endRaw = e.end?.dateTime ?? e.end?.date;
+        endISO = endRaw ? new Date(endRaw).toISOString() : undefined;
+      }
       return {
         id: e.id,
         summary: e.summary ?? "(busy)",
         startISO,
-        endISO: endRaw ? new Date(endRaw).toISOString() : undefined,
+        endISO,
+        allDay,
         location: e.location,
         htmlLink: e.htmlLink,
       } as CalEvent;
@@ -103,13 +127,28 @@ export async function createEvent(token: string, ev: NewEvent): Promise<CalEvent
     start?: { dateTime?: string; date?: string };
     end?: { dateTime?: string; date?: string };
   };
-  const s = e.start?.dateTime ?? e.start?.date ?? ev.startISO ?? `${ev.startDate}T00:00:00Z`;
-  const endRaw = e.end?.dateTime ?? e.end?.date;
+  const allDay = !e.start?.dateTime && !!(e.start?.date ?? ev.startDate);
+  if (allDay) {
+    const startDate = e.start?.date ?? ev.startDate!;
+    const endDate = e.end?.date; // exclusive
+    return {
+      id: e.id,
+      summary: e.summary ?? ev.summary,
+      startISO: allDayNoonISO(startDate),
+      endISO: endDate ? allDayNoonISO(endDate, -1) : undefined,
+      allDay: true,
+      location: e.location,
+      htmlLink: e.htmlLink,
+    };
+  }
+  const s = e.start?.dateTime ?? ev.startISO;
+  const endRaw = e.end?.dateTime;
   return {
     id: e.id,
     summary: e.summary ?? ev.summary,
     startISO: new Date(s).toISOString(),
     endISO: endRaw ? new Date(endRaw).toISOString() : undefined,
+    allDay: false,
     location: e.location,
     htmlLink: e.htmlLink,
   };

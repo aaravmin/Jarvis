@@ -25,6 +25,24 @@ People / Opportunities / Review / Auto-Populate are live. The **Google connector
 Drive/Sheets) is built; it activates once the user connects Google on the Connections tab.
 
 ## Task log (most recent first)
+- **Calendar end-times + all-day fix · Apollo email connector · README API list** — ✅ build green
+  (tsc 0, lint clean), adversarially verified (no real defects), not yet pushed. Three user requests:
+  1. **Calendar never fabricates an end time.** `sources.ends_at` (migration 0014) + `sources.is_all_day`
+     (migration 0015) make the end a real timestamp and mark date-only events. `formatEventTime()`
+     renders the start–end span deterministically (hard rules #2/#7) and the assistant is handed that
+     exact string. All-day events store start/end at LOCAL NOON (skew-proof; Google's exclusive end
+     converted to the last included day) and render a plain DATE with no clock time. Ingest now REFRESHES
+     seen events each sync, so reschedules + legacy rows self-heal. Threaded `is_all_day` through the
+     calendar page, the assistant digest/search, and the Today agent.
+  2. **Apollo.io connector** (`src/lib/apollo.ts`, gated on `APOLLO_API_KEY`, Tavily-style graceful
+     degrade): enrich an existing contact's missing email (MATCH) and discover new people (SEARCH via
+     `/mixed_people/api_search` — discovery only, no emails, so import ENRICHES each person by Apollo id
+     to reveal the email). Imports are `created_by='user'`, Apollo recorded in `field_sources.email`.
+  3. **README "APIs & services" table** lists every external service (Supabase, Gemini, Google
+     Workspace, Tavily, ElevenLabs, Apollo.io, Web Speech API) + env vars; `.env.example` gained the
+     Google connector vars; fixed Drive/Sheets attribution.
+  A 9-finding adversarial workflow flagged the two HIGH correctness bugs (all-day fabrication; Apollo
+  search returning no emails) — both fixed here, then re-verified.
 - **Jarvis write-actions + manual contacts fix + user templates** — ✅ shipped to `main`, build green.
   Three commits this session:
   1. **Write-actions** (`62e119e`): the orb can now `create_calendar_event`, `draft_email`, and
