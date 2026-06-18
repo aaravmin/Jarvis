@@ -1,14 +1,20 @@
 import { Compass } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { loadAcceptedOpportunities } from "@/lib/agents/opportunity/load";
+import { entityIdsForGoal } from "@/lib/goals/load";
 import { OpportunityCard } from "@/components/OpportunityCard";
 import { FindOpportunitiesBar } from "@/components/FindOpportunitiesBar";
 
 export const dynamic = "force-dynamic";
 
-export default async function OpportunitiesPage() {
+export default async function OpportunitiesPage({ searchParams }: { searchParams: Promise<{ goal?: string }> }) {
+  const { goal } = await searchParams;
   const supabase = await createClient();
-  const opportunities = await loadAcceptedOpportunities(supabase);
+  let opportunities = await loadAcceptedOpportunities(supabase);
+  if (goal) {
+    const ids = new Set(await entityIdsForGoal(supabase, goal, "opportunity"));
+    opportunities = opportunities.filter((o) => ids.has(o.id));
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">

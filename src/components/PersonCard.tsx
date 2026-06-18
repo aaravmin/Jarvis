@@ -2,6 +2,7 @@
 
 import { Check, X } from "lucide-react";
 import { Card } from "@/components/Card";
+import { AddToGoal } from "@/components/goals/AddToGoal";
 import type { CardFieldSource, CardSource } from "@/lib/types";
 import type { DiscoveredPerson } from "@/lib/research/types";
 
@@ -107,7 +108,9 @@ export function PersonCard({
       </span>
     ) : undefined;
 
-  const actions = !showActions ? undefined : person.reviewStatus === "review" ? (
+  const actions = !showActions ? (
+    <AddToGoal entityType="contact" entityId={person.id} />
+  ) : person.reviewStatus === "review" ? (
     <>
       <button
         type="button"

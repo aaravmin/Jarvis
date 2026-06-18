@@ -1,14 +1,20 @@
 import { Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { loadAcceptedPeople } from "@/lib/research/load";
+import { entityIdsForGoal } from "@/lib/goals/load";
 import { PersonCard } from "@/components/PersonCard";
 import { FindPeopleBar } from "@/components/FindPeopleBar";
 
 export const dynamic = "force-dynamic";
 
-export default async function PeoplePage() {
+export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ goal?: string }> }) {
+  const { goal } = await searchParams;
   const supabase = await createClient();
-  const people = await loadAcceptedPeople(supabase);
+  let people = await loadAcceptedPeople(supabase);
+  if (goal) {
+    const ids = new Set(await entityIdsForGoal(supabase, goal, "contact"));
+    people = people.filter((p) => ids.has(p.id));
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">

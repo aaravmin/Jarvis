@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Search } from "lucide-react";
 import { activeNavItem } from "@/lib/nav";
 import { AskJarvisDialog } from "@/components/AskJarvisDialog";
 import { NavDrawer } from "@/components/NavDrawer";
+import { GoalFilter } from "@/components/goals/GoalFilter";
 
 export function Topbar({ userEmail }: { userEmail?: string }) {
   const pathname = usePathname();
@@ -32,6 +33,10 @@ export function Topbar({ userEmail }: { userEmail?: string }) {
           {item?.label ?? "Jarvis"}
         </h1>
       </div>
+
+      <Suspense fallback={null}>
+        <GoalFilter />
+      </Suspense>
 
       {/* Ask Jarvis — auto-populate command surface. Text now; the same handler takes voice in Phase 8. */}
       <button
