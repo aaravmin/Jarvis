@@ -48,8 +48,21 @@ Drive/Sheets) is built; it activates once the user connects Google on the Connec
      scrub). New read-only `list_templates` assistant tool hands Jarvis each saved template's full
      name/subject/body so it can MEANINGFULLY adapt one (fill placeholders, change tone/content)
      and then `draft_email` the edited result — prompt instructs it not to echo verbatim.
-  - **tsc + full `npm run build` clean** after each commit. Adversarial review (workflow `wj8vppg39`)
-    run over the session diff — outcome folded in below.
+  - **tsc + full `npm run build` clean** after each commit. Adversarial review (workflow `wj8vppg39`,
+    13 agents, 3 lenses, each finding skeptic-verified) found **6 real defects — all fixed** in
+    `f5b6e6f`, then re-verified empirically against the project's chrono:
+    1. **HIGH** — bare relative phrases ("next week", "next month", "in 2 weeks") became fabricated
+       1-hour timed events (chrono attaches a default meridiem to them; the old `meridiem !== null`
+       check misread that). Fixed: a meridiem only implies a time when a day-segment word is present
+       (`SEGMENT_WORDS` regex); otherwise the phrase stays all-day.
+    2. **MED** — start-timed range w/ a date-only end ("tomorrow 9am to next Friday") collapsed to a
+       1-hour event; now spans to the end day at the start's time-of-day.
+    3. **MED** — multi-day confirmations showed only the first day; new `describeResolved()` renders
+       the full range ("Jun 20 – Jun 22") for all-day and timed spans.
+    4. **MED** — `NewTemplateForm.submit()` had no `catch`; offline/non-JSON now surfaces a message.
+    5. **LOW** — a space-free doc name matched `extractFileId`'s bare-id regex; `saveTemplate` now
+       falls back to a name search when a guessed (non-URL) id fails to read.
+    6. **LOW** — file was read before the size cap; added a pre-read size + empty-file guard.
 - **Gemini switch + Tavily web search + ElevenLabs voice + bare-orb home** — ✅ shipped (local), build green.
   Four user requests in one push:
   1. **Runtime LLM → Gemini** (commit `cc0b3d5`): all model calls go through `src/lib/llm/gemini.ts`
@@ -175,12 +188,15 @@ Drive/Sheets) is built; it activates once the user connects Google on the Connec
 - Runtime auth gate: protected routes redirect to `/login`; APIs self-enforce auth with 401 JSON.
 
 ## The single next task
-**Apply the migrations + verify auth/research/opportunities live.** Needs (from the user): the **real
-Supabase personal access token** in the MCP config + a **window reload** so the `supabase` MCP
-connects. (`ANTHROPIC_API_KEY` + anon key are already in `.env.local`.) Then: apply `0001→0004` via
-the MCP, confirm RLS (insert a row as user A, confirm invisible to user B), and run one cohort search
-**and one opportunity search** end-to-end (⌘K or the page bars → results land in Review with working
-source chips and chrono-resolved deadlines).
+**Verify the new write-actions end-to-end with a connected Google account.** The orb's
+`create_calendar_event` / `draft_email` / `save_drive_template` are built, build-clean, and
+review-hardened, but need a live OAuth check: connect Google (Connections tab) with the
+calendar.events + gmail.compose + drive.readonly scopes, then exercise from the orb — "add a dentist
+checkup next week" (→ all-day event next week, NOT a timed one), "draft an email to X using my
+outreach template but make it more casual" (→ list_templates → adapted draft in Gmail Drafts, never
+sent), and "save my <DocName> doc as a template" (→ appears on the Templates page). Confirm a missing
+scope surfaces the "Reconnect Google…" message. Also confirm a manually-added contact now shows on the
+People page with an "Added by you" badge.
 
 ## Known roadblocks / waiting on the user
 - **Supabase live (apply migrations `0001→0004`):** real access token in the MCP config + window
