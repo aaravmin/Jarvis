@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Mic, Send, Globe, FileText, ExternalLink, Square } from "lucide-react";
+import { Mic, Send, Globe, FileText, ExternalLink, Square, Volume2, VolumeX } from "lucide-react";
 import { JarvisOrb, type OrbState } from "@/components/JarvisOrb";
 import { JarvisSphere } from "@/components/JarvisSphere";
 import { LiveClock } from "@/components/LiveClock";
@@ -34,8 +34,13 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
   const [answer, setAnswer] = useState<AskResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [voiceSupported, setVoiceSupported] = useState(false);
+  // Spoken replies (ElevenLabs via /api/voice). On by default; the preference is remembered.
+  const [speechOn, setSpeechOn] = useState(true);
+  const [speaking, setSpeaking] = useState(false);
 
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
   const finalTranscriptRef = useRef("");
   // Mirror of phase so submit() can guard re-entry without being recreated each render.
   const phaseRef = useRef<OrbState>("idle");
@@ -50,6 +55,84 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
     };
     setVoiceSupported(Boolean(w.SpeechRecognition || w.webkitSpeechRecognition));
   }, []);
+
+  // Restore the saved spoken-reply preference.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("jarvis_voice") === "off") setSpeechOn(false);
+    } catch {
+      /* private mode / no storage — keep the default */
+    }
+  }, []);
+
+  // Halt any in-flight playback and release the audio blob URL.
+  const stopSpeaking = useCallback(() => {
+    const a = audioRef.current;
+    if (a) {
+      a.pause();
+      a.src = "";
+      audioRef.current = null;
+    }
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+    setSpeaking(false);
+  }, []);
+
+  // Speak `text` with Jarvis's voice. Server holds the ElevenLabs key; a 503 (no key) or any other
+  // failure just leaves the answer silent — speaking is a progressive enhancement, never required.
+  const speak = useCallback(
+    async (text: string) => {
+      const clean = text.trim();
+      if (!clean) return;
+      stopSpeaking();
+      try {
+        const res = await fetch("/api/voice", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ text: clean }),
+        });
+        if (!res.ok) return; // not configured / outage — stay silent
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        audioUrlRef.current = url;
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.onended = stopSpeaking;
+        audio.onerror = stopSpeaking;
+        setSpeaking(true);
+        // Autoplay may be blocked if the browser doesn't tie this to the recent gesture — fail quietly.
+        await audio.play().catch(stopSpeaking);
+      } catch {
+        stopSpeaking();
+      }
+    },
+    [stopSpeaking],
+  );
+
+  // Speak each NEW answer (only when voice is on). Intentionally keyed on `answer` alone so toggling
+  // the preference doesn't replay an old reply.
+  useEffect(() => {
+    if (answer?.answer && speechOn) void speak(answer.answer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answer]);
+
+  // Stop audio if the component unmounts mid-sentence.
+  useEffect(() => stopSpeaking, [stopSpeaking]);
+
+  const toggleSpeech = useCallback(() => {
+    setSpeechOn((on) => {
+      const next = !on;
+      try {
+        localStorage.setItem("jarvis_voice", next ? "on" : "off");
+      } catch {
+        /* ignore */
+      }
+      if (!next) stopSpeaking();
+      return next;
+    });
+  }, [stopSpeaking]);
 
   const submit = useCallback(async (text: string) => {
     const message = text.trim();
@@ -168,6 +251,18 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
             : "w-full border-border bg-surface-2",
         ].join(" ")}
       >
+        <button
+          type="button"
+          onClick={() => (speaking ? stopSpeaking() : toggleSpeech())}
+          aria-label={speechOn ? (speaking ? "Stop speaking" : "Mute Jarvis's voice") : "Unmute Jarvis's voice"}
+          aria-pressed={speechOn}
+          title={speechOn ? "Jarvis speaks replies — click to mute" : "Voice muted — click to unmute"}
+          className={`rounded-lg p-1.5 transition-colors ${
+            speaking ? "text-accent animate-pulse" : speechOn ? "text-muted hover:text-accent" : "text-muted/50 hover:text-muted"
+          }`}
+        >
+          {speechOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+        </button>
         {voiceSupported && (
           <button
             type="button"
