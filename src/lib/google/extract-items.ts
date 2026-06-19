@@ -177,11 +177,12 @@ export async function extractItemsFromSources(
   userId: string,
   sources: { id: string; title: string | null; body: string; occurredAt: string | null }[],
   concurrency = 4,
+  kind: SourceKind = "email",
 ): Promise<number> {
   let total = 0;
   for (let i = 0; i < sources.length; i += concurrency) {
     const batch = sources.slice(i, i + concurrency);
-    const results = await Promise.all(batch.map((s) => extractItemsFromSource(supabase, userId, s)));
+    const results = await Promise.all(batch.map((s) => extractItemsFromSource(supabase, userId, s, kind)));
     total += results.reduce((sum, r) => sum + r.inserted, 0);
   }
   return total;
