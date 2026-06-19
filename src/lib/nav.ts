@@ -12,6 +12,7 @@ import {
   Plug,
   FileText,
   FolderOpen,
+  Wand2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -85,6 +86,13 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Compass,
     description: "The Opportunity agent: programs, jobs, hackathons — found and tracked with deadlines.",
     deliveredBy: "Opportunity agent",
+  },
+  {
+    label: "Apply",
+    href: "/apply",
+    icon: Wand2,
+    description: "The Application agent: paste a job/grant link, Jarvis fills the form from your documents — you review and submit.",
+    deliveredBy: "Application & Outreach agent",
   },
   {
     label: "Documents",
