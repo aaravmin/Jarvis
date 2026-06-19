@@ -8,7 +8,10 @@
 code-complete Phase 0 and the research/agent stack. The keystone — turning ingested email/meeting
 sources into sourced, reviewable items — is built and live (no migration gate). **Migration 0016 is
 now applied** (via the dashboard SQL editor — so it does NOT appear in `list_migrations`, but all its
-objects are verified live), which runtime-unblocks the **Apply/Outreach/Documents** arc.
+objects are verified live), which runtime-unblocks the **Apply/Outreach/Documents** arc. **Apply
+autofill and Outreach drafts are proven end-to-end, and a new Playwright LinkedIn contact-sourcing
+feature** lands relevant people from a linked job/grant into Review (no migration — reuses the
+research→contacts pipeline). The browser backend is now enabled locally (`JARVIS_BROWSER=playwright`).
 
 ## Status summary
 Phase 0 is code-complete: app shell, provenance `<Card>`, **auth (P0-T3)**, and the **core +
@@ -36,6 +39,30 @@ email+meeting→items extraction engine and the task loop** are live. The **Goog
 once the user connects Google on the Connections tab.
 
 ## Task log (most recent first)
+- **LinkedIn contact-sourcing (Playwright) + Apply/Outreach proven end-to-end** — ✅ shipped to `main`
+  (commit `f2068e0`), tsc + eslint green, route smoke-tested (401 unauthed), pushed. The user's
+  directive: "Make sure Jarvis can automatically fill out job/grant applications using a link and email
+  people (drafts). additionally add a feature where playwright scrubs linkedin for relevant contacts for
+  job/grant applications i link it." Three parts:
+  1. **Autofill-from-a-link** — re-verified already fully-works (paste URL → scrape form → grounded,
+     citation-gated field plan → headed Chromium types values into the live form, NEVER submits). Was
+     only gated on `JARVIS_BROWSER`; now enabled in `.env.local` (Playwright 1.61 + chromium-1228
+     present). No code change needed — proven, not rebuilt.
+  2. **Email-people-as-drafts** — re-verified already fully-works (Outreach agent → Gmail **Drafts**
+     endpoint only; no `/send` code path exists). Gated on the `gmail.compose` scope (reconnect Google).
+  3. **NEW — LinkedIn sourcing.** A "Find LinkedIn contacts" button on the Apply card and Opportunity
+     card drives the user's OWN logged-in LinkedIn (persistent on-disk Chromium profile on `globalThis`)
+     to a People search scoped to the linked org + a role hint (recruiter for jobs, program officer for
+     grants), reads the result cards (anchored on `/in/` links, IIFE reader like the Apply DOM_READER),
+     and lands people in **Review** as suggested contacts. Reuses the `research_runs → sources →
+     contacts → Review → People` pipeline (same as Sheets import) — **no migration**. Read-only (never
+     logs in / connects / messages); autonomy L0 (`review_status='review'`); provenance per rule #3
+     (source_id + non-empty source_quote = on-page headline+location, falling back to the profile URL +
+     confidence). Once accepted, the existing Outreach "draft an email" button works for free. New:
+     `src/lib/agents/linkedin/{types,search,run}.ts`, `src/app/api/linkedin/contacts/route.ts`,
+     `src/components/linkedin/FindLinkedInContactsButton.tsx`; `browser.ts` gains
+     `launchPersistentContext`. Off unless `JARVIS_BROWSER=playwright`; first run opens a window to log
+     in once, then the session persists (`LINKEDIN_USER_DATA_DIR`, default `~/.jarvis-browser/linkedin`).
 - **Single LLM provider (Grok) + lean-up pass** — ✅ shipped to `main`, each commit tsc + eslint +
   build green, pushed. The user's directive: "just grok for everything and try to fix those issues …
   I don't even know if you're using playwright." Five pieces:

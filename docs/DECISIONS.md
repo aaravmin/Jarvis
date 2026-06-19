@@ -337,3 +337,24 @@
   surface with a type pill (they previously vanished after the Review queue — /tasks only showed
   `item_type='task'`), and the `/dev` Component Lab is gated behind `NODE_ENV` (server-side `notFound()`
   + hidden nav link) so it can't be reached in production.
+
+- **2026-06-19 — LinkedIn contact-sourcing reuses the existing research→contacts→Review pipeline and
+  drives the user's OWN logged-in session (no new surface, no migration, no scraping bot).** Why: the
+  user asked Jarvis to "scrub LinkedIn for relevant contacts for a job/grant I link." LinkedIn has no
+  usable people API and aggressively blocks headless mass-scraping, so the only honest, durable path is
+  to act as the user browsing their own account: one visible window, one page, rate-limited. We persist
+  that session in an on-disk Chromium profile (`launchPersistentContext`, `LINKEDIN_USER_DATA_DIR`) kept
+  alive on `globalThis` (survives dev HMR; we never open a second context against the same locked profile
+  dir), so the login sticks across runs — the user signs in once. Discovered people flow through the
+  SAME `research_runs → sources → contacts → contact_channels → Review → People` path as the Sheets
+  importer, so there is **zero new data model** (no migration — respects "Aarav applies infra") and an
+  accepted person inherits the existing Outreach "draft an email" button for free. Boundaries are
+  deliberate: read-only (never logs in for the user, never connects, never messages); autonomy L0
+  (`review_status='review'` — nothing reaches People until accepted, rule #5); provenance per rule #3
+  (each contact stores `source_id` + a non-empty `source_quote` = the on-page headline+location, falling
+  back to the profile URL, + `confidence`); and if the `sources` row can't be written we save nothing and
+  say so rather than emit provenance-less contacts. The results reader is an IIFE **string** passed to
+  `page.evaluate` (so TS never types the page-context DOM, matching the proven Apply `DOM_READER`),
+  anchored on `/in/<slug>` profile links rather than LinkedIn's churning CSS class names. The whole
+  feature is dark unless `JARVIS_BROWSER=playwright` — same gate as Apply autofill — so default installs
+  carry no browser-automation surface.

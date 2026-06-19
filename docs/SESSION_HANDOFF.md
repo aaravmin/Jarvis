@@ -55,10 +55,24 @@ controllable by voice. Full product definition: `/docs/PRD.md`. Full roadmap: `/
   the `Apply` tab + "Prepare with Jarvis" on Opportunity cards; (3) **Outreach agent**
   (`src/lib/agents/outreach/*`) — per-contact `OutreachButton`, audience-tailored draft into **Gmail
   Drafts**, **never sends**. Provenance enforced in code via the `backs()` gate.
-- ✅ **Playwright is installed and proven.** playwright 1.61 + chromium-1228 are present and smoke-tested
-  (a headless browser reads a rendered form's fields end-to-end). Apply autofill (`autofill.ts`) is
-  gated ONLY by the `JARVIS_BROWSER=playwright` env var — set it to drive a headed browser; unset, Apply
-  uses the static-HTML reader and degrades autofill to "open the application + copy from the plan".
+- ✅ **NEW — LinkedIn contact-sourcing (Playwright).** A **"Find LinkedIn contacts"** button on the Apply
+  card (`ApplicationRunCard`) and Opportunity card (`OpportunityCard`) → `POST /api/linkedin/contacts` →
+  `src/lib/agents/linkedin/{run,search,types}.ts`. It drives the user's OWN logged-in LinkedIn (a
+  persistent on-disk Chromium profile kept alive on `globalThis`; `browser.ts` `launchPersistentContext`)
+  to a People search scoped to the linked org + a role hint (recruiter for jobs, program officer for
+  grants), reads the result cards (anchored on `/in/` links via an IIFE reader like the Apply
+  `DOM_READER`), and lands people in **Review** as suggested contacts. **Reuses** the `research_runs →
+  sources → contacts → contact_channels → Review → People` pipeline (same as the Sheets importer) — **no
+  migration**. Read-only (never logs in / connects / messages); autonomy L0 (`review_status='review'`);
+  provenance per rule #3 (each contact gets `source_id` + a non-empty `source_quote` = on-page
+  headline+location, falling back to the profile URL, + `confidence`). Once accepted, the existing
+  Outreach "draft an email" button works on them for free. First run opens a window to log in once
+  (`needsLogin`), then the session persists (`LINKEDIN_USER_DATA_DIR`, default `~/.jarvis-browser/linkedin`).
+- ✅ **Playwright is installed, proven, and ENABLED.** playwright 1.61 + chromium-1228 are present;
+  `JARVIS_BROWSER=playwright` is now set in `.env.local`, so BOTH the headed Apply autofill
+  (`autofill.ts`, types grounded values into the live form, never submits) AND LinkedIn sourcing are
+  live. Unset, Apply falls back to the static-HTML reader (copy-from-plan) and LinkedIn sourcing reports
+  it's unavailable.
 - ✅ **Web search is Tavily** (`src/lib/search/tavily.ts` `webSearch()`), used by the orb assistant and
   both research agents. The citation gate (rule #3) holds against Tavily page text. **No `TAVILY_API_KEY`
   ⇒ the orb SAYS it can't web-search** (it no longer answers from memory silently).
@@ -77,10 +91,15 @@ controllable by voice. Full product definition: `/docs/PRD.md`. Full roadmap: `/
 to (re)ingest bodies and trigger extraction; or use **Scan past emails** in Review to mine already-synced
 mail. Accept a few items → confirm they land on the Tasks page.
 
-**2. Optional env to light up more.** `JARVIS_BROWSER=playwright` enables headed-browser Apply autofill
-(off ⇒ copy-from-plan; chromium is already installed). `TAVILY_API_KEY` enables web search.
-`ELEVENLABS_API_KEY` enables the voice. Write features (calendar events, Gmail drafts) need
-`calendar.events` + `gmail.compose` consent if not already granted.
+**2. LinkedIn sourcing needs a one-time login.** `JARVIS_BROWSER=playwright` is now set, so the first
+"Find LinkedIn contacts" click opens a real Chromium window on LinkedIn's login (the button reports
+"log in, then click again"). Sign in once — the session persists in `~/.jarvis-browser/linkedin` — then
+click again and people land in Review.
+
+**3. Optional env to light up more.** `JARVIS_BROWSER=playwright` is already set (enables headed Apply
+autofill + LinkedIn sourcing). `TAVILY_API_KEY` enables web search. `ELEVENLABS_API_KEY` enables the
+voice. Write features (Gmail **drafts** for Outreach, calendar events) need `gmail.compose` /
+`calendar.events` consent if not already granted — reconnect Google on the Connections tab.
 
 ## How to run
 ```
