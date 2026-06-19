@@ -17,78 +17,70 @@ controllable by voice. Full product definition: `/docs/PRD.md`. Full roadmap: `/
 - Ship autonomy L0 (suggest-only) first; narrowest OAuth scopes; tokens server-side.
 
 ## Current state
-- ✅ **Email + meetings → items extraction engine is LIVE (the keystone, no migration gate).** Ingested
-  sources now become sourced, reviewable `items`. `src/lib/google/extract-items.ts` mines any text
-  source (a `SourceKind` swaps the prompt noun for email vs. meeting transcript) for tasks/events/
-  follow-ups; provenance is enforced in CODE after the model call: keep a candidate only if
-  `backs(corpus, source_quote)` (rule #3), resolve its `raw_due` phrase with chrono anchored to the
-  source's `occurred_at` (rule #2), drop confidence < 0.35, insert at `status='review'` (rule #5).
-  Gmail ingest now reads the FULL body (`gmail.ts` `format=full` + MIME-tree parser) to feed it. The
-  Review queue (`src/lib/items/review.ts` + `src/components/items/ReviewItemCard.tsx`) shows each item
-  through `<Card>` with Accept/Dismiss → `PATCH /api/items`. Meetings tab has a paste→extract box
-  (`/api/meetings/extract`). **Verify next: connect Google, Sync email, watch items land in Review.**
-- ✅ **Task loop works.** `/api/tasks` now has PATCH (complete / edit / chrono-re-resolved due) + DELETE;
-  `src/components/tasks/TaskItem.tsx` gives each task a complete checkbox, inline edit, and delete.
-  Accepting a task in Review surfaces it here.
-- ✅ **Apply autofill is real (gated).** `src/lib/agents/application/autofill.ts` drives a HEADED browser
-  to type the grounded field plan into the live form + attach the resume, leaving the window open to
-  submit (never auto-submits). Resume PDFs/DOCX are now text-extracted server-side
-  (`src/lib/documents/extract-text.ts`, unpdf + mammoth) so the agent has a corpus. Needs
-  `JARVIS_BROWSER=playwright` + a local chromium, AND migration 0016 for runs to exist.
-- ✅ **Runtime LLM is Gemini, not Claude.** Every model call goes through `src/lib/llm/gemini.ts`
-  (direct REST, no SDK): `geminiStructured` / `geminiToolLoop` / `geminiText`. Default
-  `gemini-2.5-flash`; set via `GEMINI_MODEL`. Needs `GEMINI_API_KEY` (already in `.env.local`).
-  Reason for the switch: the Anthropic key kept running out of quota. The `@anthropic-ai/sdk` package
-  is still installed but **no longer imported anywhere**.
+- ✅ **ONE LLM provider now — everything runs on xAI Grok.** `src/lib/llm/grok.ts` is the only real LLM
+  client (`grokStructured` / `grokToolLoop` / `grokText`, OpenAI-compatible, `XAI_API_KEY` + optional
+  `XAI_MODEL`, default grok-4.3). `src/lib/llm/gemini.ts` is now a thin **adapter**: it keeps the old
+  `gemini*` export names + Gemini `contents`/`parts` request shape (so the ~10 call sites are unchanged)
+  but translates every call into Grok's `messages` API and delegates. No call hits Google anymore
+  (`GEMINI_API_KEY` / Vertex are dead). `@anthropic-ai/sdk` is still installed but imported nowhere.
+- ✅ **Email + meetings → items extraction engine is LIVE (the keystone).** Ingested sources become
+  sourced, reviewable `items`. `src/lib/google/extract-items.ts` mines any text source (a `SourceKind`
+  swaps the prompt noun for email vs. meeting transcript) for tasks/events/follow-ups; provenance is
+  enforced in CODE after the model call: keep a candidate only if `backs(corpus, source_quote)` (rule
+  #3), resolve its `raw_due` phrase with chrono anchored to the source's `occurred_at` (rule #2), drop
+  confidence < 0.35, insert at `status='review'` (rule #5). Gmail ingest reads the FULL body
+  (`gmail.ts` `format=full` + MIME-tree parser). The Review queue (`src/lib/items/review.ts` +
+  `src/components/items/ReviewItemCard.tsx`) shows each item through `<Card>` with Accept/Dismiss →
+  `PATCH /api/items`. A **"Scan past emails"** button (`BackfillButton` → `POST /api/items/backfill` →
+  `src/lib/items/backfill.ts`) mines already-synced mail that predates the extractor. Meetings tab has a
+  paste→extract box. **Verify next: Sync email, watch items land in Review.**
+- ✅ **Task loop + unified action surface.** `/api/tasks` has POST/PATCH (complete · edit · chrono-re-
+  resolved due)/DELETE; `src/components/tasks/TaskItem.tsx` gives each item a complete checkbox, inline
+  edit, and delete. The Tasks page now shows ALL accepted derived types — `task`, `event`, AND
+  `follow_up` — with a type pill (events/follow-ups previously vanished after Review). PATCH/DELETE
+  accept all three types.
+- ✅ **Multi-agent system**: intent **router** (`POST /api/agent`) → exactly ONE agent. Live set:
+  **opportunity · contact · application · email · meeting · assistant** (the `calendar` agent was
+  removed — the assistant already reads Calendar and creates real events / drafts mail via its write
+  tools, so it was redundant). The **email** agent is now LIVE: it dispatches the backfill engine, so
+  "turn my inbox into tasks" actually mines synced mail into Review. Calendar/draft requests route to
+  the assistant. **Opportunity** + **People** research agents run two-phase (Tavily search → validated
+  structured report); deadlines resolved by `chrono-node`.
+- ✅ **Application & Outreach agent — runtime-unblocked (migration 0016 is applied).** (1) **Documents**
+  tab/store — resumes & grant materials in a private Supabase Storage bucket = the agent's memory
+  (PDF/DOCX text-extracted server-side on upload, `src/lib/documents/extract-text.ts`); (2) **Application
+  agent** (`src/lib/agents/application/*`) — reads a form (static parser + a `JARVIS_BROWSER=playwright`
+  rendered-DOM path), grounds a reviewable **field plan**, and can **fill the live form in a headed
+  browser** (`autofill.ts`) — attaches the resume, leaves the window open, **never submits**; surfaces on
+  the `Apply` tab + "Prepare with Jarvis" on Opportunity cards; (3) **Outreach agent**
+  (`src/lib/agents/outreach/*`) — per-contact `OutreachButton`, audience-tailored draft into **Gmail
+  Drafts**, **never sends**. Provenance enforced in code via the `backs()` gate.
+- ✅ **Playwright is installed and proven.** playwright 1.61 + chromium-1228 are present and smoke-tested
+  (a headless browser reads a rendered form's fields end-to-end). Apply autofill (`autofill.ts`) is
+  gated ONLY by the `JARVIS_BROWSER=playwright` env var — set it to drive a headed browser; unset, Apply
+  uses the static-HTML reader and degrades autofill to "open the application + copy from the plan".
 - ✅ **Web search is Tavily** (`src/lib/search/tavily.ts` `webSearch()`), used by the orb assistant and
-  both research agents. The citation gate (hard rule #3) is preserved against Tavily page text: a
-  reported quote survives only if it's a real substring of a retrieved page, and a URL only if it's in
-  the per-run allowlist. Needs `TAVILY_API_KEY`. **No key ⇒ the orb now SAYS it can't web-search**
-  (it used to answer from memory silently); set the key to enable it.
-- ✅ **Jarvis has a voice (ElevenLabs).** `src/lib/voice/elevenlabs.ts` + `POST /api/voice` synthesize
-  each answer server-side; `JarvisConsole` plays it and shows a speaker toggle. **See the roadblock
-  below — it stays silent until `ELEVENLABS_API_KEY` is set.** Browser speech-to-text (input) already
-  worked; this closes the loop on output.
+  both research agents. The citation gate (rule #3) holds against Tavily page text. **No `TAVILY_API_KEY`
+  ⇒ the orb SAYS it can't web-search** (it no longer answers from memory silently).
+- ✅ **Jarvis has a voice (ElevenLabs).** `src/lib/voice/elevenlabs.ts` + `POST /api/voice`; client
+  playback in `JarvisConsole`. Silent until `ELEVENLABS_API_KEY` is set (text still works).
 - ✅ **Immersive home + hamburger-only nav.** `/jarvis` is a bare particle sphere (`JarvisSphere`) +
-  military clock on pure black — no explainer, no nav until you open the hamburger drawer (`NavDrawer`).
-  The duplicate top-right "Ask Jarvis" is hidden on the home only (`Topbar` checks the route).
-- ✅ **Multi-agent system**: intent **router** (`POST /api/agent`) → exactly ONE agent (opportunity ·
-  contact · application · email · calendar · meeting · assistant). **Opportunity** + **People** research
-  agents both run two-phase (Tavily search → validated structured report); deadlines resolved by `chrono-node`.
-- ✅ **Application & Outreach agent (NEW, runs on Grok/xAI — not Gemini).** `src/lib/llm/grok.ts`
-  mirrors `gemini.ts` (`grokStructured`/`grokText`/`grokToolLoop`, `XAI_API_KEY` + `XAI_MODEL`). Three
-  parts: (1) **Documents** tab/store — resumes & grant materials in a private Supabase Storage bucket =
-  the agent's memory (PDF/DOCX now text-extracted server-side on upload); (2) **Application agent**
-  (`src/lib/agents/application/*`) — reads a form (static parser + a `JARVIS_BROWSER=playwright`
-  rendered-DOM path), grounds a reviewable **field plan**, and can now **fill the live form in a headed
-  browser** (`autofill.ts`) — attaches the resume, leaves the window open, **never submits**; surfaces
-  on the `Apply` tab + "Prepare with Jarvis" on Opportunity cards; (3) **Outreach agent**
-  (`src/lib/agents/outreach/*`) — per-contact `OutreachButton`,
-  audience-tailored draft into **Gmail Drafts**, **never sends**. Provenance enforced in code via the
-  `backs()` citation gate. **⚠ Migration 0016 (its tables + Storage bucket) is NOT applied yet — see roadblock.**
-- ✅ **Google connector** (read-only OAuth + Gmail/Calendar/Drive/Sheets) is built; activates on the
-  Connections tab. Inbox triage (`src/lib/google/ingest.ts`) now runs on Gemini.
-- ✅ Migrations `0001→0015` exist and are applied to the live project (per PROGRESS; verify with the
-  Supabase MCP `list_migrations` if in doubt). **`0016_application_outreach.sql` is written but NOT
-  applied** — see roadblock. Verified this session: `npm run build` green, `tsc` + `eslint` clean.
+  military clock on pure black; nav lives in the `NavDrawer` hamburger. The `/dev` Component Lab is now
+  gated out of production (server-side `notFound()` layout + hidden nav link).
+- ✅ Migrations `0001→0015` applied via the Supabase MCP; **`0016` applied via the dashboard SQL editor**
+  (absent from `list_migrations` but all objects verified live this session). `npm run build` + `tsc` +
+  `eslint` green.
 
 ## ⚠ The roadblocks to clear next
-**1. Apply migration 0016 — the ONE thing blocking the Apply/Outreach/Documents arc.**
-`supabase/migrations/0016_application_outreach.sql` creates the `documents` table + private `documents`
-Storage bucket (+4 RLS policies), `contacts.current_work`, `application_runs`, and `outreach_runs`. The
-Documents/Apply/Outreach UI builds and routes, but every server write errors until 0016 is applied.
-**Aarav applies migrations** (don't auto-apply): run it via the Supabase MCP `apply_migration` or the
-dashboard SQL editor, then re-run the security advisor. **Everything else built this session (email→items,
-meetings, task loop, Review) is already live — no migration needed.**
+**1. Re-run Email sync, then exercise the engine.** Triage + extraction read the full message body
+(`format=full`, inside the existing `gmail.readonly` scope — no new consent). Hit Sync on the Email tab
+to (re)ingest bodies and trigger extraction; or use **Scan past emails** in Review to mine already-synced
+mail. Accept a few items → confirm they land on the Tasks page.
 
-**2. Re-run Email sync after the gmail-body change.** Triage + extraction now read the full message body
-(`format=full`) — still inside the existing `gmail.readonly` scope (no new consent), but the user should
-hit Sync on the Email tab to (re)ingest bodies and trigger extraction into the Review queue.
-
-**3. Optional keys.** `XAI_API_KEY` (+ optional `XAI_MODEL`) powers Application/Outreach (Grok) — **set
-per the user**. `TAVILY_API_KEY` enables web search (no key ⇒ the orb says it can't search). `ELEVENLABS_API_KEY`
-enables the voice (no key ⇒ silent, text still works). `JARVIS_BROWSER=playwright` + `npx playwright
-install chromium` enables Apply autofill (off ⇒ "open the application + copy from the plan").
+**2. Optional env to light up more.** `JARVIS_BROWSER=playwright` enables headed-browser Apply autofill
+(off ⇒ copy-from-plan; chromium is already installed). `TAVILY_API_KEY` enables web search.
+`ELEVENLABS_API_KEY` enables the voice. Write features (calendar events, Gmail drafts) need
+`calendar.events` + `gmail.compose` consent if not already granted.
 
 ## How to run
 ```
@@ -100,38 +92,37 @@ npm run build        # production build / typecheck
 ## Files that matter
 - `/CLAUDE.md` — how to work here (auto-read each session). `/docs/PROGRESS.md` — **read first**.
 - `/docs/DATA_MODEL.md` — schema + migration order + changelog. `/docs/DECISIONS.md` — why (newest
-  entries: the source→items extraction engine, web_search honesty, and Playwright autofill).
+  entries: single-provider Grok consolidation, phantom-agent fix, source→items engine, web_search honesty).
+- **LLM provider:** `src/lib/llm/grok.ts` — the only real client (xAI, OpenAI-compatible, three
+  primitives). `src/lib/llm/gemini.ts` — thin adapter that routes the `gemini*` API to Grok (keep the
+  name; it's documented in the file header). Every feature calls through one of these.
 - **Email/meeting → items engine:** `src/lib/google/extract-items.ts` (the extractor; `SourceKind`),
   `src/lib/google/gmail.ts` (full-body fetch), `src/lib/google/ingest.ts` (wires extraction into sync),
-  `src/lib/items/review.ts` + `src/components/items/ReviewItemCard.tsx` (Review surface),
-  `src/app/api/items/route.ts` (accept/dismiss), `src/app/api/meetings/extract/route.ts` +
-  `src/components/meetings/PasteMeetingForm.tsx` (meetings). Citation gate: `src/lib/agents/citation-gate.ts`.
-- **Task loop:** `src/app/api/tasks/route.ts` (POST/PATCH/DELETE) + `src/components/tasks/TaskItem.tsx`.
+  `src/lib/items/{review,backfill}.ts` + `src/components/items/{ReviewItemCard,BackfillButton}.tsx`,
+  `src/app/api/items/{route,backfill/route}.ts`, `src/app/api/meetings/extract/route.ts`. Citation gate:
+  `src/lib/agents/citation-gate.ts`.
+- **Task loop:** `src/app/api/tasks/route.ts` (POST/PATCH/DELETE, all three action-item types) +
+  `src/components/tasks/TaskItem.tsx` + `src/app/(app)/tasks/page.tsx` (the unified surface).
 - **Apply autofill:** `src/lib/agents/application/{browser,autofill,scrape}.ts` +
   `src/app/api/applications/[id]/autofill/route.ts`; resume text: `src/lib/documents/extract-text.ts`.
-- **LLM providers:** `src/lib/llm/gemini.ts` — talks to Gemini for every existing feature (JSON-Schema →
-  Gemini-schema conversion lives here). `src/lib/llm/grok.ts` — Grok/xAI, used ONLY by the
-  Application/Outreach agents (same three primitives, OpenAI-compatible).
-- **Application & Outreach agent:** `src/lib/documents/store.ts` (the agent's memory),
-  `src/lib/agents/application/*` (`scrape.ts` form-reader, `resolve.ts` Grok grounder + `backs()` gate,
-  `run.ts` orchestration), `src/lib/agents/outreach/*` (`compose.ts`, `run.ts`). UI: `src/app/(app)/{apply,documents}/page.tsx`,
-  `src/components/apply/*`, `src/components/outreach/OutreachButton.tsx`. Migration `0016`.
-- **Web search:** `src/lib/search/tavily.ts` (`webSearch` is the agent-facing call).
-- **Voice:** `src/lib/voice/elevenlabs.ts` + `src/app/api/voice/route.ts`; client playback in
-  `src/components/JarvisConsole.tsx`.
-- **Orb assistant:** `src/lib/assistant/{ask,data-tools,fs-tools}.ts` + `src/app/api/ask/route.ts`.
+- **Application & Outreach agent:** `src/lib/documents/store.ts`, `src/lib/agents/application/*`
+  (`scrape.ts`, `resolve.ts` grounder + `backs()` gate, `run.ts`), `src/lib/agents/outreach/*`. UI:
+  `src/app/(app)/{apply,documents}/page.tsx`, `src/components/apply/*`,
+  `src/components/outreach/OutreachButton.tsx`. Migration `0016` (applied).
 - **Multi-agent:** `src/lib/agents/{types,registry,router,citation-gate}.ts` + `src/app/api/agent/route.ts`.
-- **Research agents:** `src/lib/research/*` (people) and `src/lib/agents/opportunity/*` (programs/jobs/
-  hackathons; `deadline.ts` is the hard-rule-#2 chrono boundary).
+- **Web search:** `src/lib/search/tavily.ts`. **Voice:** `src/lib/voice/elevenlabs.ts` +
+  `src/app/api/voice/route.ts`; client playback in `src/components/JarvisConsole.tsx`.
+- **Orb assistant:** `src/lib/assistant/{ask,data-tools,fs-tools,actions}.ts` + `src/app/api/ask/route.ts`.
+- **Research agents:** `src/lib/research/*` (people) and `src/lib/agents/opportunity/*` (`deadline.ts` is
+  the hard-rule-#2 chrono boundary).
 - **Home/nav:** `src/components/{JarvisSphere,JarvisConsole,LiveClock,NavDrawer,Topbar,AppBackground}.tsx`.
 
 ## What we need from the user
-1. **Apply migration `0016`** (Supabase MCP `apply_migration` or dashboard) — the only thing blocking
-   Documents/Apply/Outreach. Everything else built this session is already live.
-2. **Connect Google + Sync email** (Connections → Email tab) — to exercise the now-live email→items
-   engine end-to-end and see items appear in the Review queue.
-3. **Optional keys** to light up more: `TAVILY_API_KEY` (web search), `ELEVENLABS_API_KEY` (voice),
-   `JARVIS_BROWSER=playwright` + `npx playwright install chromium` (Apply autofill).
-4. Keys already in place (per the user): `GEMINI_API_KEY`/`GEMINI_MODEL`, `XAI_API_KEY`/`XAI_MODEL`,
-   Supabase anon/URL, Google OAuth client. (`ANTHROPIC_*` are retired — safe to delete from `.env.local`.)
-5. Later: a Vercel login if/when we deploy; `gmail.send` write scope only when we add send-from-Jarvis.
+1. **Connect Google + Sync email** (Connections → Email tab), then **Scan past emails** in Review — to
+   exercise the now-live email→items engine and see items appear; accept a few and confirm on Tasks.
+2. **Optional env** to light up more: `JARVIS_BROWSER=playwright` (Apply autofill — chromium already
+   installed), `TAVILY_API_KEY` (web search), `ELEVENLABS_API_KEY` (voice).
+3. Keys already in place (per the user): `XAI_API_KEY` (the single LLM provider), `TAVILY_API_KEY`,
+   `ELEVENLABS_API_KEY`, Supabase anon/URL, Google OAuth client. (`GEMINI_*` and `ANTHROPIC_*` are
+   retired — safe to delete from `.env.local`.)
+4. Later: a Vercel login if/when we deploy; `gmail.send` write scope only when we add send-from-Jarvis.

@@ -310,3 +310,30 @@
   wrong answer is worse than "I can't"). `ask.ts` now returns an explicit "web search is not configured"
   tool result when `tavilyEnabled()` is false, instructing the model to tell the user rather than guess.
   Same spirit as the dates/reply-state rules: never present an ungrounded claim as a grounded one.
+
+- **2026-06-19 — One LLM provider: everything runs on xAI Grok.** Why: we were running two providers
+  (Gemini Flash for ~10 call sites, Grok only for Application/Outreach), which doubled the keys, the
+  failure modes, and the prompt/schema quirks to reason about. The user chose Grok as the single
+  standard. Decision: `lib/llm/gemini.ts` is now a thin ADAPTER over `lib/llm/grok.ts` — it keeps the
+  historical `gemini*` export names and the Gemini `contents`/`parts` request shape (so the ~10 call
+  sites are UNCHANGED) but translates every call into xAI's OpenAI-style `messages` API and delegates to
+  the three Grok primitives. No call hits Google anymore (GEMINI_API_KEY / Vertex are dead). The one bit
+  of real logic is the contents⇄messages translation, with FIFO tool-call-id pairing so a tool-loop
+  transcript survives the round-trip the research/opportunity engines need for their follow-up structured
+  pass. Trade-off accepted: the file is still named `gemini.ts` (cosmetic debt) to avoid churning 10
+  imports; its header documents that it's the unified Grok client. Grok takes JSON Schema natively, so
+  the old JSON-Schema→Gemini-schema converter and the Vertex/ADC auth path were deleted. Verified: tsc +
+  eslint + `next build` all green.
+
+- **2026-06-19 — Phantom router agents fixed: email made real, calendar removed.** Why: the `email` and
+  `calendar` agents were registered + classified but had no real dispatch — they returned a stale "needs
+  Google connection" message for capabilities that already work. Decision: (1) the `email` agent is now
+  LIVE and dispatches to the existing `backfillExtraction` engine, so "turn my inbox into tasks" actually
+  mines synced mail into the Review queue and reports counts; (2) the `calendar` agent is deleted —
+  the assistant already reads Calendar (`search_my_data`) and creates real events / drafts mail via its
+  write tools (`create_calendar_event` / `draft_email`), so a separate agent was pure redundancy;
+  calendar/draft requests now route to the assistant; (3) the `meeting` agent stays (its paste-a-
+  transcript guidance is accurate). Also: accepted `event`/`follow_up` items now appear on the Tasks
+  surface with a type pill (they previously vanished after the Review queue — /tasks only showed
+  `item_type='task'`), and the `/dev` Component Lab is gated behind `NODE_ENV` (server-side `notFound()`
+  + hidden nav link) so it can't be reached in production.

@@ -6,8 +6,9 @@
 ## Current phase
 **Phase 1 (task loop) and Phase 2 (source→items extraction) are now functional**, on top of a
 code-complete Phase 0 and the research/agent stack. The keystone — turning ingested email/meeting
-sources into sourced, reviewable items — is built and live (no migration gate). The only major
-runtime-blocked arc is **Apply/Outreach/Documents**, waiting on migration **0016**.
+sources into sourced, reviewable items — is built and live (no migration gate). **Migration 0016 is
+now applied** (via the dashboard SQL editor — so it does NOT appear in `list_migrations`, but all its
+objects are verified live), which runtime-unblocks the **Apply/Outreach/Documents** arc.
 
 ## Status summary
 Phase 0 is code-complete: app shell, provenance `<Card>`, **auth (P0-T3)**, and the **core +
@@ -26,14 +27,34 @@ grounds a reviewable field plan from your documents (never submits), and an Outr
 audience-tailored emails into Gmail Drafts (never sends). Its migration (**0016**) is written but **not
 yet applied to the live project** — see the task log.
 
-**Migrations `0001→0015` are APPLIED to the live project** (via the Supabase MCP); **`0016` is written
-but NOT yet applied** (it gates Apply/Outreach/Documents — see roadblocks). RLS is on for every table,
+**Migrations `0001→0015` are APPLIED to the live project** (via the Supabase MCP); **`0016` is also
+applied** (run through the dashboard SQL editor, so absent from `list_migrations`, but its tables,
+bucket, column, and RLS policies are verified present). RLS is on for every table,
 both provenance CHECKs exist, `review_feed` is `security_invoker`, and the security advisor is clean.
 People / Opportunities / Review / Auto-Populate / Goals / Calendar / Email triage **and now the
 email+meeting→items extraction engine and the task loop** are live. The **Google connector** activates
 once the user connects Google on the Connections tab.
 
 ## Task log (most recent first)
+- **Single LLM provider (Grok) + lean-up pass** — ✅ shipped to `main`, each commit tsc + eslint +
+  build green, pushed. The user's directive: "just grok for everything and try to fix those issues …
+  I don't even know if you're using playwright." Five pieces:
+  1. **Grok consolidation.** `lib/llm/gemini.ts` rewritten as a thin ADAPTER over `lib/llm/grok.ts`:
+     keeps the `gemini*` export names + Gemini `contents`/`parts` shape (so all ~10 call sites are
+     unchanged) but routes every call to xAI. FIFO tool-call-id pairing makes a tool-loop transcript
+     round-trip for the research/opportunity follow-up pass. Deleted the JSON-Schema→Gemini converter +
+     Vertex/ADC. No call hits Google anymore. (commit `f8b546a`)
+  2. **Events/follow-ups dead-end.** Accepted `event`/`follow_up` items vanished after Review (/tasks
+     only showed `item_type='task'`, /calendar reads only Google sources). Tasks is now the unified
+     "things on my plate" surface for all three accepted types with a type pill; task PATCH/DELETE widen
+     to the three action types so they can be checked off / edited / deleted. (commit `c5e3cb1`)
+  3. **Phantom agents.** `email` agent is now LIVE → dispatches the existing `backfillExtraction` ("turn
+     my inbox into tasks" mines synced mail into Review). `calendar` agent deleted (assistant already
+     reads Calendar + creates events / drafts mail). `meeting` kept. (commit `7b44986`)
+  4. **/dev gate.** Server-side `notFound()` layout + hidden nav link → 404 in production. (commit `a84c04b`)
+  5. **Playwright proven.** Smoke test launched headless chromium, read a rendered form's fields, closed
+     clean. It IS installed (1.61 + chromium-1228); the only missing piece is `JARVIS_BROWSER=playwright`
+     in `.env.local` to enable the headed autofill.
 - **The engine bay: real autofill + email/meeting→items extraction + task loop (Phase 1/2 made real)**
   — ✅ all shipped to `main`, each commit tsc + build + lint green, pushed. The user's directive:
   "give Jarvis a job/grant application or a person to contact and it should fill it out … go part by
@@ -293,12 +314,11 @@ extracts text), "Prepare with Jarvis" on an opportunity, then "Fill in browser" 
 should open with the grounded fields typed in and the resume attached, left open for you to submit.
 
 ## Known roadblocks / waiting on the user
-- **Apply migration `0016` (Aarav applies migrations).** Migrations `0001→0015` are applied live;
-  `0016` is written but NOT yet applied. It gates the entire Application/Outreach/Documents runtime:
-  the `documents` table + private Storage bucket, `application_runs`, `outreach_runs`, and
-  `contacts.current_work`. Until it's applied, the Documents/Apply/Outreach UI builds and routes but
-  any run errors (the tables don't exist). **Everything else this session (email→items, meetings,
-  task loop, Review) is live and needs no migration.**
+- **Migration `0016` is APPLIED — no longer a roadblock.** Aarav ran it through the dashboard SQL
+  editor, so it does NOT appear in `list_migrations`, but all of its objects are verified live (the
+  `documents` table + private Storage bucket, `application_runs`, `outreach_runs`, `contacts.current_work`,
+  and 8 RLS policies). The Apply/Outreach/Documents arc is now runtime-unblocked. (If you ever re-point
+  at a fresh project, re-run `supabase/migrations/0016_application_outreach.sql`.)
 - **Reconnect Google after the gmail body change.** Triage + extraction now read the full message body
   (`format=full`) — still within the existing `gmail.readonly` scope, so no NEW consent is needed, but
   the user should re-run Email sync to (re)ingest bodies and trigger extraction. Write features
@@ -308,16 +328,21 @@ should open with the grounded fields typed in and the resume attached, left open
   more silent from-memory answers), and the research/opportunity agents get no recall seed. Set it to
   enable web search end-to-end. Never affects provenance.
 - **`ELEVENLABS_API_KEY` (optional).** Unset = the orb stays silent (text still works). Set it to speak.
-- **`JARVIS_BROWSER=playwright` + `npx playwright install chromium` (for Apply autofill).** Without it,
-  Apply degrades to "open the application + copy from the plan"; the static-HTML form reader still works.
-- **LLM keys:** Gemini powers everything except Application/Outreach; **Grok** (`XAI_API_KEY` +
-  `XAI_MODEL`) powers Application/Outreach. Both set per the user.
+- **`JARVIS_BROWSER=playwright` (for Apply autofill).** Playwright 1.61 + chromium-1228 are already
+  installed and smoke-tested (a headed browser reads + fills forms end-to-end). The ONE missing piece is
+  this env var — until it's set, Apply uses the static-HTML form reader and degrades autofill to "open
+  the application + copy from the plan". Set `JARVIS_BROWSER=playwright` in `.env.local` to turn on the
+  browser.
+- **LLM key:** **one provider now — xAI Grok** powers EVERY model call (`XAI_API_KEY`, optional
+  `XAI_MODEL`, default grok-4.3). `lib/llm/gemini.ts` is a thin adapter that routes to `grok.ts`;
+  GEMINI_API_KEY / Vertex are no longer used. Set per the user.
 
 ## Stack as built
 Next.js 15.5.19 · React 19.1 · Tailwind v4 · TypeScript · lucide-react · Turbopack ·
-`@supabase/ssr` + `@supabase/supabase-js` · `@anthropic-ai/sdk` (web_search) · `chrono-node`
-(installed for the date resolver, used from Phase 2). App at repo root; docs in `/docs`;
-SQL in `/supabase/migrations`.
+`@supabase/ssr` + `@supabase/supabase-js` · **xAI Grok** (single LLM provider, `lib/llm/grok.ts` +
+the `gemini.ts` adapter) · Tavily (`lib/search/tavily.ts`, web search) · Playwright (Apply autofill) ·
+`chrono-node` (date resolver). App at repo root; docs in `/docs`; SQL in `/supabase/migrations`.
+(`@anthropic-ai/sdk` is still an installed dependency but no longer imported anywhere — retired.)
 
 ## Notes
 - The model's self-reported URLs/quotes are **never trusted** — see `src/lib/research/extract.ts`
