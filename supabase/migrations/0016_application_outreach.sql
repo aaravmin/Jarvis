@@ -27,13 +27,16 @@ create table if not exists public.documents (
   name           text not null,                       -- display name (usually the original filename)
   doc_type       text not null default 'resume'
                    check (doc_type in ('resume','grant_material','bio','writing_sample','other')),
-  storage_path   text not null,                       -- path in the 'documents' bucket: {user_id}/{uuid}.ext
+  storage_path   text,                                -- path in the 'documents' bucket: {user_id}/{uuid}.ext (null = text-only)
   mime_type      text,
   file_size      integer,
   extracted_text text,                                -- plain-text contents the model reads to fill forms
   is_default     boolean not null default false,      -- the primary doc of its type when none is specified
   created_at     timestamptz not null default now(),
-  updated_at     timestamptz not null default now()
+  updated_at     timestamptz not null default now(),
+  -- A document is useful to the agent only if it has a readable body and/or an attachable file.
+  constraint documents_has_content_chk
+    check (storage_path is not null or (extracted_text is not null and length(btrim(extracted_text)) > 0))
 );
 create index if not exists documents_user_id_idx  on public.documents(user_id);
 create index if not exists documents_doc_type_idx on public.documents(user_id, doc_type);
