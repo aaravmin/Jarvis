@@ -93,12 +93,7 @@ meetings, proposes what to do next, and shows its receipts.
 </p>
 
 <p align="center">
-  <img src="docs/images/review.png" alt="The Review queue: each suggested task, event, or contact shows a source chip you can open to see the exact quote that created it" width="100%" />
-</p>
-
-<p align="center">
-  <img src="docs/images/contacts.png" alt="A contact card: web-researched background, why they matter to a goal, the ask, and an AI-drafted outreach email — every field with its source" width="49%" />
-  <img src="docs/images/opportunities.png" alt="Opportunities found by the agent — programs, jobs, and hackathons, each with a chrono-resolved deadline and a source link" width="49%" />
+  <img src="docs/images/opportunities.png" alt="Opportunities found by the agent — programs, jobs, and hackathons, each as its own card with a chrono-resolved deadline, location, requirements, and a link to the application" width="100%" />
 </p>
 
 ## Design
