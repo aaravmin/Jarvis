@@ -18,6 +18,12 @@ On top of that, a **multi-agent system** is now built: an intent **router** (`PO
 each request to exactly one agent, and a full **Opportunity agent** (programs/jobs/hackathons) mirrors
 the people agent with chrono-resolved deadlines. Tabs were renamed to mirror the agents.
 
+Most recently, an **Application & Outreach agent** (the "apply for me" layer, powered by **Grok**) is
+built end-to-end: a `Documents` store (the agent's memory), an Application agent that reads a form and
+grounds a reviewable field plan from your documents (never submits), and an Outreach agent that drafts
+audience-tailored emails into Gmail Drafts (never sends). Its migration (**0016**) is written but **not
+yet applied to the live project** — see the task log.
+
 **Migrations `0001→0005` are now APPLIED to the live project** (via the Supabase MCP). RLS is on for
 all 12 tables, both provenance CHECKs exist, `review_feed` is `security_invoker`, and the security
 advisor is clean (revoked a stray public `EXECUTE` on the pre-existing `rls_auto_enable` helper).
@@ -25,6 +31,28 @@ People / Opportunities / Review / Auto-Populate are live. The **Google connector
 Drive/Sheets) is built; it activates once the user connects Google on the Connections tab.
 
 ## Task log (most recent first)
+- **Application & Outreach agent (the "apply for me" layer)** — ✅ build green (tsc 0, lint clean),
+  shipped to `main` across the session. A new specialized agent powered by **Grok (xAI)** (Gemini stays
+  on every existing feature). Three pillars:
+  1. **Documents = the agent's memory.** New `Documents` tab + private, owner-scoped Supabase Storage
+     bucket (`documents`, RLS by `auth.uid()` folder) + `documents` table (metadata + extracted text,
+     default-resume flag). Client upload → `/api/documents/create` → `store.ts` (`loadAgentMaterials`
+     returns the default/most-recent resume + other materials).
+  2. **Application agent.** `runApplication()` flow: dedup guard → read the form (dependency-free static
+     HTML parser today; env-gated `JARVIS_BROWSER=playwright` rendered-DOM path wired for later) → load
+     the user's materials → Grok grounds each field → persist a **field plan** for review. Provenance is
+     enforced in CODE (`backs()` citation gate): any fill not grounded in the corpus is demoted to
+     unfilled/`inferred` (hard rule #3). It **NEVER submits** — lands `needs_review` (hard rule #5).
+     Surfaces: `Apply` tab, "Prepare with Jarvis" on Opportunity cards, and the orb router
+     ("prepare this application <link>" → application agent, URL extracted from the message).
+  3. **Outreach agent.** Per-contact `OutreachButton`: pick an **audience** (investor/recruiter/professor/
+     peer/founder — sets tone + ask) + goal → Grok drafts a tailored email grounded in the contact's
+     `current_work` (no invented recipient facts) → editable → **saved to Gmail Drafts** (`gmail.compose`),
+     never sent. Reuses the existing `getTokenWithScope` + `createDraft` infra.
+  Migration **0016** adds it all (documents table + Storage bucket + 4 policies, `contacts.current_work`,
+  `application_runs`, `outreach_runs`, owner-only RLS, inflight unique index). **⚠️ 0016 is written but
+  NOT yet applied to the live project — Aarav applies migrations.** Until then the Documents/Apply/Outreach
+  tables don't exist server-side; the UI builds and routes, but runs will error until 0016 is applied.
 - **Calendar end-times + all-day fix · Apollo email connector · README API list** — ✅ build green
   (tsc 0, lint clean), adversarially verified (no real defects), not yet pushed. Three user requests:
   1. **Calendar never fabricates an end time.** `sources.ends_at` (migration 0014) + `sources.is_all_day`

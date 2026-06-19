@@ -132,12 +132,50 @@ data and the live web, and can take L0 write actions.
 
 ---
 
-## 10. Connectors & infrastructure
+## 10. Application & outreach agent 🟢
+The "apply for me" layer. Two flows, both **suggest-only — Jarvis never submits a form and never
+sends an email** (HARD RULE #5). Powered by **Grok (xAI)** for grounding/composition; Gemini stays on
+every existing feature.
+
+### Your documents = the agent's memory 🟢
+- **What it does:** upload resumes and grant materials; mark one resume as default. These are the
+  corpus the agent fills forms and tailors outreach from.
+- **Storage:** files land in a private, owner-scoped Supabase Storage bucket (`documents`, RLS by
+  `auth.uid()` folder); metadata + extracted text in the `documents` table.
+- **Surface:** `Documents` tab. API: `/api/documents/create`, `/api/documents/[id]`.
+
+### Application agent 🟢
+- **What it does:** give it a job/grant link; it reads the form, then fills every field it can
+  **ground in your documents** and returns a **field plan** for review. Each filled field carries its
+  value source (resume / profile / document / opportunity), the **source quote** it was grounded in,
+  and a confidence — ungrounded guesses are demoted to unfilled (`backs()` citation gate, hard rule #3).
+- **Form reading:** a dependency-free static HTML parser today; an env-gated (`JARVIS_BROWSER=playwright`)
+  rendered-DOM path is wired for JS-built forms once a browser is provisioned — **submit-only-on-click,
+  no auto-pilot**.
+- **Surface:** `Apply` tab + "Prepare with Jarvis" on Opportunity cards. API: `/api/applications/prepare`,
+  `/api/applications/[id]`. Also **registered in the agent router** — `POST /api/agent` with
+  "prepare this application <link>" extracts the URL and dispatches here (forward-looking: the orb
+  posts to `/api/ask` today, so the router activates once an action-dispatch UI uses it, same as the
+  opportunity/contact agents). The user reviews the field plan and submits on the real site themselves.
+- **Autonomy:** L0 — run lands `needs_review`; nothing is submitted.
+
+### Outreach agent 🟢
+- **What it does:** per contact, pick an **audience** (investor / recruiter / professor / peer /
+  founder) — which sets the tone and the ask — and a goal; Grok drafts a tailored email grounded in
+  what the contact is working on (no invented recipient facts).
+- **Surface:** "Outreach" on contact cards. API: `/api/outreach/draft`, `/api/outreach/[id]/gmail`.
+  The draft is editable, then **saved to Gmail Drafts** (`gmail.compose`) — never sent.
+- **Autonomy:** L0 — drafts only.
+
+---
+
+## 11. Connectors & infrastructure
 
 | Piece | Status | Notes |
 |---|---|---|
-| **Supabase** (Postgres + Auth + RLS) | 🟢 | System of record. Every table row is owner-scoped via RLS. |
-| **Gemini** (LLM) | 🟢 | 2.5 Flash. Three primitives: structured JSON, tool-loop, plain text. **Dual auth:** AI Studio API key *or* Vertex AI via ADC (`GOOGLE_CLOUD_PROJECT`) for orgs that forbid keys. Retries on overload. |
+| **Supabase** (Postgres + Auth + RLS) | 🟢 | System of record. Every table row is owner-scoped via RLS. Private `documents` Storage bucket for resumes/materials. |
+| **Gemini** (LLM) | 🟢 | 2.5 Flash. Three primitives: structured JSON, tool-loop, plain text. **Dual auth:** AI Studio API key *or* Vertex AI via ADC (`GOOGLE_CLOUD_PROJECT`) for orgs that forbid keys. Retries on overload. Powers every feature except Application/Outreach. |
+| **Grok** (xAI LLM) | 🟢 | OpenAI-compatible. Grounds the Application field-plan + composes Outreach drafts. Same three primitives (`grokStructured`/`grokText`/`grokToolLoop`), `XAI_API_KEY` + `XAI_MODEL`. |
 | **Google OAuth** | 🔌 | Narrowest scopes, tokens **server-side only**. Read-only first; write scopes added per feature. Re-consent prompts surface clearly. |
 | **Tavily** | 🟢 | The only web-search path — every citation traces to a real result. |
 | **Apollo.io** | ⚙️ | Contact email enrichment + people discovery. |
@@ -158,6 +196,9 @@ These are the honest edges of today's build (and the natural next steps on the f
 - **Autonomy is L0 only.** Nothing auto-sends or auto-commits; graduating to L1 (auto for
   high-confidence, rare-false-positive cases) is future work.
 - **Meetings are paste-only.** No live capture/transcription yet.
+- **Applications fill, they don't submit.** The agent reads forms and grounds a field plan; the user
+  submits on the real site. Static HTML forms are read today; JS-rendered forms need the Playwright
+  path (env-gated, `JARVIS_BROWSER=playwright`) which awaits a provisioned browser.
 - **Today's plan is ephemeral.** Recomputed each load; not persisted or scheduled.
 - **Notion mirror, proactive reminders, wake-word voice, and computer-use** are all unbuilt (see `ROADMAP.md`).
 - **Email "did I reply?" tracking** is not yet wired from real thread state.

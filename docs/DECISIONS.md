@@ -233,3 +233,37 @@
   and required/optional status, plus `NEXT_PUBLIC_SITE_URL` and the optional `GOOGLE_OAUTH_REDIRECT` in
   the env block and `.env.example` (which was also missing the Google connector vars entirely). Fixed
   the Drive/Sheets attribution: Drive = draft-from-template, Sheets = contact import/export.
+
+- **2026-06-19 — The Application & Outreach agent runs on Grok (xAI), not Gemini.** Why: the user's
+  roadmap specified Grok as the "brain" for this module. Added `src/lib/llm/grok.ts` (OpenAI-compatible,
+  `grokStructured`/`grokText`/`grokToolLoop`, `XAI_API_KEY` + `XAI_MODEL`) mirroring `gemini.ts`. Gemini
+  is untouched on every existing feature — this is additive, not a swap. Consequence: two LLM providers
+  now coexist; pick per feature (existing → Gemini, application/outreach → Grok).
+
+- **2026-06-19 — The Application agent FILLS a reviewable field plan but NEVER submits; form-reading is
+  a static parser today with an env-gated Playwright path for later.** Why: hard rule #5 (ship L0
+  suggest-only) + "don't reduce functionality / no auto-pilot." `runApplication` reads the form
+  (dependency-free static HTML parser via `scrape.ts`; a `JARVIS_BROWSER=playwright` rendered-DOM path
+  is wired behind a `new Function("m","return import(m)")` dynamic import so the uninstalled `playwright`
+  package never breaks the bundle — verified by `npm run build`), grounds each field with Grok, and
+  persists a `field_plan` at status `needs_review`. Provenance is enforced in CODE, not trusted from the
+  model: `backs(corpus, quote)` (the citation gate) demotes any ungrounded fill to unfilled/`inferred`
+  with capped confidence (hard rule #3). The user submits on the real site.
+
+- **2026-06-19 — Outreach is UI-only (contact-targeted); only the Application agent joined the router.**
+  Why: an application needs just a URL, which the router can extract from free text and dispatch
+  (`/api/agent` → `runApplication`, redirect `/apply`). Outreach needs a specific contact + audience +
+  tone that natural language can't reliably resolve, and it has no review-queue home — its natural
+  entry point is the per-contact `OutreachButton`. Shipping a half-working NL outreach path would be
+  worse than none, so outreach stays on the Contacts UI. Drafts save to Gmail Drafts (`gmail.compose`),
+  never send (L0). (The router dispatch remains forward-looking until a UI posts to `/api/agent`; the
+  orb still uses `/api/ask` — see the 2026-06-17 router decision.)
+
+- **2026-06-19 — Documents (resumes/grant materials) live in a private Supabase Storage bucket, RLS by
+  user-id folder; the `documents` row holds extracted text.** Why: the agent needs a corpus to ground
+  fills/drafts in (hard rule #3), and files must stay owner-scoped (hard rule #6). Bucket `documents` is
+  private with policies gating `(storage.foldername(name))[1] = auth.uid()::text`; uploads go to
+  `${user.id}/<uuid>.<ext>` from the browser, then `/api/documents/create` records metadata + the
+  extracted text used for grounding. One default resume per user (`createDocument` clears the prior
+  default of the same type). **Migration 0016 carries all of this and is NOT yet applied to the live DB
+  — Aarav applies migrations** (the UI/routes build, but server writes error until 0016 lands).

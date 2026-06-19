@@ -162,6 +162,32 @@ provenance, landing in Review) mirrors the people agent's shape:
   (review_status=review) + `opportunities` (review_status=review). The fixed `research_run_id` column
   became a generic `run_id`. Still `security_invoker=true` so base-table RLS holds.
 
+## Application & Outreach agent — migration `0016_application_outreach.sql`
+
+The "apply for me" layer (Grok-powered). All rows owner-scoped via RLS; suggest-only (L0).
+
+- **`documents`** — the agent's memory: a user's resumes / grant materials. `doc_type`
+  (`resume|cover_letter|transcript|portfolio|grant_material|other`), `name`, `storage_path` (nullable —
+  points at the private `documents` Storage bucket), `extracted_text` (what the agent grounds fills in),
+  `is_default` (one default per type), `mime_type`, `size_bytes`. `documents_has_content_chk` requires
+  either a `storage_path` or `extracted_text` (no empty rows).
+- **Storage bucket `documents`** — **private**, with 4 policies (select/insert/update/delete) gating
+  `(storage.foldername(name))[1] = auth.uid()::text` so a user only ever touches their own folder
+  (`${user.id}/…`). Hard rule #6 (owner-scoped, tokens/files server-trusted).
+- **`contacts.current_work`** (+ `current_work_updated_at`) — what a contact is working on now; the
+  Outreach composer grounds the email in this (no invented recipient facts).
+- **`application_runs`** — one row per prepared application: `target_url`, `kind` (`job|grant|other`),
+  `opportunity_id` (FK, nullable — set when launched from a card), `title`, `organization`, `resume_id`
+  (FK documents), `status` (`running|needs_review|submitted|error`), **`field_plan` (jsonb)** — the
+  array of `{label, value, source, source_quote, confidence, required, filled}` items (provenance per
+  field, hard rule #3), `unfilled_count`, `summary`, `error`. A partial unique index
+  (`… where status='running'`) blocks concurrent duplicate runs against the same URL. **Never stores a
+  submission — the agent fills, the user submits.**
+- **`outreach_runs`** — one row per drafted email: `contact_id` (FK), `audience` (CHECK ∈
+  investor|recruiter|professor|peer|founder|other), `goal`, `template_id` (FK email_templates,
+  nullable), `status` (`running|drafted|saved|error`), `draft_subject`, `draft_body`, `gmail_draft_id`
+  (set once saved into Gmail Drafts — `gmail.compose`, never sent), `error`.
+
 ## Migration order
 1. **P0-T4 (`0001_core.sql`):** `sources`, `items` (no `contact_id` yet) + RLS.
 2. **Phase 6 (`0002_people.sql`):** `goals`, `contacts`, `contact_channels`, `connections`,
@@ -180,11 +206,15 @@ provenance, landing in Review) mirrors the people agent's shape:
 8. **Profile (`0008_profile.sql`):** `profiles` (headline/age/level/looking_for) for relevance.
 9. **Email ingest (`0009_email_ingest.sql`):** `sources` gains from_name/from_email/group_label + a
    partial-unique (user, type, external_id) for idempotent re-sync.
-10. **Phase 7:** `applications` (Kanban) — schema TBD when we reach P7-T1.
+10. **Application & Outreach agent (`0016_application_outreach.sql`):** `documents` (+ private Storage
+    bucket `documents` & 4 RLS policies), `contacts.current_work`, `application_runs` (jsonb `field_plan`,
+    inflight unique index), `outreach_runs`. Owner-only RLS. **⚠ NOT yet applied to the live project.**
+11. **Phase 7:** `applications` (Kanban) — schema TBD when we reach P7-T1.
 
 **Applied to the live project on 2026-06-17:** `0001→0009` via the Supabase MCP. RLS verified; advisors
 clean. (`0006→0009` add the goals-anchor tables, goals L0/provenance, the profile, and email-ingest
-columns on `sources`.)
+columns on `sources`.) **`0016` is written but NOT applied — Aarav applies migrations.** (Migrations
+`0010→0015` predate this doc's order list; the changelog below is authoritative for them.)
 
 ## Changelog
 - _2026-06-17_ — Initial data model documented from roadmap Sections 3.4 & 3.7 (P0-T1). No migrations
@@ -205,3 +235,11 @@ columns on `sources`.)
   to union opportunities (the fixed `research_run_id` column generalized to `run_id`). Dates split into
   model-verbatim `raw_*` strings + chrono-resolved `*_at` timestamps (hard rule #2). RLS owner-scoped.
   **Apply order is now `0001→0004`.** Not yet applied to a live project (same token/reload blocker).
+- _2026-06-19_ — **Migration `0016_application_outreach.sql` written** for the Application & Outreach
+  agent (Grok-powered): `documents` (+ private `documents` Storage bucket & 4 owner-folder RLS policies)
+  as the agent's memory; `contacts.current_work` (+ `_updated_at`) for outreach grounding;
+  `application_runs` (jsonb `field_plan` with per-field provenance, `unfilled_count`, status
+  running/needs_review/submitted/error, inflight unique index); `outreach_runs` (audience CHECK,
+  draft_subject/body, gmail_draft_id, status running/drafted/saved/error, template_id FK). Owner-only
+  RLS throughout; suggest-only (the agent fills/drafts, never submits/sends). **NOT yet applied to the
+  live project — Aarav applies migrations.** Server writes against these tables error until it lands.
