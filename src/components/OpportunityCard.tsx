@@ -159,38 +159,49 @@ export function OpportunityCard({
 
   return (
     <Card title={title} source={source} reasoning={reasoning} meta={meta} actions={actions}>
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="rounded-full border border-accent/40 bg-accent-soft/40 px-2 py-0.5 font-medium text-accent">
             {CATEGORY_LABEL[o.category]}
           </span>
-          {(o.location || o.isRemote) && (
-            <span className="inline-flex items-center gap-1 text-muted">
-              <MapPin className="h-3.5 w-3.5" />
-              {o.location || (o.isRemote ? "Remote" : "")}
+          {o.compOrPrize && (
+            <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-muted-strong">
+              {o.compOrPrize}
             </span>
           )}
-          {o.compOrPrize && <span className="text-muted-strong">{o.compOrPrize}</span>}
         </div>
 
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+        {/* Key facts — one labeled row per fact so each opportunity stays scannable and the details
+            never clump together into a wall of text. */}
+        <dl className="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-2 border-t border-border pt-3 text-sm">
+          {(o.location || o.isRemote) && (
+            <>
+              <dt className="flex items-center gap-1 text-muted">
+                <MapPin className="h-3.5 w-3.5" />
+                Location
+              </dt>
+              <dd className="text-foreground">
+                {o.location || "Remote"}
+                {o.location && o.isRemote ? " · Remote OK" : ""}
+              </dd>
+            </>
+          )}
           {(o.rawDeadline || o.deadlineAt) && (
             <>
-              <dt className="text-muted">Deadline</dt>
+              <dt className="flex items-center gap-1 text-muted">
+                <CalendarClock className="h-3.5 w-3.5" />
+                Deadline
+              </dt>
               <dd className="text-foreground">
                 {o.rawDeadline || "—"}
-                {o.deadlineAt && (
-                  <span className="ml-1.5 text-xs text-muted">({formatDate(o.deadlineAt)})</span>
-                )}
+                {o.deadlineAt && <span className="ml-1.5 text-xs text-muted">({formatDate(o.deadlineAt)})</span>}
               </dd>
             </>
           )}
           {(o.rawEventDates || o.startsAt) && (
             <>
               <dt className="text-muted">Dates</dt>
-              <dd className="text-muted-strong">
-                {o.rawEventDates || formatDate(o.startsAt)}
-              </dd>
+              <dd className="text-muted-strong">{o.rawEventDates || formatDate(o.startsAt)}</dd>
             </>
           )}
           {o.requirements && (
@@ -199,30 +210,32 @@ export function OpportunityCard({
               <dd className="text-muted-strong">{o.requirements}</dd>
             </>
           )}
+          {o.requiredSkills.length > 0 && (
+            <>
+              <dt className="text-muted">Skills</dt>
+              <dd className="flex flex-wrap gap-1.5">
+                {o.requiredSkills.map((s) => (
+                  <span
+                    key={s}
+                    className="rounded-md border border-border bg-surface px-1.5 py-0.5 text-[11px] text-muted-strong"
+                  >
+                    {s}
+                  </span>
+                ))}
+              </dd>
+            </>
+          )}
         </dl>
-
-        {o.requiredSkills.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {o.requiredSkills.map((s) => (
-              <span
-                key={s}
-                className="rounded-md border border-border bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted-strong"
-              >
-                {s}
-              </span>
-            ))}
-          </div>
-        )}
 
         {o.howToApplyUrl && (
           <a
             href={o.howToApplyUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 px-2.5 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/40"
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-accent/40 bg-accent-soft/30 px-3 py-2 text-xs font-semibold text-accent transition-colors hover:bg-accent-soft/50"
           >
             <ExternalLink className="h-3.5 w-3.5" />
-            How to apply
+            Open application
           </a>
         )}
       </div>

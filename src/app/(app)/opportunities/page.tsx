@@ -30,7 +30,10 @@ export default async function OpportunitiesPage({ searchParams }: { searchParams
           <h2 className="text-sm font-semibold text-foreground">No opportunities yet</h2>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
+          <p className="px-1 text-xs text-muted">
+            {opportunities.length} {opportunities.length === 1 ? "opportunity" : "opportunities"}
+          </p>
           {opportunities.map((o) => (
             <OpportunityCard key={o.id} opportunity={o} showActions={false} />
           ))}
