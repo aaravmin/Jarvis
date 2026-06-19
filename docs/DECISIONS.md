@@ -284,3 +284,29 @@
   The mechanical core (DOM read + text/select/radio/checkbox fill + file attach) is verified end-to-end
   against a live chromium. Surface: `POST /api/applications/[id]/autofill` + "Fill in browser" on the
   run card. (Browser autofill needs migration 0016 live for runs to exist, same gate as the rest.)
+
+- **2026-06-19 — Source→items extraction is one engine; provenance is enforced in code, not trusted.**
+  Why: the inbox/calendar/meetings all ingested `sources` but nothing turned them into `items`, so the
+  whole product wedge (Review → Tasks → follow-ups) had an empty engine bay (`items`=0 despite 43
+  sources). Decision: a single extractor (`lib/google/extract-items.ts`) mines any text source for
+  candidate tasks/events/follow-ups, parameterized by a `SourceKind` ("email" | "meeting") that only
+  swaps the prompt noun — the inbox and the Meetings paste-box share one code path. The model is
+  UNTRUSTED at three points, each enforced in our code after the call: (1) **hard rule #3** — a
+  candidate's `source_quote` is kept only if `backs(corpus, quote)` proves it's actually in the source;
+  paraphrases/hallucinations are dropped, so every surviving item has a real, clickable source line.
+  (2) **hard rule #2** — the model returns a verbatim `raw_due` *phrase* and never a date; chrono
+  resolves it anchored to the source's `occurred_at` (the email's arrival / the meeting time), NOT
+  today — so "by Friday" in a week-old email resolves to the correct Friday. (3) **hard rule #5** —
+  everything lands at `status='review'` (L0 suggest-only) with confidence < 0.35 filtered and
+  (source_id, title) de-duped; the user accepts/dismisses via `PATCH /api/items`. To feed the engine,
+  Gmail ingest now pulls the FULL body (`format=full` + a MIME-tree parser, text/plain preferred,
+  HTML stripped) instead of the ~160-char snippet — still read-only, no new scope. Surfaces:
+  `lib/items/review.ts` + `ReviewItemCard` (rendered through the provenance-enforcing `<Card>`, so a
+  quote-less item literally cannot display — rule #4), merged into the existing Review queue.
+
+- **2026-06-19 — The orb admits when it can't web-search instead of answering from memory.** Why:
+  `web_search` silently returned `[]` with no `TAVILY_API_KEY`, so the model would answer current-events
+  questions from training data while looking like it had searched — a trust violation (a quiet, plausible
+  wrong answer is worse than "I can't"). `ask.ts` now returns an explicit "web search is not configured"
+  tool result when `tavilyEnabled()` is false, instructing the model to tell the user rather than guess.
+  Same spirit as the dates/reply-state rules: never present an ungrounded claim as a grounded one.

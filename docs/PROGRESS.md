@@ -4,8 +4,10 @@
 > Read this file (plus `/CLAUDE.md` and `/docs/SESSION_HANDOFF.md`) at the start of every session.
 
 ## Current phase
-**Phase 0 — Foundations** (complete in code) → entering Phase 1, with an early **Auto-Populate**
-cohort-research feature already built (cross-cutting, by user request).
+**Phase 1 (task loop) and Phase 2 (source→items extraction) are now functional**, on top of a
+code-complete Phase 0 and the research/agent stack. The keystone — turning ingested email/meeting
+sources into sourced, reviewable items — is built and live (no migration gate). The only major
+runtime-blocked arc is **Apply/Outreach/Documents**, waiting on migration **0016**.
 
 ## Status summary
 Phase 0 is code-complete: app shell, provenance `<Card>`, **auth (P0-T3)**, and the **core +
@@ -24,13 +26,55 @@ grounds a reviewable field plan from your documents (never submits), and an Outr
 audience-tailored emails into Gmail Drafts (never sends). Its migration (**0016**) is written but **not
 yet applied to the live project** — see the task log.
 
-**Migrations `0001→0005` are now APPLIED to the live project** (via the Supabase MCP). RLS is on for
-all 12 tables, both provenance CHECKs exist, `review_feed` is `security_invoker`, and the security
-advisor is clean (revoked a stray public `EXECUTE` on the pre-existing `rls_auto_enable` helper).
-People / Opportunities / Review / Auto-Populate are live. The **Google connector** (read-only OAuth +
-Drive/Sheets) is built; it activates once the user connects Google on the Connections tab.
+**Migrations `0001→0015` are APPLIED to the live project** (via the Supabase MCP); **`0016` is written
+but NOT yet applied** (it gates Apply/Outreach/Documents — see roadblocks). RLS is on for every table,
+both provenance CHECKs exist, `review_feed` is `security_invoker`, and the security advisor is clean.
+People / Opportunities / Review / Auto-Populate / Goals / Calendar / Email triage **and now the
+email+meeting→items extraction engine and the task loop** are live. The **Google connector** activates
+once the user connects Google on the Connections tab.
 
 ## Task log (most recent first)
+- **The engine bay: real autofill + email/meeting→items extraction + task loop (Phase 1/2 made real)**
+  — ✅ all shipped to `main`, each commit tsc + build + lint green, pushed. The user's directive:
+  "give Jarvis a job/grant application or a person to contact and it should fill it out … go part by
+  part of the roadmap and make sure Jarvis can do it." Six pieces, in order:
+  1. **Playwright browser autofill (B5).** `JARVIS_BROWSER=playwright`-gated. `application/browser.ts`
+     (dependency-decoupled Chromium loader via `new Function` so the app builds without playwright) +
+     `application/autofill.ts` (`autofillApplication`: launches a HEADED browser, locates each grounded
+     field by selector→name→id→label, fills text/select/radio/checkbox, attaches the resume file, and
+     **leaves the window open for the user to review + submit — never clicks Submit**) + `scrape.ts`
+     DOM reader rewrite (a browser-side reader passed as a string to `page.evaluate`, resolving real
+     labels/options/selectors) + `POST /api/applications/[id]/autofill` + a "Fill in browser" button on
+     `ApplicationRunCard`. Mechanical core smoke-tested against a real browser (8 field types + all fill
+     primitives passed). **Runtime-blocked only by migration 0016.**
+  2. **Resume text extraction (B4).** `lib/documents/extract-text.ts` (unpdf + mammoth, serverless, no
+     native deps) + `/api/documents/create` downloads the uploaded binary and extracts when the client
+     sent no text — so a PDF/DOCX resume becomes the corpus the autofill grounds on (was empty before;
+     the autofill was filling nothing). Both parse paths verified in this environment.
+  3. **Task loop (B3).** Tasks could be created but never completed/edited/deleted (`/api/tasks` had
+     only POST). Added PATCH (status done⇄accepted, title/notes edits, chrono-re-resolved due) + DELETE,
+     RLS-scoped + pinned to `item_type='task'`; `components/tasks/TaskItem.tsx` gives each row a
+     complete checkbox, inline edit, and delete. Live-verifiable (not gated on 0016).
+  4. **Email→items extraction engine (B1) — the keystone.** 43 ingested email sources had produced 0
+     items because nothing turned sources into items. Now: `gmail.ts` reads the FULL body (`format=full`
+     + a MIME-tree parser that prefers text/plain and strips HTML — verified on 4 payload shapes) and
+     stores it as `raw_text`; `lib/google/extract-items.ts` runs Gemini per email for candidate
+     tasks/events/follow-ups, then enforces the hard rules in CODE: keep a candidate only if
+     `backs(corpus, source_quote)` (rule #3), resolve `raw_due` with chrono anchored to the email's
+     `occurred_at` (rule #2), drop confidence < 0.35, dedup by (source_id, title), insert at
+     `status='review'` (rule #5). Wired into `ingestGmail`; sync reports "N to review".
+  5. **Review surface + accept/reject (B2).** `lib/items/review.ts` + `components/items/ReviewItemCard.tsx`
+     render each extracted item through the provenance-enforcing `<Card>` (working source chip required,
+     rule #4) with Accept/Dismiss → `PATCH /api/items` (accept→accepted, dismiss→dismissed, RLS-scoped,
+     only acts on rows still in review). The Review page now merges items with the research-agent runs.
+     Accepted tasks flow to the Tasks page.
+  6. **Meetings paste→extract (B10) + web_search honesty.** Meetings was a stub that *claimed*
+     transcript extraction. Now `/api/meetings/extract` stores a pasted transcript as a `meeting` source
+     and runs the same engine (generalized with a `SourceKind` so the prompt says "meeting transcript");
+     the Meetings tab has a paste form + a list of transcripts with per-meeting action-item counts.
+     Separately, the orb's `web_search` now returns an explicit "not configured" result when
+     `TAVILY_API_KEY` is unset (it previously answered from memory silently). `docs/CAPABILITIES.md`
+     updated to match reality.
 - **Application & Outreach agent (the "apply for me" layer)** — ✅ build green (tsc 0, lint clean),
   shipped to `main` across the session. A new specialized agent powered by **Grok (xAI)** (Gemini stays
   on every existing feature). Three pillars:
@@ -234,29 +278,40 @@ Drive/Sheets) is built; it activates once the user connects Google on the Connec
 - Runtime auth gate: protected routes redirect to `/login`; APIs self-enforce auth with 401 JSON.
 
 ## The single next task
-**Verify the new write-actions end-to-end with a connected Google account.** The orb's
-`create_calendar_event` / `draft_email` / `save_drive_template` are built, build-clean, and
-review-hardened, but need a live OAuth check: connect Google (Connections tab) with the
-calendar.events + gmail.compose + drive.readonly scopes, then exercise from the orb — "add a dentist
-checkup next week" (→ all-day event next week, NOT a timed one), "draft an email to X using my
-outreach template but make it more casual" (→ list_templates → adapted draft in Gmail Drafts, never
-sent), and "save my <DocName> doc as a template" (→ appears on the Templates page). Confirm a missing
-scope surfaces the "Reconnect Google…" message. Also confirm a manually-added contact now shows on the
-People page with an "Added by you" badge.
+**Verify the email→items engine end-to-end against live Gmail.** It's now runtime-functional (no
+migration gate — the `items`/`sources` tables are live). Connect Google on the Connections tab, hit
+**Sync** on the Email tab, and confirm: the sync summary reports "N to review"; the `Review` tab shows
+the extracted tasks/events/follow-ups each with a working source chip (click it → the exact email line
++ Gmail link); Accept moves a task to the `Tasks` page, Dismiss clears it. Then paste a transcript on
+the `Meetings` tab and confirm its action items land in Review the same way. Watch for date correctness
+(a "by Friday" in an email from last week must resolve to the right Friday — chrono is anchored to the
+email's `occurred_at`, not today).
+
+Then, once **migration 0016 is applied** (see roadblocks), verify the Apply autofill: set
+`JARVIS_BROWSER=playwright` + `npx playwright install chromium`, upload a PDF resume (confirm it
+extracts text), "Prepare with Jarvis" on an opportunity, then "Fill in browser" — a headed window
+should open with the grounded fields typed in and the resume attached, left open for you to submit.
 
 ## Known roadblocks / waiting on the user
-- **Supabase live (apply migrations `0001→0004`):** real access token in the MCP config + window
-  reload. The config is structurally fixed (`~/.claude.json`); only the token is a placeholder. The
-  `sbp_…` access token goes in the **MCP config**, NOT `.env.local` (the `.env.local` Supabase key is
-  the `eyJ…` anon JWT — a different credential). ← **current blocker** for running everything DB-backed
-  (auth sign-in, People, Opportunities, Review, Auto-Populate).
-- **`ANTHROPIC_API_KEY` + anon key:** ✅ now set in `.env.local` (per the user). The router also uses
-  Claude; without the key, routing falls back to the assistant and research runs error gracefully.
-- **Model choice:** research/opportunity engines default to `claude-sonnet-4-6`; set
-  `ANTHROPIC_MODEL=claude-opus-4-8` for stronger research. Router defaults to Haiku
-  (`JARVIS_ROUTER_MODEL`).
-- **Optional `TAVILY_API_KEY`:** unset = Opportunity agent uses Claude `web_search` only (fully
-  functional). Set it for a recall boost; it never affects provenance.
+- **Apply migration `0016` (Aarav applies migrations).** Migrations `0001→0015` are applied live;
+  `0016` is written but NOT yet applied. It gates the entire Application/Outreach/Documents runtime:
+  the `documents` table + private Storage bucket, `application_runs`, `outreach_runs`, and
+  `contacts.current_work`. Until it's applied, the Documents/Apply/Outreach UI builds and routes but
+  any run errors (the tables don't exist). **Everything else this session (email→items, meetings,
+  task loop, Review) is live and needs no migration.**
+- **Reconnect Google after the gmail body change.** Triage + extraction now read the full message body
+  (`format=full`) — still within the existing `gmail.readonly` scope, so no NEW consent is needed, but
+  the user should re-run Email sync to (re)ingest bodies and trigger extraction. Write features
+  (calendar events, Gmail drafts) still need `calendar.events` + `gmail.compose` consent if not already
+  granted.
+- **`TAVILY_API_KEY` (optional but recommended).** Unset = the orb now says it can't web-search (no
+  more silent from-memory answers), and the research/opportunity agents get no recall seed. Set it to
+  enable web search end-to-end. Never affects provenance.
+- **`ELEVENLABS_API_KEY` (optional).** Unset = the orb stays silent (text still works). Set it to speak.
+- **`JARVIS_BROWSER=playwright` + `npx playwright install chromium` (for Apply autofill).** Without it,
+  Apply degrades to "open the application + copy from the plan"; the static-HTML form reader still works.
+- **LLM keys:** Gemini powers everything except Application/Outreach; **Grok** (`XAI_API_KEY` +
+  `XAI_MODEL`) powers Application/Outreach. Both set per the user.
 
 ## Stack as built
 Next.js 15.5.19 · React 19.1 · Tailwind v4 · TypeScript · lucide-react · Turbopack ·
