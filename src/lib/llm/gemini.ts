@@ -1,102 +1,40 @@
 import "server-only";
+import {
+  grokStructured,
+  grokText,
+  grokToolLoop,
+  grokModel,
+  type GrokMessage,
+} from "@/lib/llm/grok";
 
 /**
- * The Gemini provider — Jarvis's runtime LLM. We talk to Google's Generative Language REST API
- * directly (no SDK dependency) so the surface stays small and auditable. Three primitives cover every
- * call site in the app:
+ * The unified LLM provider — routes EVERY call to xAI Grok (see `grok.ts`).
  *
- *   1. geminiStructured<T>()  — forced JSON output against a schema (the old "forced tool" pattern).
- *   2. geminiToolLoop()       — a function-calling agent loop (web search + local tools), used by the
- *                               orb assistant and the research engines.
- *   3. geminiText()           — plain prose, no schema.
+ * Jarvis standardized on a single model provider (xAI Grok) on 2026-06-19. This module keeps the
+ * historical `gemini*` export names and the Gemini `contents`/`parts` request shape because ~10 call
+ * sites already speak it (the orb assistant, email extraction, research/opportunity engines, etc.).
+ * Rather than rewrite all of them, this file is now a thin ADAPTER: it translates the Gemini-shaped
+ * calls into xAI's OpenAI-style `messages` API and delegates to the three Grok primitives. No call hits
+ * Google anymore — GEMINI_API_KEY / Vertex are unused. (The file name is a cosmetic leftover; the only
+ * real LLM client is `grok.ts`.)
  *
- * Why Gemini and not Claude: the Anthropic key ran out of quota constantly; Gemini Flash is fast,
- * cheap, and high-quota. The model is configurable via GEMINI_MODEL (default gemini-2.5-flash — a GA
- * model that's reliable under load; gemini-3.5-flash is newer but currently rate-limited/overloaded).
+ *   geminiStructured<T>()  → grokStructured()  (forced JSON against a JSON Schema)
+ *   geminiText()           → grokText()        (plain prose)
+ *   geminiToolLoop()       → grokToolLoop()    (function-calling agent loop)
  *
- * Two auth modes, picked at call time (the request body + response shape are identical, so only the
- * URL and headers differ):
- *   • AI Studio (default) — the public Generative Language API, authed with GEMINI_API_KEY.
- *   • Vertex AI            — for orgs that forbid API keys: set GOOGLE_CLOUD_PROJECT (+ optional
- *                            GOOGLE_CLOUD_LOCATION) and authenticate with Application Default
- *                            Credentials (`gcloud auth application-default login`). A bearer token is
- *                            minted from ADC per request (the library caches/refreshes it). Setting
- *                            GOOGLE_CLOUD_PROJECT flips Jarvis to this mode automatically.
+ * The one bit of real logic here is the contents⇄messages translation. Gemini represents a transcript
+ * as `{role:'user'|'model', parts:[{text}|{functionCall}|{functionResponse}]}`; xAI uses OpenAI roles
+ * (`user`/`assistant`/`tool`) with `tool_calls` on the assistant turn and `tool_call_id` on each tool
+ * reply. We pair the two by emitting a fresh unique id per tool call and dequeuing those ids FIFO when
+ * the matching tool responses arrive — exactly the order Gemini emits call-then-response, so a tool-loop
+ * transcript survives the round-trip (grok messages → contents → grok messages) used by the research and
+ * opportunity engines for their follow-up structured pass.
  *
- * Robustness: every call retries on transient overload / rate-limit ("high demand", 429/503), which is
- * exactly the failure the switch was meant to dodge. All model output is treated as UNTRUSTED — the
- * call sites validate, clamp, and re-derive everything (dates are never computed by the model).
+ * All model output stays UNTRUSTED — the call sites validate, clamp, and re-derive everything (dates are
+ * never computed by the model; HARD RULE #2).
  */
 
-const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
-const DEFAULT_MODEL = "gemini-2.5-flash";
-const DEFAULT_LOCATION = "us-central1";
-const MAX_RETRIES = 4;
-const RETRY_BACKOFF_MS = [600, 1400, 3000];
-
-export function geminiModel(): string {
-  return (process.env.GEMINI_MODEL || "").trim() || DEFAULT_MODEL;
-}
-
-// --- Auth: AI Studio API key OR Vertex AI via ADC ---------------------------
-
-function vertexProject(): string {
-  return (process.env.GOOGLE_CLOUD_PROJECT || "").trim();
-}
-
-function vertexLocation(): string {
-  return (process.env.GOOGLE_CLOUD_LOCATION || "").trim() || DEFAULT_LOCATION;
-}
-
-/** Vertex mode is on iff a GCP project is configured. */
-function vertexMode(): boolean {
-  return vertexProject().length > 0;
-}
-
-function apiKey(): string {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) {
-    throw new Error(
-      "No Gemini credentials. Set GEMINI_API_KEY (AI Studio), or GOOGLE_CLOUD_PROJECT + ADC (Vertex AI) for orgs that block API keys. Server-side only.",
-    );
-  }
-  return key;
-}
-
-// ADC client is created lazily and cached; the library refreshes the underlying token on its own.
-let cachedAuthClient: Promise<import("google-auth-library").AuthClient> | null = null;
-
-async function vertexBearerToken(): Promise<string> {
-  if (!cachedAuthClient) {
-    cachedAuthClient = (async () => {
-      const { GoogleAuth } = await import("google-auth-library");
-      const auth = new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/cloud-platform"] });
-      return auth.getClient();
-    })();
-  }
-  try {
-    const client = await cachedAuthClient;
-    const { token } = await client.getAccessToken();
-    if (!token) throw new Error("empty token");
-    return token;
-  } catch (e) {
-    cachedAuthClient = null; // reset so a transient ADC failure can recover on the next call
-    throw new Error(
-      `Could not obtain Google ADC credentials for Vertex AI (${e instanceof Error ? e.message : "unknown"}). Run \`gcloud auth application-default login\`.`,
-    );
-  }
-}
-
-/** Build the generateContent URL for whichever mode is active. */
-function generateUrl(): string {
-  if (vertexMode()) {
-    const loc = vertexLocation();
-    return `https://${loc}-aiplatform.googleapis.com/v1/projects/${vertexProject()}/locations/${loc}/publishers/google/models/${geminiModel()}:generateContent`;
-  }
-  return `${ENDPOINT}/${geminiModel()}:generateContent?key=${apiKey()}`;
-}
-
-// --- Wire types (the subset of the REST API we use) -------------------------
+// --- Wire types (kept identical so existing call sites and their type imports don't change) ----------
 
 export type GeminiPart =
   | { text: string }
@@ -107,152 +45,117 @@ export type GeminiContent = { role: "user" | "model"; parts: GeminiPart[] };
 
 export type GeminiFunction = { name: string; description?: string; parameters?: object };
 
-type GenConfig = {
-  maxOutputTokens?: number;
-  temperature?: number;
-  responseMimeType?: string;
-  responseSchema?: object;
-  thinkingConfig?: { thinkingBudget: number };
-};
-
-type GenerateBody = {
-  systemInstruction?: { parts: { text: string }[] };
+export type ToolLoopResult = {
+  text: string;
   contents: GeminiContent[];
-  tools?: { functionDeclarations: GeminiFunction[] }[];
-  generationConfig?: GenConfig;
+  finishReason: string;
+  turns: number;
 };
 
-type GeminiResponse = {
-  candidates?: Array<{ content?: { parts?: GeminiPart[] }; finishReason?: string }>;
-  promptFeedback?: { blockReason?: string };
-  error?: { code?: number; message?: string; status?: string };
-};
+/** Same name the call sites log; now reports the active xAI model. */
+export function geminiModel(): string {
+  return grokModel();
+}
 
-// --- JSON Schema → Gemini Schema -------------------------------------------
+// --- contents (Gemini) ⇄ messages (xAI/OpenAI) translation --------------------------------------------
 
-const TYPE_MAP: Record<string, string> = {
-  string: "STRING",
-  number: "NUMBER",
-  integer: "INTEGER",
-  boolean: "BOOLEAN",
-  array: "ARRAY",
-  object: "OBJECT",
-};
-
-type JsonSchema = {
-  type?: string;
-  description?: string;
-  enum?: unknown[];
-  items?: JsonSchema;
-  properties?: Record<string, JsonSchema>;
-  required?: string[];
-  [k: string]: unknown;
-};
+function isText(p: GeminiPart): p is { text: string } {
+  return "text" in p;
+}
+function isCall(p: GeminiPart): p is Extract<GeminiPart, { functionCall: unknown }> {
+  return "functionCall" in p;
+}
+function isResponse(p: GeminiPart): p is Extract<GeminiPart, { functionResponse: unknown }> {
+  return "functionResponse" in p;
+}
 
 /**
- * Convert one of our JSON Schemas (the `input_schema` objects the call sites already define) into a
- * Gemini `responseSchema`. Gemini's schema dialect is an OpenAPI subset: uppercase types, no
- * `additionalProperties`, and crucially NO free-form objects (an OBJECT must declare its properties).
- * Returns null when the schema can't be represented faithfully (e.g. a free-form map like
- * `field_sources: { type: "object" }`); the caller then falls back to prompt-embedded JSON mode.
+ * Gemini `contents` → xAI `messages`. A `model` turn with functionCalls becomes an assistant message
+ * carrying `tool_calls`; the following `user` turn's functionResponses become `tool` messages. Because
+ * Gemini emits a call turn then its response turn in order, we mint a fresh id per call, queue it, and
+ * dequeue FIFO for the responses — guaranteeing unique ids that pair correctly even if the same function
+ * is called twice.
  */
-export function toGeminiSchema(schema: JsonSchema): object | null {
-  const type = schema.type ? TYPE_MAP[schema.type] : undefined;
-  if (!type) return null;
+function toMessages(contents: GeminiContent[]): GrokMessage[] {
+  const out: GrokMessage[] = [];
+  const pendingIds: string[] = [];
+  let seq = 0;
 
-  if (type === "OBJECT") {
-    const props = schema.properties;
-    // A free-form object (no declared properties) is unrepresentable in responseSchema.
-    if (!props || Object.keys(props).length === 0) return null;
-    const properties: Record<string, object> = {};
-    for (const [k, v] of Object.entries(props)) {
-      const conv = toGeminiSchema(v);
-      if (!conv) return null; // any unrepresentable child poisons the whole schema
-      properties[k] = conv;
+  for (const c of contents) {
+    const texts = c.parts.filter(isText).map((p) => p.text).filter(Boolean);
+    if (c.role === "model") {
+      const calls = c.parts.filter(isCall);
+      if (calls.length) {
+        const tool_calls = calls.map((p) => {
+          const id = `call_${seq++}`;
+          pendingIds.push(id);
+          return {
+            id,
+            type: "function" as const,
+            function: { name: p.functionCall.name, arguments: JSON.stringify(p.functionCall.args ?? {}) },
+          };
+        });
+        out.push({ role: "assistant", content: texts.join("\n") || null, tool_calls });
+      } else {
+        out.push({ role: "assistant", content: texts.join("\n") });
+      }
+    } else {
+      // user turn: tool responses (each must reference the matching tool_call id) then any text
+      for (const p of c.parts.filter(isResponse)) {
+        const id = pendingIds.shift() ?? `call_${seq++}`;
+        out.push({ role: "tool", tool_call_id: id, content: JSON.stringify(p.functionResponse.response ?? {}) });
+      }
+      if (texts.length) out.push({ role: "user", content: texts.join("\n") });
     }
-    const out: Record<string, unknown> = { type, properties };
-    if (schema.description) out.description = schema.description;
-    if (Array.isArray(schema.required) && schema.required.length) out.required = schema.required;
-    return out;
   }
-
-  if (type === "ARRAY") {
-    if (!schema.items) return null;
-    const items = toGeminiSchema(schema.items);
-    if (!items) return null;
-    const out: Record<string, unknown> = { type, items };
-    if (schema.description) out.description = schema.description;
-    return out;
-  }
-
-  // Scalar.
-  const out: Record<string, unknown> = { type };
-  if (schema.description) out.description = schema.description;
-  if (Array.isArray(schema.enum) && schema.enum.length) out.enum = schema.enum;
   return out;
 }
 
-// --- Low-level call with overload/rate-limit retry --------------------------
-
-function isTransient(status: number, body: GeminiResponse | null): boolean {
-  if (status === 429 || status === 500 || status === 503) return true;
-  const s = body?.error?.status;
-  if (s === "UNAVAILABLE" || s === "RESOURCE_EXHAUSTED" || s === "INTERNAL") return true;
-  const msg = (body?.error?.message ?? "").toLowerCase();
-  return msg.includes("high demand") || msg.includes("overload") || msg.includes("try again");
-}
-
-async function generate(body: GenerateBody): Promise<GeminiResponse> {
-  const vertex = vertexMode();
-  const url = generateUrl();
-  let lastErr = "";
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    let status = 0;
-    let parsed: GeminiResponse | null = null;
-    try {
-      const headers: Record<string, string> = { "content-type": "application/json" };
-      // Vertex authenticates per request with an ADC bearer token; AI Studio uses the ?key= in the URL.
-      if (vertex) headers.authorization = `Bearer ${await vertexBearerToken()}`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-      });
-      status = res.status;
-      parsed = (await res.json().catch(() => null)) as GeminiResponse | null;
-      if (res.ok && parsed && !parsed.error) return parsed;
-      lastErr = parsed?.error?.message ?? `HTTP ${status}`;
-    } catch (e) {
-      status = 0;
-      lastErr = e instanceof Error ? e.message : "network error";
+/**
+ * xAI `messages` → Gemini `contents` (drops the leading system message, which is supplied separately on
+ * every call). Used to hand the tool-loop transcript back to callers in the shape they expect; it
+ * survives a re-translation by toMessages because order is preserved and tool replies re-pair FIFO.
+ */
+function toContents(messages: GrokMessage[]): GeminiContent[] {
+  const out: GeminiContent[] = [];
+  for (const m of messages) {
+    if (m.role === "system") continue;
+    if (m.role === "user") {
+      out.push({ role: "user", parts: [{ text: m.content ?? "" }] });
+    } else if (m.role === "assistant") {
+      const parts: GeminiPart[] = [];
+      if (m.content) parts.push({ text: m.content });
+      for (const tc of m.tool_calls ?? []) {
+        let args: Record<string, unknown> = {};
+        try {
+          args = tc.function.arguments ? (JSON.parse(tc.function.arguments) as Record<string, unknown>) : {};
+        } catch {
+          args = {};
+        }
+        parts.push({ functionCall: { name: tc.function.name, args } });
+      }
+      out.push({ role: "model", parts });
+    } else {
+      // tool reply
+      let response: Record<string, unknown> = {};
+      try {
+        response = m.content ? (JSON.parse(m.content) as Record<string, unknown>) : {};
+      } catch {
+        response = { result: m.content ?? "" };
+      }
+      // The function name is irrelevant downstream (toMessages re-pairs tool replies by order, not name).
+      out.push({ role: "user", parts: [{ functionResponse: { name: "tool", response } }] });
     }
-    // Retry transient failures with backoff; otherwise fail fast.
-    if (attempt < MAX_RETRIES && (status === 0 || isTransient(status, parsed))) {
-      const wait = RETRY_BACKOFF_MS[Math.min(attempt, RETRY_BACKOFF_MS.length - 1)];
-      await new Promise((r) => setTimeout(r, wait));
-      continue;
-    }
-    break;
   }
-  throw new Error(`Gemini request failed: ${lastErr}`);
+  return out;
 }
 
-function textOf(resp: GeminiResponse): string {
-  const parts = resp.candidates?.[0]?.content?.parts ?? [];
-  return parts
-    .map((p) => ("text" in p ? p.text : ""))
-    .join("")
-    .trim();
-}
-
-// --- Public primitives ------------------------------------------------------
+// --- Public primitives (Gemini-shaped, Grok-backed) ---------------------------------------------------
 
 /**
- * Force structured JSON out of Gemini against a JSON Schema. Drop-in replacement for the old
- * "forced tool call" pattern. When the schema is cleanly convertible we use a hard responseSchema;
- * otherwise we fall back to JSON mode with the schema embedded in the prompt. Returns null on any
- * failure (blocked, truncated, unparseable) so callers can degrade gracefully — they all validate the
- * shape themselves anyway. Thinking is disabled by default (these are extraction/classification tasks).
+ * Force structured JSON against a JSON Schema. Grok takes JSON Schema natively (no schema conversion),
+ * so we pass `opts.schema` straight through. Returns null on any failure (call sites validate anyway).
+ * `thinkingBudget` is accepted for call-site compatibility and ignored (Grok manages its own reasoning).
  */
 export async function geminiStructured<T>(opts: {
   system: string;
@@ -262,51 +165,13 @@ export async function geminiStructured<T>(opts: {
   maxTokens?: number;
   thinkingBudget?: number;
 }): Promise<T | null> {
-  const responseSchema = toGeminiSchema(opts.schema as JsonSchema);
-  const schemaHint = responseSchema
-    ? ""
-    : `\n\nRespond with ONLY a single JSON object (no prose, no markdown) matching this JSON Schema:\n${JSON.stringify(opts.schema)}`;
-
-  const contents: GeminiContent[] = [...(opts.contents ?? [])];
-  if (opts.user || schemaHint) {
-    contents.push({ role: "user", parts: [{ text: `${opts.user ?? ""}${schemaHint}` }] });
-  }
-
-  const generationConfig: GenConfig = {
-    maxOutputTokens: opts.maxTokens ?? 4000,
-    responseMimeType: "application/json",
-    thinkingConfig: { thinkingBudget: opts.thinkingBudget ?? 0 },
-  };
-  if (responseSchema) generationConfig.responseSchema = responseSchema;
-
-  let resp: GeminiResponse;
-  try {
-    resp = await generate({
-      systemInstruction: { parts: [{ text: opts.system }] },
-      contents,
-      generationConfig,
-    });
-  } catch {
-    return null;
-  }
-
-  const raw = textOf(resp);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    // Salvage a JSON object embedded in stray prose (rare with JSON mode, but cheap insurance).
-    const start = raw.indexOf("{");
-    const end = raw.lastIndexOf("}");
-    if (start >= 0 && end > start) {
-      try {
-        return JSON.parse(raw.slice(start, end + 1)) as T;
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  }
+  return grokStructured<T>({
+    system: opts.system,
+    user: opts.user,
+    messages: opts.contents ? toMessages(opts.contents) : undefined,
+    schema: opts.schema,
+    maxTokens: opts.maxTokens,
+  });
 }
 
 /** Plain prose generation (no schema). Returns "" on failure. */
@@ -316,34 +181,13 @@ export async function geminiText(opts: {
   maxTokens?: number;
   thinkingBudget?: number;
 }): Promise<string> {
-  try {
-    const resp = await generate({
-      systemInstruction: { parts: [{ text: opts.system }] },
-      contents: [{ role: "user", parts: [{ text: opts.user }] }],
-      generationConfig: {
-        maxOutputTokens: opts.maxTokens ?? 2000,
-        thinkingConfig: { thinkingBudget: opts.thinkingBudget ?? 0 },
-      },
-    });
-    return textOf(resp);
-  } catch {
-    return "";
-  }
+  return grokText({ system: opts.system, user: opts.user, maxTokens: opts.maxTokens });
 }
 
-export type ToolLoopResult = {
-  text: string;
-  contents: GeminiContent[];
-  finishReason: string;
-  turns: number;
-};
-
 /**
- * A function-calling agent loop. The model may call any declared function; `execute` runs it
- * (server-side) and its return value is fed back as a functionResponse, until the model stops calling
- * tools and produces a text answer (or we hit maxTurns). Returns the final text plus the full
- * `contents` transcript so a caller can run a follow-up structured pass over the same context (the
- * research engines do this: search, then force a validated report).
+ * A function-calling agent loop. Delegates to grokToolLoop and translates the transcript both ways so
+ * callers keep using Gemini `contents`. The returned `contents` can be passed to a follow-up
+ * geminiStructured({contents}) for a validated final pass (the research/opportunity engines do this).
  */
 export async function geminiToolLoop(opts: {
   system: string;
@@ -354,51 +198,20 @@ export async function geminiToolLoop(opts: {
   maxTokens?: number;
   thinkingBudget?: number;
 }): Promise<ToolLoopResult> {
-  const maxTurns = opts.maxTurns ?? 8;
-  const contents: GeminiContent[] = [...opts.contents];
-  // Call sites declare tool params as ordinary JSON Schema; convert each to Gemini's dialect here.
-  const functionDeclarations = opts.functions.map((f) => ({
-    name: f.name,
-    description: f.description,
-    parameters: f.parameters ? (toGeminiSchema(f.parameters as JsonSchema) ?? undefined) : undefined,
-  }));
-  const tools = [{ functionDeclarations }];
-  let finishReason = "";
-
-  for (let turn = 0; turn < maxTurns; turn++) {
-    const resp = await generate({
-      systemInstruction: { parts: [{ text: opts.system }] },
-      contents,
-      tools,
-      generationConfig: {
-        maxOutputTokens: opts.maxTokens ?? 8000,
-        thinkingConfig: { thinkingBudget: opts.thinkingBudget ?? 0 },
-      },
-    });
-    finishReason = resp.candidates?.[0]?.finishReason ?? "";
-    const parts = resp.candidates?.[0]?.content?.parts ?? [];
-    const calls = parts.filter(
-      (p): p is Extract<GeminiPart, { functionCall: unknown }> => "functionCall" in p,
-    );
-
-    if (!calls.length) {
-      return { text: textOf(resp), contents, finishReason, turns: turn + 1 };
-    }
-
-    // Echo the model's tool-calling turn, then answer EVERY call (Gemini requires a response per call).
-    contents.push({ role: "model", parts });
-    const responseParts: GeminiPart[] = [];
-    for (const c of calls) {
-      let result: Record<string, unknown>;
-      try {
-        result = await opts.execute(c.functionCall.name, c.functionCall.args ?? {});
-      } catch (e) {
-        result = { error: e instanceof Error ? e.message : "tool failed" };
-      }
-      responseParts.push({ functionResponse: { name: c.functionCall.name, response: result } });
-    }
-    contents.push({ role: "user", parts: responseParts });
-  }
-
-  return { text: "", contents, finishReason: finishReason || "max_turns", turns: maxTurns };
+  const res = await grokToolLoop({
+    system: opts.system,
+    messages: toMessages(opts.contents),
+    // GeminiFunction and GrokFunction are the same {name, description?, parameters?} shape, and Grok
+    // takes JSON-Schema params directly — no conversion needed.
+    functions: opts.functions,
+    execute: opts.execute,
+    maxTurns: opts.maxTurns,
+    maxTokens: opts.maxTokens,
+  });
+  return {
+    text: res.text,
+    contents: toContents(res.messages),
+    finishReason: res.finishReason,
+    turns: res.turns,
+  };
 }
