@@ -37,10 +37,6 @@
   <img src="https://img.shields.io/badge/Google_Workspace-Gmail_·_Calendar_·_Drive-4285F4?logo=google&logoColor=white" alt="Google Workspace" />
 </p>
 
-<p align="center">
-  <img src="docs/images/home.png" alt="Jarvis home: a glowing arc-reactor orb on near-black, a large military clock above it, and a single ask bar — the whole command center collapses behind one hamburger so the orb is all you see at rest" width="100%" />
-</p>
-
 ---
 
 Most "AI assistants" hand you a chat box and ask you to trust the answer. Jarvis is built on the
@@ -81,20 +77,6 @@ meetings, proposes what to do next, and shows its receipts.
     </td>
   </tr>
 </table>
-
-## Screenshots
-
-<p align="center">
-  <img src="docs/images/home.png" alt="The home command center: particle-sphere orb and a large military clock on near-black, with one ask bar" width="100%" />
-</p>
-
-<p align="center">
-  <img src="docs/images/jarvis-ask.png" alt="Asking the orb a question — the answer streams back in a console with web-search citations and any files it read" width="100%" />
-</p>
-
-<p align="center">
-  <img src="docs/images/opportunities.png" alt="Opportunities found by the agent — programs, jobs, and hackathons, each as its own card with a chrono-resolved deadline, location, requirements, and a link to the application" width="100%" />
-</p>
 
 ## Design
 
