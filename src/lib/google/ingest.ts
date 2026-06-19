@@ -6,6 +6,7 @@ import { listMessageIds, getMessage, gmailLink, type GmailMessage } from "@/lib/
 import { listEvents } from "@/lib/google/calendar";
 import { loadGoalDigests } from "@/lib/goals/facts";
 import { loadProfile, profileDigest } from "@/lib/profile";
+import { extractItemsFromSources } from "@/lib/google/extract-items";
 
 /**
  * Gmail + Calendar ingestion. Gmail is triaged by Gemini relative to the user's goals/profile: only
@@ -74,12 +75,17 @@ async function classifyEmails(emails: GmailMessage[], who: string): Promise<Map<
   return map;
 }
 
-export type GmailIngestResult = { imported: number; contactsAdded: number; groups: { label: string; count: number }[] };
+export type GmailIngestResult = {
+  imported: number;
+  contactsAdded: number;
+  itemsExtracted: number;
+  groups: { label: string; count: number }[];
+};
 
 export async function ingestGmail(supabase: SupabaseClient, userId: string): Promise<GmailIngestResult> {
   const token = await getValidAccessToken(supabase, userId);
   const ids = await listMessageIds(token, 40);
-  if (!ids.length) return { imported: 0, contactsAdded: 0, groups: [] };
+  if (!ids.length) return { imported: 0, contactsAdded: 0, itemsExtracted: 0, groups: [] };
 
   const emails = (await Promise.all(ids.map((m) => getMessage(token, m.id).catch(() => null)))).filter(
     (e): e is GmailMessage => e !== null,
@@ -103,6 +109,8 @@ export async function ingestGmail(supabase: SupabaseClient, userId: string): Pro
   const groups = new Map<string, number>();
   let imported = 0;
   let contactsAdded = 0;
+  // Newly-stored email sources whose body we'll mine for action items after the ingest loop.
+  const newSources: { id: string; title: string | null; body: string; occurredAt: string | null }[] = [];
 
   for (let i = 0; i < emails.length; i++) {
     const e = emails[i];
@@ -121,12 +129,13 @@ export async function ingestGmail(supabase: SupabaseClient, userId: string): Pro
         group_label: c.group,
         permalink: gmailLink(e.id),
         occurred_at: e.dateISO,
-        raw_text: e.snippet,
+        raw_text: e.body || e.snippet,
       })
       .select("id")
       .single();
     if (srcErr || !src) continue; // skip on insert failure (e.g. a dedup race) — don't count it
     imported++;
+    newSources.push({ id: src.id, title: e.subject, body: e.body || e.snippet, occurredAt: e.dateISO });
     groups.set(c.group, (groups.get(c.group) ?? 0) + 1);
 
     // Important person / opportunity sender → add to Contacts (L0 review), deduped by email.
@@ -153,9 +162,21 @@ export async function ingestGmail(supabase: SupabaseClient, userId: string): Pro
     }
   }
 
+  // Mine the freshly-stored emails for action items (L0 → they land in the Review queue, suggest-only).
+  // Best-effort: extraction failures must not fail the ingest that already succeeded.
+  let itemsExtracted = 0;
+  if (newSources.length) {
+    try {
+      itemsExtracted = await extractItemsFromSources(supabase, userId, newSources);
+    } catch {
+      itemsExtracted = 0;
+    }
+  }
+
   return {
     imported,
     contactsAdded,
+    itemsExtracted,
     groups: [...groups.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count),
   };
 }

@@ -11,11 +11,67 @@ export type GmailMessage = {
   fromEmail: string;
   subject: string;
   snippet: string;
+  /** Decoded plain-text body (best-effort; falls back to snippet). The corpus the extractor quotes. */
+  body: string;
   dateISO: string;
 };
 
 function header(headers: { name?: string; value?: string }[], name: string): string {
   return headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value ?? "";
+}
+
+const MAX_BODY = 16_000; // enough for a real email; guards against a giant newsletter blowing up tokens
+
+/** Gmail's MIME tree node — recursive, optionally multipart, each part optionally carrying body data. */
+type GmailPart = {
+  mimeType?: string;
+  body?: { data?: string; size?: number };
+  parts?: GmailPart[];
+};
+
+/** Strip HTML to readable text when a message has no text/plain alternative. */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<\/(p|div|tr|li|h[1-6]|table)>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&quot;/gi, '"');
+}
+
+function decodePart(data: string | undefined): string {
+  if (!data) return "";
+  try {
+    return Buffer.from(data, "base64url").toString("utf8");
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Pull the best readable body out of a Gmail payload tree: prefer text/plain, fall back to a
+ * stripped text/html. Walks nested multiparts (multipart/alternative, multipart/mixed with
+ * attachments) and ignores attachment parts (which carry an attachmentId, not inline data).
+ */
+function extractBody(payload: GmailPart | undefined): string {
+  if (!payload) return "";
+  let plain = "";
+  let html = "";
+  const walk = (part: GmailPart) => {
+    const mime = (part.mimeType ?? "").toLowerCase();
+    if (mime === "text/plain") plain += decodePart(part.body?.data);
+    else if (mime === "text/html") html += decodePart(part.body?.data);
+    for (const child of part.parts ?? []) walk(child);
+  };
+  walk(payload);
+  const text = plain.trim() || htmlToText(html).trim();
+  return text.replace(/\r\n?/g, "\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim().slice(0, MAX_BODY);
 }
 
 /** Parse a From header ("Jane Doe <jane@x.com>") into name + email. */
@@ -39,28 +95,31 @@ export async function listMessageIds(token: string, max = 40): Promise<{ id: str
 }
 
 export async function getMessage(token: string, id: string): Promise<GmailMessage> {
-  const res = await fetch(
-    `${API}/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
-    { headers: { authorization: `Bearer ${token}` } },
-  );
+  // format=full gives the full MIME tree so we can read the body (the extractor's corpus), not just
+  // the ~160-char snippet. We still only ever read; no write scope is implied.
+  const res = await fetch(`${API}/messages/${id}?format=full`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
   if (!res.ok) throw new Error(`Gmail get failed (${res.status}): ${await res.text()}`);
   const m = (await res.json()) as {
     id: string;
     threadId: string;
     snippet?: string;
     internalDate?: string;
-    payload?: { headers?: { name?: string; value?: string }[] };
+    payload?: GmailPart & { headers?: { name?: string; value?: string }[] };
   };
   const headers = m.payload?.headers ?? [];
   const { name, email } = parseFrom(header(headers, "From"));
   const dateISO = m.internalDate ? new Date(Number(m.internalDate)).toISOString() : new Date().toISOString();
+  const snippet = m.snippet ?? "";
   return {
     id: m.id,
     threadId: m.threadId,
     fromName: name,
     fromEmail: email,
     subject: header(headers, "Subject") || "(no subject)",
-    snippet: m.snippet ?? "",
+    snippet,
+    body: extractBody(m.payload) || snippet,
     dateISO,
   };
 }
