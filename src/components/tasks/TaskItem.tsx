@@ -2,10 +2,24 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Check, Loader2, Pencil, Trash2, CalendarClock, Reply } from "lucide-react";
 import { formatDate } from "@/lib/format";
 
-export type Task = { id: string; title: string; due_at: string | null; reasoning: string | null; status: string };
+export type Task = {
+  id: string;
+  title: string;
+  due_at: string | null;
+  reasoning: string | null;
+  status: string;
+  item_type?: "task" | "event" | "follow_up";
+};
+
+// Events and follow-ups share this list with plain tasks; a small pill keeps them distinct. Tasks get
+// no pill to avoid clutter (they're the default).
+const TYPE_PILL: Record<"event" | "follow_up", { label: string; icon: typeof CalendarClock }> = {
+  event: { label: "Event", icon: CalendarClock },
+  follow_up: { label: "Follow-up", icon: Reply },
+};
 
 const input =
   "w-full rounded-md border border-border bg-surface px-2 py-1 text-sm text-foreground outline-none placeholder:text-muted";
@@ -129,7 +143,18 @@ export function TaskItem({ task }: { task: Task }) {
       </button>
 
       <div className="min-w-0 flex-1">
-        <p className={`truncate text-sm ${done ? "text-muted line-through" : "text-foreground"}`}>{task.title}</p>
+        <div className="flex items-center gap-1.5">
+          {task.item_type && task.item_type !== "task" && (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-strong">
+              {(() => {
+                const PillIcon = TYPE_PILL[task.item_type].icon;
+                return <PillIcon className="h-2.5 w-2.5 text-accent" />;
+              })()}
+              {TYPE_PILL[task.item_type].label}
+            </span>
+          )}
+          <p className={`truncate text-sm ${done ? "text-muted line-through" : "text-foreground"}`}>{task.title}</p>
+        </div>
         {task.reasoning && <p className="truncate text-xs text-muted">{task.reasoning}</p>}
       </div>
 

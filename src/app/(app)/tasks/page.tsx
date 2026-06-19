@@ -10,10 +10,13 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   const { goal } = await searchParams;
   const supabase = await createClient();
 
+  // One "things on my plate" surface: tasks, follow-ups the user owes, and date-bound events all land
+  // here once accepted (events/follow-ups would otherwise vanish after the Review queue). A type badge
+  // keeps them distinct; the date column shows whatever chrono resolved.
   let q = supabase
     .from("items")
-    .select("id, title, due_at, reasoning, status")
-    .eq("item_type", "task")
+    .select("id, title, due_at, reasoning, status, item_type")
+    .in("item_type", ["task", "event", "follow_up"])
     .in("status", ["accepted", "done"])
     .order("due_at", { ascending: true, nullsFirst: false });
   if (goal) {

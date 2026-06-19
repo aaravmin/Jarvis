@@ -4,6 +4,10 @@ import { resolveDeadline } from "@/lib/agents/opportunity/deadline";
 
 export const dynamic = "force-dynamic";
 
+// The Tasks surface shows every accepted derived action item, so edit/complete/delete must reach all
+// three — not just plain tasks — or an accepted event/follow-up couldn't be checked off or removed.
+const ACTION_ITEM_TYPES = ["task", "event", "follow_up"] as const;
+
 /**
  * POST /api/tasks — manually add a task. Body: { title, rawDue?, notes? }. The due date is resolved
  * deterministically by chrono (hard rule #2), never trusted from free text as a timestamp.
@@ -48,7 +52,8 @@ export async function POST(request: Request) {
  *   status: "done" | "accepted"  → check off / un-check.
  *   title / notes                → edit text.
  *   rawDue                       → re-resolve the due date with chrono (hard rule #2); "" clears it.
- * RLS scopes the row to the signed-in user; we also pin item_type='task' defensively.
+ * RLS scopes the row to the signed-in user; we also pin item_type to the action-item types defensively
+ * (task/event/follow_up) so this can't touch opportunity or other item rows.
  */
 export async function PATCH(request: Request) {
   const supabase = await createClient();
@@ -88,7 +93,7 @@ export async function PATCH(request: Request) {
     .update(update)
     .eq("user_id", user.id)
     .eq("id", id)
-    .eq("item_type", "task");
+    .in("item_type", ACTION_ITEM_TYPES);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true, dueAt: update.due_at });
 }
@@ -115,7 +120,7 @@ export async function DELETE(request: Request) {
     .delete()
     .eq("user_id", user.id)
     .eq("id", id)
-    .eq("item_type", "task");
+    .in("item_type", ACTION_ITEM_TYPES);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
