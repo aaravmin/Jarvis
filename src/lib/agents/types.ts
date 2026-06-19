@@ -12,10 +12,11 @@ export type AgentKind =
   | "opportunity" // find programs / jobs / hackathons (LIVE)
   | "contact" // find/research people (LIVE — the people agent)
   | "application" // prepare a job/grant application from a link (LIVE — fills, never submits)
-  | "email" // triage Gmail (needs Google connection)
-  | "calendar" // read/plan calendar (needs Google connection)
+  | "email" // mine synced Gmail into sourced tasks/follow-ups in Review (LIVE — the backfill engine)
   | "meeting" // transcript → action items (paste a transcript)
-  | "assistant"; // general ask: web search + read local files (LIVE — the orb brain)
+  | "assistant"; // general ask + write actions: web search, local files, create events, draft email (LIVE)
+// Note: calendar requests (read OR create events) route to the assistant — it answers from synced
+// Calendar data and creates real events via its create_calendar_event tool. No separate agent needed.
 
 /** Can the agent actually run right now? */
 export type AgentStatus = "live" | "needs-connection" | "paste";

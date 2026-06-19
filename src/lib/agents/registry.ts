@@ -34,21 +34,9 @@ export const AGENTS: Record<AgentKind, AgentMeta> = {
     kind: "email",
     label: "Email agent",
     tab: "Email",
-    blurb: "ACTIONS on your Gmail: triages it into sourced tasks, replies, and follow-ups, each linked to the exact message. (To just ASK about your inbox, the Jarvis assistant answers from your synced mail.)",
-    triggers: "turn my inbox into tasks; triage my unread mail into to-dos; pull action items out of my email.",
-    status: "needs-connection",
-    unavailableHint:
-      "The Email agent needs Gmail connected (read-only) via the Google OAuth client. See /docs/CONNECTORS.md to enable it.",
-  },
-  calendar: {
-    kind: "calendar",
-    label: "Calendar agent",
-    tab: "Calendar",
-    blurb: "ACTIONS on your calendar: proposes and adds events from your email/meetings. (To just ASK what's on your calendar, the Jarvis assistant answers from your synced events.)",
-    triggers: "add the interview to my calendar; propose events from my email; block focus time before the deadline.",
-    status: "needs-connection",
-    unavailableHint:
-      "The Calendar agent needs Google Calendar connected via the Google OAuth client. See /docs/CONNECTORS.md to enable it.",
+    blurb: "Mines your already-synced Gmail into sourced tasks, events, and follow-ups — each linked to the exact message — and drops them in the Review queue to approve. (To just ASK about your inbox, the Jarvis assistant answers from your synced mail.)",
+    triggers: "turn my inbox into tasks; triage my synced mail into to-dos; pull action items out of my email.",
+    status: "live",
   },
   meeting: {
     kind: "meeting",

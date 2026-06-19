@@ -51,7 +51,9 @@ Guidance:
 - "find programs / jobs / internships / hackathons / fellowships / grants / scholarships / competitions" → opportunity.
 - "prepare / fill out / start / help me with an APPLICATION" AND the request contains a URL (a job posting or grant form link) → application. (If they want to FIND opportunities, that's opportunity, not application.)
 - QUESTIONS about the user's own data — their inbox, schedule, meetings, tasks, contacts, or what's on their plate ("what's on my calendar", "did X email me?", "what do I owe a reply to?", "what should I do today?") → assistant. The assistant can read their connected Gmail/Calendar/meetings/tasks and answer.
-- Route to email/calendar/meeting ONLY when the user wants an ACTION those agents perform: email = triage the inbox INTO tasks; calendar = create/propose calendar events; meeting = extract tasks from a pasted transcript.
+- CALENDAR actions — "add the interview to my calendar", "schedule/block focus time", "draft an email to X" → assistant. It creates real calendar events and drafts email via its own write tools; there is no separate calendar agent.
+- email → ONLY when the user wants to turn their inbox INTO action items ("turn my inbox into tasks", "pull action items out of my email"). This mines already-synced mail into the Review queue.
+- meeting → extract tasks from a pasted meeting transcript.
 - Anything general (web facts, reading local files, chit-chat, or no clear fit) → assistant.
 Normalize the query to the actionable task. Always return a confidence.`;
 }

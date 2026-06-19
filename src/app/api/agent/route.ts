@@ -5,6 +5,7 @@ import { agentMeta } from "@/lib/agents/registry";
 import { runOpportunitySearch } from "@/lib/agents/opportunity/run";
 import { runApplication } from "@/lib/agents/application/run";
 import { runPeopleSearch } from "@/lib/research/run";
+import { backfillExtraction } from "@/lib/items/backfill";
 import { ask } from "@/lib/assistant/ask";
 import { buildAskDataContext, type AskDataContext } from "@/lib/assistant/data-tools";
 import type { AgentDispatchResult } from "@/lib/agents/types";
@@ -17,8 +18,10 @@ export const maxDuration = 120;
  * POST /api/agent — the multi-agent entry point. Classifies one free-text request and dispatches it
  * to exactly ONE specialized agent (never all of them):
  *   • opportunity / contact → run the research engine, results land in Review
- *   • assistant             → answer inline (web search + local files)
- *   • email / calendar      → routed correctly, but not connected yet (Google OAuth) → guidance
+ *   • application           → read a form URL and build a field plan (Apply tab)
+ *   • email                 → mine synced Gmail into action items, land them in Review
+ *   • assistant             → answer inline (web search + local files + connected data; also creates
+ *                             calendar events and drafts email via its write tools)
  *   • meeting               → needs a pasted transcript → guidance
  * Body: { message: string }. Returns an AgentDispatchResult that always includes the routing decision.
  */
@@ -111,6 +114,31 @@ export async function POST(request: Request) {
               message: r.view.summary,
             };
     return NextResponse.json(result);
+  }
+
+  if (decision.agent === "email") {
+    // "Turn my inbox into tasks" — mine already-synced mail into the Review queue (the same engine the
+    // Scan button uses). Each click processes a bounded batch and reports how much is left.
+    try {
+      const { scanned, inserted, remaining } = await backfillExtraction(supabase, user.id);
+      const message =
+        inserted > 0
+          ? `Found ${inserted} action item${inserted === 1 ? "" : "s"} in ${scanned} message${scanned === 1 ? "" : "s"} — review them now.${remaining ? ` ${remaining} more to scan.` : ""}`
+          : scanned > 0
+            ? `Scanned ${scanned} message${scanned === 1 ? "" : "s"} — nothing actionable.${remaining ? ` ${remaining} more to scan.` : ""}`
+            : "No un-scanned email left. Sync new mail on the Email tab, then ask again.";
+      const result: AgentDispatchResult = {
+        decision,
+        outcome: "done",
+        resultCount: inserted,
+        redirectTo: inserted > 0 ? "/review" : "/email",
+        message,
+      };
+      return NextResponse.json(result);
+    } catch (err) {
+      const error = err instanceof Error ? err.message : "Couldn't mine your inbox.";
+      return NextResponse.json({ decision, outcome: "error", error } satisfies AgentDispatchResult);
+    }
   }
 
   // assistant — answer inline (the orb brain: web search + local files + the user's connected data).
