@@ -149,15 +149,22 @@ every existing feature.
   **ground in your documents** and returns a **field plan** for review. Each filled field carries its
   value source (resume / profile / document / opportunity), the **source quote** it was grounded in,
   and a confidence — ungrounded guesses are demoted to unfilled (`backs()` citation gate, hard rule #3).
-- **Form reading:** a dependency-free static HTML parser today; an env-gated (`JARVIS_BROWSER=playwright`)
-  rendered-DOM path is wired for JS-built forms once a browser is provisioned — **submit-only-on-click,
-  no auto-pilot**.
+- **Form reading:** a dependency-free static HTML parser by default; an env-gated
+  (`JARVIS_BROWSER=playwright`) **rendered-DOM** path reads JS-built forms with a real browser —
+  resolving each control's visible label, grouping radios, capturing options + a re-locatable selector.
+- **Browser autofill (live):** with the Playwright backend on, **"Fill in browser"** opens a real
+  browser window, types every grounded value into the actual form, attaches your resume from private
+  Storage, and **leaves the window open for you to review and submit**. It re-locates each control
+  (selector → name/id → label) and fills by type (text/select/radio/checkbox); each field is
+  independent and every skip is reported. **Submit-only-on-click — Jarvis never clicks Submit/Apply**
+  (hard rule #5). Verified end-to-end against a live browser (DOM read + every fill primitive).
 - **Surface:** `Apply` tab + "Prepare with Jarvis" on Opportunity cards. API: `/api/applications/prepare`,
-  `/api/applications/[id]`. Also **registered in the agent router** — `POST /api/agent` with
-  "prepare this application <link>" extracts the URL and dispatches here (forward-looking: the orb
-  posts to `/api/ask` today, so the router activates once an action-dispatch UI uses it, same as the
-  opportunity/contact agents). The user reviews the field plan and submits on the real site themselves.
-- **Autonomy:** L0 — run lands `needs_review`; nothing is submitted.
+  `/api/applications/[id]`, `/api/applications/[id]/autofill`. Also **registered in the agent router** —
+  `POST /api/agent` with "prepare this application <link>" extracts the URL and dispatches here
+  (forward-looking: the orb posts to `/api/ask` today, so the router activates once an action-dispatch
+  UI uses it, same as the opportunity/contact agents). The user reviews the field plan and submits on
+  the real site themselves.
+- **Autonomy:** L0 — run lands `needs_review`; values are filled but never submitted.
 
 ### Outreach agent 🟢
 - **What it does:** per contact, pick an **audience** (investor / recruiter / professor / peer /
@@ -196,9 +203,12 @@ These are the honest edges of today's build (and the natural next steps on the f
 - **Autonomy is L0 only.** Nothing auto-sends or auto-commits; graduating to L1 (auto for
   high-confidence, rare-false-positive cases) is future work.
 - **Meetings are paste-only.** No live capture/transcription yet.
-- **Applications fill, they don't submit.** The agent reads forms and grounds a field plan; the user
-  submits on the real site. Static HTML forms are read today; JS-rendered forms need the Playwright
-  path (env-gated, `JARVIS_BROWSER=playwright`) which awaits a provisioned browser.
+- **Applications fill, they don't submit.** The agent reads forms, grounds a field plan, and — with
+  the Playwright backend on — types the grounded values into the live form and attaches the resume,
+  leaving the window open for **you** to review and submit. It never clicks Submit/Apply. Static HTML
+  forms are read with no dependencies; JS-rendered forms + browser autofill need `JARVIS_BROWSER=playwright`
+  and a local browser (`npx playwright install chromium`); on a headless server it degrades to "Open
+  application + copy from the plan."
 - **Today's plan is ephemeral.** Recomputed each load; not persisted or scheduled.
 - **Notion mirror, proactive reminders, wake-word voice, and computer-use** are all unbuilt (see `ROADMAP.md`).
 - **Email "did I reply?" tracking** is not yet wired from real thread state.

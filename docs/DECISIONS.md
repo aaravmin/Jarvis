@@ -267,3 +267,20 @@
   extracted text used for grounding. One default resume per user (`createDocument` clears the prior
   default of the same type). **Migration 0016 carries all of this and is NOT yet applied to the live DB
   — Aarav applies migrations** (the UI/routes build, but server writes error until 0016 lands).
+
+- **2026-06-19 — Playwright browser autofill is real, but submit-only-on-click, gated, and
+  dependency-decoupled.** Why: the user asked Jarvis to actually *fill out* a job/grant form, not just
+  produce a plan. `autofill.ts` drives a HEADED real browser to type the grounded `field_plan` into the
+  live form, attaches the resume from private Storage to the first file input, then **leaves the window
+  open for the user to review and submit** — it never clicks Submit/Apply (hard rule #5). Field identity
+  (`name`/`field_type`/`selector`/`options`) rides scrape→resolve→autofill inside the `field_plan` jsonb
+  (no migration); `browserScrape` now reads the *rendered* DOM via `page.evaluate` (visible labels,
+  grouped radios, options, re-locatable selectors) instead of re-parsing static HTML. The `playwright`
+  dep is loaded via `new Function("m","return import(m)")` (in `browser.ts`) so the bundler never
+  resolves it — the app builds/runs without it and the static parser stays the default. Each control is
+  re-located selector→name/id→label and filled by type; every field is independent and each skip is
+  reported. Open windows are tracked on `globalThis` so a re-fill replaces the prior one. All gated on
+  `JARVIS_BROWSER=playwright`; off or headless it degrades to "Open application + copy from the plan."
+  The mechanical core (DOM read + text/select/radio/checkbox fill + file attach) is verified end-to-end
+  against a live chromium. Surface: `POST /api/applications/[id]/autofill` + "Fill in browser" on the
+  run card. (Browser autofill needs migration 0016 live for runs to exist, same gate as the rest.)

@@ -12,7 +12,8 @@ const MAX_TEXT = 200_000;
 const input =
   "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted";
 
-// File types whose text we can read in the browser; others (PDF/DOCX) rely on the paste box.
+// File types whose text we can read in the browser for an instant preview. PDF/DOCX are extracted
+// server-side on save (see /api/documents/create), so they no longer need the paste box either.
 const TEXT_LIKE = /\.(txt|md|markdown|json|csv|tex)$/i;
 
 /**
@@ -166,8 +167,8 @@ export function UploadDocumentForm() {
         <textarea
           className={`${input} min-h-[140px] resize-y`}
           placeholder={
-            "Paste the document text here so the agent can read and fill forms from it.\n" +
-            "(Text files auto-fill; for a PDF/DOCX, paste the text — the file itself is still attached.)"
+            "Optional — attach a file and Jarvis reads it for you.\n" +
+            "PDF, DOCX and text files are extracted automatically on upload; paste here only to add or override text."
           }
           value={f.text}
           onChange={(e) => setF((p) => ({ ...p, text: e.target.value.slice(0, MAX_TEXT) }))}

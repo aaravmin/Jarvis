@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createDocument } from "@/lib/documents/store";
+import { extractDocumentText } from "@/lib/documents/extract-text";
 import { DOC_TYPES, type DocType } from "@/lib/documents/types";
 
 export const dynamic = "force-dynamic";
+// PDF/DOCX parsing of an uploaded file can take a moment.
+export const maxDuration = 60;
 
 const MAX_TEXT = 200_000; // generous for a resume/grant narrative; guards against a runaway paste
 
@@ -55,6 +58,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid storage path." }, { status: 400 });
   }
 
+  // Server-side extraction: when the client couldn't read the file (a PDF/DOCX resume — the common
+  // case), pull the text from the uploaded binary so the agent has a corpus to ground fills in
+  // (hard rule #3). Best-effort: a failure leaves `text` as-is and the upload still succeeds.
+  let resolvedText = text;
+  if (!resolvedText && body.storagePath) {
+    const { data: blob } = await supabase.storage.from("documents").download(body.storagePath);
+    if (blob) {
+      const buffer = Buffer.from(await blob.arrayBuffer());
+      resolvedText = await extractDocumentText(buffer, body.mimeType, body.name ?? body.storagePath);
+    }
+  }
+
   try {
     const doc = await createDocument(supabase, user.id, {
       name: (body.name ?? "").trim(),
@@ -62,10 +77,10 @@ export async function POST(request: Request) {
       storagePath: body.storagePath,
       mimeType: body.mimeType,
       fileSize: typeof body.fileSize === "number" ? body.fileSize : undefined,
-      extractedText: text || undefined,
+      extractedText: resolvedText || undefined,
       isDefault: Boolean(body.isDefault),
     });
-    return NextResponse.json({ ok: true, document: doc });
+    return NextResponse.json({ ok: true, document: doc, extractedChars: resolvedText.length });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Could not save the document." },
