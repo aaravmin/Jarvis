@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   CircleCheck,
   CircleDashed,
+  Wand2,
 } from "lucide-react";
 import type { ApplicationRunView, FieldPlanItem, FieldValueSource } from "@/lib/agents/application/types";
 
@@ -47,7 +48,10 @@ export function ApplicationRunCard({ run }: { run: ApplicationRunView }) {
   const router = useRouter();
   const [plan, setPlan] = useState<FieldPlanItem[]>(run.fieldPlan);
   const [dirty, setDirty] = useState(false);
-  const [busy, setBusy] = useState<null | "save" | "submit" | "delete">(null);
+  const [busy, setBusy] = useState<null | "save" | "submit" | "delete" | "autofill">(null);
+  const [fill, setFill] = useState<{ tone: "ok" | "warn"; message: string } | null>(null);
+
+  const grounded = plan.filter((f) => f.filled && f.value.trim().length > 0).length;
 
   const status = STATUS[run.status];
   const heading = run.title || run.organization || hostOf(run.targetUrl);
@@ -80,6 +84,25 @@ export function ApplicationRunCard({ run }: { run: ApplicationRunView }) {
     });
     setBusy(null);
     if (res.ok) router.refresh();
+  }
+
+  async function autofill() {
+    setBusy("autofill");
+    setFill(null);
+    try {
+      const res = await fetch(`/api/applications/${run.id}/autofill`, { method: "POST" });
+      const data = (await res.json().catch(() => null)) as
+        | { ok?: boolean; message?: string; unavailable?: boolean }
+        | null;
+      setFill({
+        tone: data?.ok ? "ok" : "warn",
+        message: data?.message ?? "Autofill didn't return a result. Open the application and copy from the plan.",
+      });
+    } catch {
+      setFill({ tone: "warn", message: "Couldn't reach the autofill service. Open the application and copy from the plan." });
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function discard() {
@@ -156,6 +179,18 @@ export function ApplicationRunCard({ run }: { run: ApplicationRunView }) {
         >
           <ExternalLink className="h-3.5 w-3.5" /> Open application
         </a>
+        {run.status !== "submitted" && grounded > 0 && (
+          <button
+            type="button"
+            onClick={() => void autofill()}
+            disabled={busy !== null}
+            title="Open a real browser and type the grounded values into the live form. Jarvis never submits — you review and submit."
+            className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent-soft/30 px-3 py-1.5 text-xs font-semibold text-accent hover:bg-accent-soft/50 disabled:opacity-50"
+          >
+            {busy === "autofill" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+            Fill in browser
+          </button>
+        )}
         {dirty && (
           <button
             type="button"
@@ -188,6 +223,14 @@ export function ApplicationRunCard({ run }: { run: ApplicationRunView }) {
           {busy === "delete" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
         </button>
       </div>
+
+      {fill && (
+        <p
+          className={`mt-2 text-xs leading-relaxed ${fill.tone === "ok" ? "text-emerald-400" : "text-amber-400"}`}
+        >
+          {fill.message}
+        </p>
+      )}
     </div>
   );
 }

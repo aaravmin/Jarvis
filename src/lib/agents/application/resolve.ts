@@ -24,6 +24,16 @@ export type MaterialsBundle = {
 
 const VALUE_SOURCES: FieldValueSource[] = ["resume", "profile", "document", "opportunity", "inferred", "user"];
 
+/** Carry the form control's identity into the plan item so the Playwright autofill can re-locate it. */
+function identity(f: FormField): Pick<FieldPlanItem, "name" | "field_type" | "selector" | "options"> {
+  return {
+    name: f.name,
+    field_type: f.type,
+    selector: f.selector,
+    options: f.options && f.options.length ? f.options : undefined,
+  };
+}
+
 const FIELD_PLAN_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -109,6 +119,7 @@ export async function resolveFields(
       confidence: 0,
       required: f.required,
       filled: false,
+      ...identity(f),
     }));
     return { plan, notes: "No resume or documents on file yet, so nothing could be auto-filled." };
   }
@@ -139,6 +150,7 @@ export async function resolveFields(
       confidence: 0,
       required: f.required,
       filled: false,
+      ...identity(f),
     }));
     return { plan, notes: "The model didn't return a usable plan; fill these in yourself." };
   }
@@ -160,7 +172,7 @@ export async function resolveFields(
 
     // File and password fields are never auto-filled (the user attaches/enters them).
     if (f.type === "file") {
-      return { label: f.label, value: "", source: "user", source_quote: "", confidence: 0, required: f.required, filled: false };
+      return { label: f.label, value: "", source: "user", source_quote: "", confidence: 0, required: f.required, filled: false, ...identity(f) };
     }
 
     // Provenance gate (hard rule #3): a "filled" value MUST be backed by a quote that's really in the
@@ -182,6 +194,7 @@ export async function resolveFields(
       confidence,
       required: f.required, // trust the FORM, not the model
       filled,
+      ...identity(f),
     };
   });
 

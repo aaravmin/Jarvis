@@ -38,6 +38,8 @@ export type FormField = {
   required: boolean;
   /** Choices for select/radio/checkbox fields, verbatim from the form. */
   options?: string[];
+  /** Best-effort CSS selector to re-locate the control at autofill time (from id/name when available). */
+  selector?: string;
 };
 
 /**
@@ -62,6 +64,16 @@ export type FieldPlanItem = {
   confidence: number; // 0..1
   required: boolean;
   filled: boolean;
+  // ── Field identity carried through from the scrape so the Playwright autofill can re-locate the
+  //    control. Optional so older runs (pre-autofill) still parse. Snake_case to match the jsonb contract.
+  /** The form control's name/id. */
+  name?: string;
+  /** The control type, so the filler knows whether to type, select, check, or attach a file. */
+  field_type?: FormFieldType;
+  /** Best-effort CSS selector captured at scrape time. */
+  selector?: string;
+  /** Choices for select/radio/checkbox, so the filler can match a value to a real option. */
+  options?: string[];
 };
 
 /** A full application run as the run screen consumes it. */

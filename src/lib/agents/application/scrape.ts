@@ -1,4 +1,5 @@
 import "server-only";
+import { launchBrowser, newPage, type PwPage } from "./browser";
 import type { FormField, FormFieldType } from "./types";
 
 /**
@@ -126,6 +127,22 @@ function parseOptions(block: string): string[] {
   return out;
 }
 
+/** A reproducible CSS selector for a control, preferring id then name (both survive a fresh page load). */
+function selectorFor(id: string | undefined, name: string | undefined): string | undefined {
+  if (id) return `#${cssEscape(id)}`;
+  if (name) return `[name="${cssAttrEscape(name)}"]`;
+  return undefined;
+}
+
+/** Escape an id for a `#id` selector (CSS.escape isn't available server-side). */
+function cssEscape(s: string): string {
+  return s.replace(/([^a-zA-Z0-9_-])/g, "\\$1");
+}
+/** Escape a value for use inside a double-quoted attribute selector. */
+function cssAttrEscape(s: string): string {
+  return s.replace(/(["\\])/g, "\\$1");
+}
+
 /** Parse all form controls out of raw HTML. Backend for the static path; deps-free. */
 function parseFields(html: string): FormField[] {
   const labels = labelMap(html);
@@ -146,13 +163,15 @@ function parseFields(html: string): FormField[] {
     const tag = m[1];
     const rawType = (attr(tag, "type") ?? "text").toLowerCase();
     if (["hidden", "submit", "button", "reset", "image"].includes(rawType)) continue;
-    const name = attr(tag, "name") ?? attr(tag, "id");
+    const id = attr(tag, "id");
+    const name = attr(tag, "name") ?? id;
     if (!name) continue;
     push({
       name,
       label: resolveLabel(tag, labels),
       type: toFieldType(rawType, "input"),
       required: hasFlag(tag, "required") || attr(tag, "aria-required") === "true",
+      selector: selectorFor(id, attr(tag, "name")),
     });
   }
 
@@ -160,13 +179,15 @@ function parseFields(html: string): FormField[] {
   const taRe = /<textarea\b([^>]*)>/gi;
   while ((m = taRe.exec(html))) {
     const tag = m[1];
-    const name = attr(tag, "name") ?? attr(tag, "id");
+    const id = attr(tag, "id");
+    const name = attr(tag, "name") ?? id;
     if (!name) continue;
     push({
       name,
       label: resolveLabel(tag, labels),
       type: "textarea",
       required: hasFlag(tag, "required") || attr(tag, "aria-required") === "true",
+      selector: selectorFor(id, attr(tag, "name")),
     });
   }
 
@@ -174,7 +195,8 @@ function parseFields(html: string): FormField[] {
   const selRe = /<select\b([^>]*)>([\s\S]*?)<\/select>/gi;
   while ((m = selRe.exec(html))) {
     const tag = m[1];
-    const name = attr(tag, "name") ?? attr(tag, "id");
+    const id = attr(tag, "id");
+    const name = attr(tag, "name") ?? id;
     if (!name) continue;
     push({
       name,
@@ -182,6 +204,7 @@ function parseFields(html: string): FormField[] {
       type: "select",
       required: hasFlag(tag, "required") || attr(tag, "aria-required") === "true",
       options: parseOptions(m[2]),
+      selector: selectorFor(id, attr(tag, "name")),
     });
   }
 
@@ -200,41 +223,132 @@ function parseOrganization(html: string): string | undefined {
   return site?.trim() || undefined;
 }
 
-/** Optional Playwright backend. `new Function` hides the specifier so the bundler never resolves it;
- *  returns null when the package isn't installed — the caller then uses the static path. */
-async function browserScrape(url: string): Promise<ScrapedForm | null> {
-  if (process.env.JARVIS_BROWSER !== "playwright") return null;
-  try {
-    const dynamicImport = new Function("m", "return import(m)") as (m: string) => Promise<{
-      chromium?: { launch: (o?: unknown) => Promise<unknown> };
-    }>;
-    const pw = await dynamicImport("playwright");
-    if (!pw.chromium) return null;
-    const browser = (await pw.chromium.launch({ headless: true })) as {
-      newPage: () => Promise<unknown>;
-      close: () => Promise<void>;
-    };
-    try {
-      const page = (await browser.newPage()) as {
-        goto: (u: string, o?: unknown) => Promise<unknown>;
-        content: () => Promise<string>;
-        title: () => Promise<string>;
-      };
-      await page.goto(url, { waitUntil: "networkidle", timeout: FETCH_TIMEOUT_MS });
-      const html = await page.content();
-      const fields = parseFields(html);
-      return {
-        fields,
-        title: (await page.title())?.trim() || parseTitle(html),
-        organization: parseOrganization(html),
-        via: "browser",
-        empty: fields.length === 0,
-      };
-    } finally {
-      await browser.close();
+/** One control as the in-browser reader returns it (before mapping to our FormFieldType). */
+type RawDomField = {
+  name: string;
+  label: string;
+  rawType: string;
+  tag: "input" | "textarea" | "select";
+  required: boolean;
+  options?: string[];
+  selector?: string;
+};
+
+/**
+ * Browser-side form reader, passed to page.evaluate as a STRING so TypeScript never tries to type the
+ * DOM globals it uses. Reads the RENDERED DOM (so JS-built forms are visible), resolves each control's
+ * visible label the way a human sees it, groups radio buttons by name, and skips invisible/no-data
+ * controls. Returns RawDomField[].
+ */
+const DOM_READER = `(() => {
+  const esc = (s) => (window.CSS && CSS.escape ? CSS.escape(s) : String(s).replace(/[^a-zA-Z0-9_-]/g, '\\\\$&'));
+  const visible = (el) => {
+    const s = window.getComputedStyle(el);
+    if (s.display === 'none' || s.visibility === 'hidden') return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 || r.height > 0 || el.type === 'radio' || el.type === 'checkbox';
+  };
+  const text = (n) => (n && n.textContent ? n.textContent.replace(/\\s+/g, ' ').trim() : '');
+  const labelFor = (el) => {
+    if (el.id) { const l = document.querySelector('label[for="' + esc(el.id) + '"]'); if (text(l)) return text(l); }
+    const wrap = el.closest('label'); if (text(wrap)) return text(wrap);
+    const aria = el.getAttribute('aria-label'); if (aria) return aria.trim();
+    const lb = el.getAttribute('aria-labelledby');
+    if (lb) { const parts = lb.split(/\\s+/).map((id) => text(document.getElementById(id))).filter(Boolean); if (parts.length) return parts.join(' '); }
+    const ph = el.getAttribute('placeholder'); if (ph) return ph.trim();
+    return '';
+  };
+  const groupLabel = (el) => {
+    const fs = el.closest('fieldset'); const lg = fs && fs.querySelector('legend');
+    return text(lg) || '';
+  };
+  const selFor = (el) => {
+    if (el.id) return '#' + esc(el.id);
+    const nm = el.getAttribute('name');
+    if (nm) return el.tagName.toLowerCase() + '[name="' + nm.replace(/(["\\\\])/g, '\\\\$1') + '"]';
+    return '';
+  };
+  const out = []; const seen = new Set(); const radios = new Map();
+  const els = Array.prototype.slice.call(document.querySelectorAll('input, textarea, select'));
+  for (const el of els) {
+    const tag = el.tagName.toLowerCase();
+    let rawType = 'text';
+    if (tag === 'select') rawType = 'select';
+    else if (tag === 'textarea') rawType = 'textarea';
+    else {
+      rawType = (el.getAttribute('type') || 'text').toLowerCase();
+      if (['hidden', 'submit', 'button', 'reset', 'image'].indexOf(rawType) !== -1) continue;
     }
+    if (!visible(el)) continue;
+    const name = el.getAttribute('name') || el.id || '';
+    const required = !!el.required || el.getAttribute('aria-required') === 'true';
+    if (rawType === 'radio') {
+      const key = name || el.id || Math.random().toString();
+      let g = radios.get(key);
+      if (!g) { g = { name: name || key, label: groupLabel(el) || labelFor(el) || name || 'Choice', rawType: 'radio', tag: 'input', required, options: [], selector: name ? 'input[name="' + name.replace(/(["\\\\])/g, '\\\\$1') + '"]' : selFor(el) }; radios.set(key, g); out.push(g); }
+      const opt = labelFor(el) || el.value; if (opt && g.options.indexOf(opt) === -1) g.options.push(opt);
+      if (required) g.required = true;
+      continue;
+    }
+    const label = labelFor(el) || (name ? name : 'Field');
+    let options;
+    if (tag === 'select') options = Array.prototype.slice.call(el.options).map((o) => text(o)).filter((t) => t && !/^(select|choose|--)/i.test(t));
+    if (rawType === 'checkbox') { const v = labelFor(el) || el.value; options = v ? [v] : undefined; }
+    const key = rawType + ':' + name.toLowerCase() + ':' + label.toLowerCase();
+    if (seen.has(key)) continue; seen.add(key);
+    out.push({ name: name || label, label, rawType, tag, required, options, selector: selFor(el) });
+  }
+  return out;
+})()`;
+
+/** Map a RawDomField to our FormField (coarse type + carry the selector through). */
+function toFormField(r: RawDomField): FormField {
+  return {
+    name: r.name,
+    label: r.label,
+    type: toFieldType(r.rawType, r.tag),
+    required: r.required,
+    options: r.options && r.options.length ? r.options : undefined,
+    selector: r.selector || undefined,
+  };
+}
+
+/**
+ * Optional Playwright backend. Renders the page and reads the LIVE DOM (so JS-built forms are visible),
+ * capturing each control's label, type, options and a re-locatable selector. Returns null when
+ * Playwright is unavailable — the caller then uses the static path.
+ */
+async function browserScrape(url: string): Promise<ScrapedForm | null> {
+  const browser = await launchBrowser({ headless: true });
+  if (!browser) return null;
+  let page: PwPage | null = null;
+  try {
+    page = await newPage(browser);
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: FETCH_TIMEOUT_MS });
+    // Give client-rendered forms a moment to mount, then read the DOM directly.
+    try {
+      await page.waitForLoadState("networkidle", { timeout: 5_000 });
+    } catch {
+      /* networkidle can never settle on chatty pages — proceed with what's rendered */
+    }
+    const raw = (await page.evaluate<RawDomField[]>(DOM_READER as unknown as () => RawDomField[])) ?? [];
+    const fields = raw.map(toFormField);
+    const html = await page.content();
+    return {
+      fields,
+      title: (await page.title())?.trim() || parseTitle(html),
+      organization: parseOrganization(html),
+      via: "browser",
+      empty: fields.length === 0,
+    };
   } catch {
     return null; // any failure → fall back to static
+  } finally {
+    try {
+      await browser.close();
+    } catch {
+      /* ignore */
+    }
   }
 }
 
