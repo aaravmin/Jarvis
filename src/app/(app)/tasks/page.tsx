@@ -1,12 +1,10 @@
 import { CheckSquare } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { entityIdsForGoal } from "@/lib/goals/load";
-import { formatDate } from "@/lib/format";
 import { ManualTaskForm } from "@/components/manual/ManualTaskForm";
+import { TaskItem, type Task } from "@/components/tasks/TaskItem";
 
 export const dynamic = "force-dynamic";
-
-type TaskRow = { id: string; title: string; due_at: string | null; reasoning: string | null; status: string };
 
 export default async function TasksPage({ searchParams }: { searchParams: Promise<{ goal?: string }> }) {
   const { goal } = await searchParams;
@@ -23,7 +21,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
     q = q.in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
   }
   const { data } = await q;
-  const tasks = (data ?? []) as TaskRow[];
+  const tasks = (data ?? []) as Task[];
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -39,13 +37,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       ) : (
         <ul className="space-y-1.5">
           {tasks.map((t) => (
-            <li key={t.id} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-2 px-3 py-2.5">
-              <div className="min-w-0">
-                <p className={`truncate text-sm ${t.status === "done" ? "text-muted line-through" : "text-foreground"}`}>{t.title}</p>
-                {t.reasoning && <p className="truncate text-xs text-muted">{t.reasoning}</p>}
-              </div>
-              {t.due_at && <span className="shrink-0 text-xs text-muted">{formatDate(t.due_at)}</span>}
-            </li>
+            <TaskItem key={t.id} task={t} />
           ))}
         </ul>
       )}
