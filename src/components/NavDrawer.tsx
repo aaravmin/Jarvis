@@ -126,12 +126,14 @@ export function NavDrawer({ userEmail }: { userEmail?: string }) {
                   </form>
                 </div>
               )}
-              <Link
-                href="/dev"
-                className="block px-3 text-[11px] text-muted transition-colors hover:text-accent"
-              >
-                Component lab →
-              </Link>
+              {process.env.NODE_ENV !== "production" && (
+                <Link
+                  href="/dev"
+                  className="block px-3 text-[11px] text-muted transition-colors hover:text-accent"
+                >
+                  Component lab →
+                </Link>
+              )}
             </div>
           </aside>
         </div>
