@@ -65,21 +65,31 @@ const EXTRACT_SCHEMA = {
   required: ["items"],
 };
 
-const SYSTEM = `You extract action items from a single email for a busy person's task manager.
+export type SourceKind = "email" | "meeting";
 
-Return ONLY genuine commitments the RECIPIENT must act on:
+function systemFor(kind: SourceKind): string {
+  const noun = kind === "meeting" ? "meeting transcript" : "email";
+  const owner = kind === "meeting" ? "the user (the person this task manager belongs to)" : "the RECIPIENT";
+  const skip =
+    kind === "meeting"
+      ? "small talk, recaps of what was already done, or action items assigned to OTHER people"
+      : "newsletters, FYI/announcements, receipts, marketing, or things the SENDER will do";
+  return `You extract action items from a single ${noun} for a busy person's task manager.
+
+Return ONLY genuine commitments ${owner} must act on:
 - task: something the user has to do ("send the form", "review the doc", "register by Friday").
 - event: a meeting, call, interview, or hard deadline tied to a date/time.
 - follow_up: the user owes someone a reply or a promised thing.
 
-Do NOT extract: newsletters, FYI/announcements, receipts, marketing, or things the SENDER will do.
-If the email has nothing actionable for the user, return an empty list — that is the common case.
+Do NOT extract: ${skip}.
+If the ${noun} has nothing actionable for the user, return an empty list — that is a common case.
 
 CRITICAL RULES:
-- source_quote MUST be copied verbatim from the email body. Do not paraphrase, summarize, or invent.
+- source_quote MUST be copied verbatim from the ${noun}. Do not paraphrase, summarize, or invent.
 - raw_due MUST be the literal phrase as written ("by next Tuesday", "March 3rd", "EOD"). NEVER compute,
   convert, or guess an actual date — our system resolves dates itself. Empty string if no date is stated.
 - Be conservative: a wrong task is worse than a missed one. Set confidence honestly (0..1).`;
+}
 
 const MAX_TITLE = 200;
 const MIN_CONFIDENCE = 0.35; // below this it isn't worth putting in the user's face
@@ -94,15 +104,21 @@ export async function extractItemsFromSource(
   supabase: SupabaseClient,
   userId: string,
   source: { id: string; title: string | null; body: string; occurredAt: string | null },
+  kind: SourceKind = "email",
 ): Promise<ExtractResult> {
   const corpus = `${source.title ?? ""}\n${source.body ?? ""}`.trim();
   if (corpus.length < 20) return { inserted: 0, considered: 0 };
 
+  const userMsg =
+    kind === "meeting"
+      ? `Meeting: ${source.title ?? "(untitled)"}\n\nTranscript:\n${source.body}`
+      : `Email subject: ${source.title ?? "(no subject)"}\n\nEmail body:\n${source.body}`;
+
   let out: { items?: RawCandidate[] } | null = null;
   try {
     out = await geminiStructured<{ items?: RawCandidate[] }>({
-      system: SYSTEM,
-      user: `Email subject: ${source.title ?? "(no subject)"}\n\nEmail body:\n${source.body}`,
+      system: systemFor(kind),
+      user: userMsg,
       schema: EXTRACT_SCHEMA,
       maxTokens: 2000,
     });

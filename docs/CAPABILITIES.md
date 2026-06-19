@@ -25,7 +25,8 @@ data and the live web, and can take L0 write actions.
 
 - **Surface:** `Jarvis` tab (`/jarvis`), `JarvisConsole` orb. API: `POST /api/ask`.
 - **Tools the orb can call:**
-  - `web_search` — Tavily-backed; every cited fact traces to a real result URL.
+  - `web_search` — Tavily-backed; every cited fact traces to a real result URL. Requires `TAVILY_API_KEY`;
+    with no key the orb says it can't search the web rather than answering live questions from memory.
   - `search_my_data` — read-only query over synced Gmail, Calendar, meetings, tasks, contacts, opportunities.
   - `list_dir` / `read_file` — read local files within allowlisted folders (`JARVIS_FILE_ROOTS`; secrets always denied).
   - `create_calendar_event` — creates a real Google event (🔌).
@@ -44,10 +45,17 @@ data and the live web, and can take L0 write actions.
 - **What it does:** pulls recent Gmail, and Gemini triages each message **relative to your goals/profile**
   — keeps genuinely important mail, drops promotions/spam, groups by sender/org, and flags real
   people/opportunities to add as contacts.
+- **Action-item extraction:** every kept email's full body is mined by Gemini for genuine commitments
+  (tasks / events / follow-ups). Each candidate is kept only if its `source_quote` actually appears in
+  the email (citation gate, HARD RULE #3); its date is resolved by chrono anchored to when the email
+  arrived (HARD RULE #2); below-0.35-confidence candidates are dropped. Survivors land in the Review
+  queue. Sync reports "N to review". (`src/lib/google/extract-items.ts`.)
 - **Drafting:** composes Gmail drafts on request (via the orb or Email agent) — lands in Drafts, never sent.
-- **Surface:** `Email` tab. API: `/api/google/sync-email`, `/api/google/draft-email`, `/api/google/gmail/create-draft`.
-- **Scopes:** `gmail.readonly` (triage), `gmail.compose` (draft). Deduped by Gmail message ID.
-- **Autonomy:** L0 — extracted tasks and auto-added contacts land in `review`.
+- **Surface:** `Email` tab; extracted items appear in `Review`. API: `/api/google/sync-email`,
+  `/api/google/draft-email`, `/api/google/gmail/create-draft`, `/api/items` (accept/dismiss).
+- **Scopes:** `gmail.readonly` (triage + body), `gmail.compose` (draft). Deduped by Gmail message ID.
+- **Autonomy:** L0 — extracted tasks/follow-ups and auto-added contacts land in `review`; the user
+  accepts or dismisses each. Accepted tasks then appear on the Tasks page.
 
 ---
 
@@ -58,8 +66,12 @@ data and the live web, and can take L0 write actions.
   timezones) and rendered date-only.
 - **Event creation:** creates real events from your verbatim phrase ("tomorrow at 3pm"); the time is
   resolved deterministically by chrono-node — **the model never computes the date** (HARD RULE #2).
-- **Meetings:** extracts action items from a pasted transcript into sourced tasks.
-- **Surface:** `Calendar` + `Meetings` tabs. API: `/api/google/sync-calendar`, `/api/google/calendar/create-event`.
+- **Meetings:** paste a transcript on the `Meetings` tab and Jarvis stores it as a `meeting` source and
+  mines it for action items with the same engine the inbox uses — verbatim `source_quote`, chrono-resolved
+  dates anchored to the meeting, suggest-only into the Review queue. The Meetings tab lists each pasted
+  transcript with how many action items it produced.
+- **Surface:** `Calendar` + `Meetings` tabs. API: `/api/google/sync-calendar`, `/api/google/calendar/create-event`,
+  `/api/meetings/extract`.
 - **Scope:** `calendar.events`.
 
 ---
@@ -184,7 +196,7 @@ every existing feature.
 | **Gemini** (LLM) | 🟢 | 2.5 Flash. Three primitives: structured JSON, tool-loop, plain text. **Dual auth:** AI Studio API key *or* Vertex AI via ADC (`GOOGLE_CLOUD_PROJECT`) for orgs that forbid keys. Retries on overload. Powers every feature except Application/Outreach. |
 | **Grok** (xAI LLM) | 🟢 | OpenAI-compatible. Grounds the Application field-plan + composes Outreach drafts. Same three primitives (`grokStructured`/`grokText`/`grokToolLoop`), `XAI_API_KEY` + `XAI_MODEL`. |
 | **Google OAuth** | 🔌 | Narrowest scopes, tokens **server-side only**. Read-only first; write scopes added per feature. Re-consent prompts surface clearly. |
-| **Tavily** | 🟢 | The only web-search path — every citation traces to a real result. |
+| **Tavily** | ⚙️ | The web-search path (orb + research/opportunity agents). Gated on `TAVILY_API_KEY`; with no key, web search is unavailable and the orb says so instead of guessing. Every citation traces to a real result. |
 | **Apollo.io** | ⚙️ | Contact email enrichment + people discovery. |
 | **ElevenLabs** | ⚙️ | Spoken answers. |
 
@@ -202,7 +214,8 @@ These are the honest edges of today's build (and the natural next steps on the f
 
 - **Autonomy is L0 only.** Nothing auto-sends or auto-commits; graduating to L1 (auto for
   high-confidence, rare-false-positive cases) is future work.
-- **Meetings are paste-only.** No live capture/transcription yet.
+- **Meetings need a pasted transcript.** Paste-and-extract works (same engine as the inbox); there's
+  no live capture/transcription yet.
 - **Applications fill, they don't submit.** The agent reads forms, grounds a field plan, and — with
   the Playwright backend on — types the grounded values into the live form and attaches the resume,
   leaving the window open for **you** to review and submit. It never clicks Submit/Apply. Static HTML

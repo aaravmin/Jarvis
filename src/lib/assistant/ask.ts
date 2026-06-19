@@ -1,6 +1,6 @@
 import "server-only";
 import { geminiToolLoop, type GeminiContent } from "@/lib/llm/gemini";
-import { webSearch } from "@/lib/search/tavily";
+import { webSearch, tavilyEnabled } from "@/lib/search/tavily";
 import { listDir, readFile, allowedRootsLabel } from "@/lib/assistant/fs-tools";
 import type { AskCitation, AskFileRef, AskActionRef, AskResponse } from "@/lib/assistant/types";
 import type { AskDataContext } from "@/lib/assistant/data-tools";
@@ -185,6 +185,15 @@ export async function ask(message: string, ctx?: AskDataContext): Promise<AskRes
     if (name === "web_search") {
       const query = String(args.query ?? "").trim();
       if (!query) return { results: [] };
+      // Be honest when search is unavailable: tell the model so it says it can't search, rather than
+      // silently answering from memory (which would look like a live search but isn't grounded).
+      if (!tavilyEnabled()) {
+        return {
+          results: [],
+          error:
+            "Web search is not configured on this server (no TAVILY_API_KEY). Tell the user you can't search the web right now — do not answer current-events or live questions from memory.",
+        };
+      }
       const hits = await webSearch(query, { deep: true, maxResults: 6 });
       for (const h of hits) {
         if (h.url && !seenUrls.has(h.url)) {
