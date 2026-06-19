@@ -14,6 +14,15 @@ import "server-only";
  * cheap, and high-quota. The model is configurable via GEMINI_MODEL (default gemini-2.5-flash — a GA
  * model that's reliable under load; gemini-3.5-flash is newer but currently rate-limited/overloaded).
  *
+ * Two auth modes, picked at call time (the request body + response shape are identical, so only the
+ * URL and headers differ):
+ *   • AI Studio (default) — the public Generative Language API, authed with GEMINI_API_KEY.
+ *   • Vertex AI            — for orgs that forbid API keys: set GOOGLE_CLOUD_PROJECT (+ optional
+ *                            GOOGLE_CLOUD_LOCATION) and authenticate with Application Default
+ *                            Credentials (`gcloud auth application-default login`). A bearer token is
+ *                            minted from ADC per request (the library caches/refreshes it). Setting
+ *                            GOOGLE_CLOUD_PROJECT flips Jarvis to this mode automatically.
+ *
  * Robustness: every call retries on transient overload / rate-limit ("high demand", 429/503), which is
  * exactly the failure the switch was meant to dodge. All model output is treated as UNTRUSTED — the
  * call sites validate, clamp, and re-derive everything (dates are never computed by the model).
@@ -21,6 +30,7 @@ import "server-only";
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 const DEFAULT_MODEL = "gemini-2.5-flash";
+const DEFAULT_LOCATION = "us-central1";
 const MAX_RETRIES = 4;
 const RETRY_BACKOFF_MS = [600, 1400, 3000];
 
@@ -28,12 +38,62 @@ export function geminiModel(): string {
   return (process.env.GEMINI_MODEL || "").trim() || DEFAULT_MODEL;
 }
 
+// --- Auth: AI Studio API key OR Vertex AI via ADC ---------------------------
+
+function vertexProject(): string {
+  return (process.env.GOOGLE_CLOUD_PROJECT || "").trim();
+}
+
+function vertexLocation(): string {
+  return (process.env.GOOGLE_CLOUD_LOCATION || "").trim() || DEFAULT_LOCATION;
+}
+
+/** Vertex mode is on iff a GCP project is configured. */
+function vertexMode(): boolean {
+  return vertexProject().length > 0;
+}
+
 function apiKey(): string {
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
-    throw new Error("GEMINI_API_KEY is not set. Jarvis runs its LLM calls server-side and needs it in .env.local.");
+    throw new Error(
+      "No Gemini credentials. Set GEMINI_API_KEY (AI Studio), or GOOGLE_CLOUD_PROJECT + ADC (Vertex AI) for orgs that block API keys. Server-side only.",
+    );
   }
   return key;
+}
+
+// ADC client is created lazily and cached; the library refreshes the underlying token on its own.
+let cachedAuthClient: Promise<import("google-auth-library").AuthClient> | null = null;
+
+async function vertexBearerToken(): Promise<string> {
+  if (!cachedAuthClient) {
+    cachedAuthClient = (async () => {
+      const { GoogleAuth } = await import("google-auth-library");
+      const auth = new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/cloud-platform"] });
+      return auth.getClient();
+    })();
+  }
+  try {
+    const client = await cachedAuthClient;
+    const { token } = await client.getAccessToken();
+    if (!token) throw new Error("empty token");
+    return token;
+  } catch (e) {
+    cachedAuthClient = null; // reset so a transient ADC failure can recover on the next call
+    throw new Error(
+      `Could not obtain Google ADC credentials for Vertex AI (${e instanceof Error ? e.message : "unknown"}). Run \`gcloud auth application-default login\`.`,
+    );
+  }
+}
+
+/** Build the generateContent URL for whichever mode is active. */
+function generateUrl(): string {
+  if (vertexMode()) {
+    const loc = vertexLocation();
+    return `https://${loc}-aiplatform.googleapis.com/v1/projects/${vertexProject()}/locations/${loc}/publishers/google/models/${geminiModel()}:generateContent`;
+  }
+  return `${ENDPOINT}/${geminiModel()}:generateContent?key=${apiKey()}`;
 }
 
 // --- Wire types (the subset of the REST API we use) -------------------------
@@ -143,15 +203,19 @@ function isTransient(status: number, body: GeminiResponse | null): boolean {
 }
 
 async function generate(body: GenerateBody): Promise<GeminiResponse> {
-  const url = `${ENDPOINT}/${geminiModel()}:generateContent?key=${apiKey()}`;
+  const vertex = vertexMode();
+  const url = generateUrl();
   let lastErr = "";
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     let status = 0;
     let parsed: GeminiResponse | null = null;
     try {
+      const headers: Record<string, string> = { "content-type": "application/json" };
+      // Vertex authenticates per request with an ADC bearer token; AI Studio uses the ?key= in the URL.
+      if (vertex) headers.authorization = `Bearer ${await vertexBearerToken()}`;
       const res = await fetch(url, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers,
         body: JSON.stringify(body),
       });
       status = res.status;
