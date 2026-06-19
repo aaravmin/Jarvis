@@ -4,6 +4,7 @@ import { Check, X } from "lucide-react";
 import { Card } from "@/components/Card";
 import { AddToGoal } from "@/components/goals/AddToGoal";
 import { DraftToContact } from "@/components/google/DraftToContact";
+import { OutreachButton } from "@/components/outreach/OutreachButton";
 import { ContactStatusControl } from "@/components/ContactStatusControl";
 import { EditContactForm } from "@/components/EditContactForm";
 import { FindEmailButton } from "@/components/FindEmailButton";
@@ -124,6 +125,7 @@ export function PersonCard({
   const actions = !showActions ? (
     <>
       <ContactStatusControl contactId={person.id} initial={person.outreachStatus} />
+      <OutreachButton contactId={person.id} name={person.fullName} />
       <DraftToContact name={person.fullName} email={emailChannel} />
       {apolloEnabled && !emailChannel && (
         <FindEmailButton contactId={person.id} fullName={person.fullName} company={person.company ?? undefined} linkedin={linkedinChannel} />

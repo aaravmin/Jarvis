@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { routeTask } from "@/lib/agents/router";
 import { agentMeta } from "@/lib/agents/registry";
 import { runOpportunitySearch } from "@/lib/agents/opportunity/run";
+import { runApplication } from "@/lib/agents/application/run";
 import { runPeopleSearch } from "@/lib/research/run";
 import { ask } from "@/lib/assistant/ask";
 import { buildAskDataContext, type AskDataContext } from "@/lib/assistant/data-tools";
@@ -73,6 +74,42 @@ export async function POST(request: Request) {
         : r.status === "reused"
           ? { decision, outcome: "done", runId: r.runId, redirectTo: "/review", message: "A matching search is already running — see Review." }
           : { decision, outcome: "done", runId: r.view.id, resultCount: r.view.resultCount, redirectTo: "/review" };
+    return NextResponse.json(result);
+  }
+
+  if (decision.agent === "application") {
+    // The agent needs a form URL. Pull the first http(s) link out of the request; if there isn't one,
+    // route correctly but point the user at the Apply tab instead of guessing.
+    const url = (message.match(/https?:\/\/[^\s<>"')]+/i)?.[0] ?? "").replace(/[.,]+$/, "");
+    if (!url) {
+      const result: AgentDispatchResult = {
+        decision,
+        outcome: "done",
+        redirectTo: "/apply",
+        message: "Paste the application link on the Apply tab and Jarvis will read the form and fill it from your documents.",
+      };
+      return NextResponse.json(result);
+    }
+    const lower = `${message} ${url}`.toLowerCase();
+    const kind = /grant|fellowship|scholarship|research|funding/.test(lower)
+      ? "grant"
+      : /job|intern|career|greenhouse|lever|workday|ashby/.test(lower)
+        ? "job"
+        : "other";
+    const r = await runApplication(supabase, user.id, { targetUrl: url, kind });
+    const result: AgentDispatchResult =
+      r.status === "error"
+        ? { decision, outcome: "error", runId: r.runId, error: r.error }
+        : r.status === "reused"
+          ? { decision, outcome: "done", runId: r.runId, redirectTo: "/apply", message: "That application is already being prepared — see Apply." }
+          : {
+              decision,
+              outcome: "done",
+              runId: r.view.id,
+              resultCount: r.view.fieldPlan.length,
+              redirectTo: "/apply",
+              message: r.view.summary,
+            };
     return NextResponse.json(result);
   }
 

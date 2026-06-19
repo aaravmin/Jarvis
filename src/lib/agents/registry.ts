@@ -22,6 +22,14 @@ export const AGENTS: Record<AgentKind, AgentMeta> = {
     triggers: "find Brown alumni at YC biotech startups; recruiters hiring new grads at climate-tech firms; founders of seed-stage AI dev-tools companies in NYC.",
     status: "live",
   },
+  application: {
+    kind: "application",
+    label: "Application agent",
+    tab: "Apply",
+    blurb: "Prepares a JOB or GRANT application from a link you give it: reads the form and fills every field it can ground in your saved documents (resume, grant materials). It NEVER submits — you review the field plan and submit yourself. Needs an application URL.",
+    triggers: "prepare this application https://…; fill out this job application <link>; help me apply to this grant <link>; start an application for <link>.",
+    status: "live",
+  },
   email: {
     kind: "email",
     label: "Email agent",

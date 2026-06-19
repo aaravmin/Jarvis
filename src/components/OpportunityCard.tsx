@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, X, ExternalLink, MapPin, CalendarClock } from "lucide-react";
+import { Check, X, ExternalLink, MapPin, CalendarClock, Wand2 } from "lucide-react";
 import { Card } from "@/components/Card";
 import { AddToGoal } from "@/components/goals/AddToGoal";
 import { OpportunityStatusControl } from "@/components/OpportunityStatusControl";
@@ -157,6 +157,17 @@ export function OpportunityCard({
 
   const title = o.organization ? `${o.title} · ${o.organization}` : o.title;
 
+  // Which application bucket to hand the Apply agent (it tunes the grounding prompt).
+  const applyKind =
+    o.category === "grant" || o.category === "fellowship" || o.category === "scholarship"
+      ? "grant"
+      : o.category === "job" || o.category === "internship"
+        ? "job"
+        : "other";
+  const applyHref = o.howToApplyUrl
+    ? `/apply?url=${encodeURIComponent(o.howToApplyUrl)}&kind=${applyKind}&opportunityId=${o.id}&autostart=1`
+    : null;
+
   return (
     <Card title={title} source={source} reasoning={reasoning} meta={meta} actions={actions}>
       <div className="space-y-3">
@@ -228,15 +239,27 @@ export function OpportunityCard({
         </dl>
 
         {o.howToApplyUrl && (
-          <a
-            href={o.howToApplyUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-accent/40 bg-accent-soft/30 px-3 py-2 text-xs font-semibold text-accent transition-colors hover:bg-accent-soft/50"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            Open application
-          </a>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <a
+              href={o.howToApplyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold text-muted-strong transition-colors hover:border-accent/40 hover:text-accent"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Open application
+            </a>
+            {applyHref && (
+              <a
+                href={applyHref}
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-accent/40 bg-accent-soft/30 px-3 py-2 text-xs font-semibold text-accent transition-colors hover:bg-accent-soft/50"
+                title="Jarvis reads the form and fills it from your documents — you review and submit"
+              >
+                <Wand2 className="h-3.5 w-3.5" />
+                Prepare with Jarvis
+              </a>
+            )}
+          </div>
         )}
       </div>
     </Card>

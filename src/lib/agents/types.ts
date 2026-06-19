@@ -11,6 +11,7 @@ import type { AskActionRef, AskCitation, AskFileRef } from "@/lib/assistant/type
 export type AgentKind =
   | "opportunity" // find programs / jobs / hackathons (LIVE)
   | "contact" // find/research people (LIVE — the people agent)
+  | "application" // prepare a job/grant application from a link (LIVE — fills, never submits)
   | "email" // triage Gmail (needs Google connection)
   | "calendar" // read/plan calendar (needs Google connection)
   | "meeting" // transcript → action items (paste a transcript)
