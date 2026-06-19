@@ -33,18 +33,27 @@ export type PwLocator = {
 
 export type PwPage = {
   goto: (url: string, opts?: unknown) => Promise<unknown>;
+  url: () => string;
   content: () => Promise<string>;
   title: () => Promise<string>;
   locator: (selector: string) => PwLocator;
   getByLabel: (text: string, opts?: unknown) => PwLocator;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   evaluate: <T = unknown>(fn: (...a: any[]) => T, arg?: unknown) => Promise<T>;
+  waitForSelector: (selector: string, opts?: unknown) => Promise<unknown>;
   bringToFront: () => Promise<void>;
   waitForLoadState: (state?: string, opts?: unknown) => Promise<void>;
   waitForTimeout: (ms: number) => Promise<void>;
 };
 
 export type PwContext = {
+  newPage: () => Promise<PwPage>;
+  close: () => Promise<void>;
+};
+
+/** A persistent (profile-backed) context — its cookies/localStorage survive on disk, so a login sticks. */
+export type PwPersistentContext = {
+  pages: () => PwPage[];
   newPage: () => Promise<PwPage>;
   close: () => Promise<void>;
 };
@@ -56,8 +65,17 @@ export type PwBrowser = {
   isConnected: () => boolean;
 };
 
+type PersistentOpts = {
+  headless?: boolean;
+  args?: string[];
+  timeout?: number;
+  userAgent?: string;
+  viewport?: { width: number; height: number };
+};
+
 type Chromium = {
   launch: (opts?: { headless?: boolean; args?: string[]; timeout?: number }) => Promise<PwBrowser>;
+  launchPersistentContext: (userDataDir: string, opts?: PersistentOpts) => Promise<PwPersistentContext>;
 };
 
 /** True when the operator has opted into the browser backend. */
@@ -101,6 +119,32 @@ export async function launchBrowser(opts: { headless: boolean }): Promise<PwBrow
 export async function newPage(browser: PwBrowser): Promise<PwPage> {
   const context = await browser.newContext({ userAgent: UA, viewport: { width: 1280, height: 900 } });
   return context.newPage();
+}
+
+/**
+ * Launch a profile-backed (persistent) context. Unlike `launchBrowser`, cookies/localStorage written
+ * here survive on disk in `userDataDir`, so a site login (e.g. LinkedIn) persists across runs — the
+ * user signs in ONCE in the visible window and later scrapes reuse that session. Returns null when
+ * Playwright is unavailable. Always run headed for an authenticated flow (login needs a real window,
+ * and a real profile is far less likely to trip a site's bot checks).
+ */
+export async function launchPersistentContext(
+  userDataDir: string,
+  opts: { headless: boolean },
+): Promise<PwPersistentContext | null> {
+  const chromium = await loadChromium();
+  if (!chromium?.launchPersistentContext) return null;
+  try {
+    return await chromium.launchPersistentContext(userDataDir, {
+      headless: opts.headless,
+      args: LAUNCH_ARGS,
+      userAgent: UA,
+      viewport: { width: 1280, height: 900 },
+      timeout: 30_000,
+    });
+  } catch {
+    return null;
+  }
 }
 
 // ── Headed autofill session registry ────────────────────────────────────────────────────────────

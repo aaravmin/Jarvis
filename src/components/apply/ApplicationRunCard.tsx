@@ -13,6 +13,7 @@ import {
   CircleDashed,
   Wand2,
 } from "lucide-react";
+import { FindLinkedInContactsButton } from "@/components/linkedin/FindLinkedInContactsButton";
 import type { ApplicationRunView, FieldPlanItem, FieldValueSource } from "@/lib/agents/application/types";
 
 const SOURCE_LABEL: Record<FieldValueSource, string> = {
@@ -191,6 +192,7 @@ export function ApplicationRunCard({ run }: { run: ApplicationRunView }) {
             Fill in browser
           </button>
         )}
+        <FindLinkedInContactsButton applicationId={run.id} org={run.organization ?? undefined} />
         {dirty && (
           <button
             type="button"

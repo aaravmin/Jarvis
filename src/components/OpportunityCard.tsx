@@ -4,6 +4,7 @@ import { Check, X, ExternalLink, MapPin, CalendarClock, Wand2 } from "lucide-rea
 import { Card } from "@/components/Card";
 import { AddToGoal } from "@/components/goals/AddToGoal";
 import { OpportunityStatusControl } from "@/components/OpportunityStatusControl";
+import { FindLinkedInContactsButton } from "@/components/linkedin/FindLinkedInContactsButton";
 import { formatDate, daysUntil } from "@/lib/format";
 import type { CardFieldSource, CardSource } from "@/lib/types";
 import type { DiscoveredOpportunity, OpportunityCategory } from "@/lib/agents/opportunity/types";
@@ -260,6 +261,14 @@ export function OpportunityCard({
               </a>
             )}
           </div>
+        )}
+
+        {o.organization && (
+          <FindLinkedInContactsButton
+            opportunityId={o.id}
+            org={o.organization}
+            className="border-t border-border pt-3"
+          />
         )}
       </div>
     </Card>
