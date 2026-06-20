@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Globe, AlertTriangle, RotateCw, X } from "lucide-react";
+import { Loader2, Globe, AlertTriangle, RotateCw, X, ShieldCheck } from "lucide-react";
 import { PersonCard } from "@/components/PersonCard";
 import type { DiscoveredPerson, ResearchRunView } from "@/lib/research/types";
 
@@ -17,14 +17,44 @@ export function ResearchRunCard({
   elapsed,
   onCancel,
   onRetry,
+  apolloEnabled = false,
 }: {
   run: ResearchRunView;
   elapsed?: number;
   onCancel?: () => void;
   onRetry?: () => void;
+  apolloEnabled?: boolean;
 }) {
   const [people, setPeople] = useState<DiscoveredPerson[]>(run.people);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [validating, setValidating] = useState(false);
+  const [validateMsg, setValidateMsg] = useState<string | null>(null);
+
+  // Validate + enrich every contact in this run: format-check + Apollo cross-check existing emails,
+  // and fill missing email/company/title/LinkedIn. Then re-pull the run so the cards show the new
+  // verdicts (field_sources statuses) and filled values without a full page reload.
+  async function validate() {
+    setValidating(true);
+    setValidateMsg(null);
+    try {
+      const res = await fetch("/api/contacts/validate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ researchRunId: run.id }),
+      });
+      const data = await res.json().catch(() => null);
+      setValidateMsg(data?.message ?? (res.ok ? "Validation finished." : "Couldn't validate these contacts."));
+      const refreshed = await fetch(`/api/research/${run.id}`);
+      if (refreshed.ok) {
+        const view = (await refreshed.json()) as { people?: DiscoveredPerson[] };
+        if (Array.isArray(view.people)) setPeople(view.people);
+      }
+    } catch {
+      setValidateMsg("Couldn't reach the validator.");
+    } finally {
+      setValidating(false);
+    }
+  }
 
   async function act(action: "accept" | "dismiss", contactId: string) {
     setPendingIds((prev) => new Set(prev).add(contactId));
@@ -95,6 +125,22 @@ export function ResearchRunCard({
           </div>
         </div>
 
+        {run.status === "done" && people.length > 0 && (
+          <button
+            type="button"
+            onClick={() => void validate()}
+            disabled={validating}
+            title={
+              apolloEnabled
+                ? "Format-check + Apollo.io cross-check each contact's email, and fill any missing email / company / title / LinkedIn."
+                : "Format-check each contact's email and LinkedIn. Set APOLLO_API_KEY to also cross-check against Apollo and fill missing emails."
+            }
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs text-muted transition-colors hover:border-accent/50 hover:text-foreground disabled:opacity-50"
+          >
+            {validating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+            {validating ? "Validating…" : "Validate & enrich"}
+          </button>
+        )}
         {run.status === "running" && onCancel && (
           <button
             type="button"
@@ -116,6 +162,8 @@ export function ResearchRunCard({
           </button>
         )}
       </header>
+
+      {validateMsg && <p className="mt-3 text-xs text-muted-strong">{validateMsg}</p>}
 
       {run.status === "done" && people.length > 0 && (
         <div className="mt-4 space-y-3">

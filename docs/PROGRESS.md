@@ -39,6 +39,41 @@ email+meeting→items extraction engine and the task loop** are live. The **Goog
 once the user connects Google on the Connections tab.
 
 ## Task log (most recent first)
+- **Contact "Validate & enrich" + people-discovery recall tune** — ✅ shipped to `main`, tsc + eslint
+  green, route smoke-tested (validate 401 unauthed; /review + /people compile, 307 auth-redirect), an
+  adversarial 4-dimension review run (9 confirmed findings, in-scope ones fixed), pushed. The user's
+  directive: "find as many Brown alumni in X as possible … give it a Google Sheet, it auto-populates
+  the contacts and tries to fill in the missing pieces and validates if the contact information in the
+  spreadsheet is correct. Make sure it has the functionality." Audited first (6-reader mapping
+  workflow): **3 of 4 facets already worked** — multi-person discovery (`runPeopleSearch` already loops
+  over MANY candidates), Sheet→contacts import (`importContactsFromSheet`), and per-contact email enrich
+  (`apolloMatchPerson`). The **one genuinely missing facet was validating the sheet's existing contact
+  info + batch-filling the blanks**. Built that, plus a recall tune:
+  1. **NEW — Validate & enrich.** `src/lib/contacts/validate-enrich.ts` +
+     `POST /api/contacts/validate`. For each target contact (by run, by ids, or review/accepted scope;
+     pooled 5-concurrent, cap 25/call, per-row try/catch): **Tier 1** deterministic format-check of the
+     existing email + LinkedIn (works with NO API key); **Tier 2** (only when `APOLLO_API_KEY` set)
+     `apolloMatchPerson` to cross-check the sheet's email against Apollo's record
+     (verified / mismatch / unconfirmed / invalid) and FILL any missing email / company / title /
+     LinkedIn. **No migration** — verdicts + filled provenance go in `contacts.field_sources` jsonb
+     (added optional `status` to the `FieldSource` type); contacts stay in **Review** (L0, rule #5) so
+     the user re-approves; RLS scopes every read/write (rule #6). Channel fills are dedup-safe
+     (fresh-check + insert + keep-lowest-id prune) since `contact_channels` has no UNIQUE(contact_id,
+     kind, value) — **suggested follow-up migration for Aarav** to make that airtight.
+  2. **Wiring.** Auto-runs after a Sheet import (`ConnectionsPanel`, before the Review redirect); a
+     "Validate & enrich" button on each Review people-run (`ResearchRunCard`, re-fetches the run after)
+     and on the People toolbar (`ContactsToolbar`, `router.refresh`); coloured at-a-glance verdict
+     badges on `PersonCard` (Email verified/mismatch/invalid · LinkedIn invalid · Enriched). Button
+     tooltips are honest about Apollo being optional (threaded `apolloEnabled` so they don't oversell
+     when no key is set).
+  3. **Recall tune (F1).** `src/lib/research/extract.ts`: rule 4 flipped from "prefer precision over
+     recall" to **"be exhaustive within what you can verify"** (search several angles, report EVERY
+     cited match, don't stop at three) while keeping the hard citation bar; phase-2 report prompt told
+     not to truncate; `MAX_TURNS` 8→12 for more search rounds.
+  - **Known follow-ups surfaced by the review (pre-existing, NOT in this diff):** `contact_channels`
+    never persists `sourceUrl`/`confidence` (lost on reload — needs a migration + `run.ts` change);
+    non-transactional channel-insert+field_sources-update (Supabase has no client txns; self-heals on
+    re-run, same pattern as the existing find-email route).
 - **LinkedIn contact-sourcing (Playwright) + Apply/Outreach proven end-to-end** — ✅ shipped to `main`
   (commit `f2068e0`), tsc + eslint green, route smoke-tested (401 unauthed), pushed. The user's
   directive: "Make sure Jarvis can automatically fill out job/grant applications using a link and email

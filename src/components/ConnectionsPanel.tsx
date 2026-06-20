@@ -163,8 +163,24 @@ function ImportContactsTool() {
       const data = await res.json();
       if (!res.ok) setErr(data?.error ?? "Import failed.");
       else {
-        setMsg(`Imported ${data.resultCount} contact${data.resultCount === 1 ? "" : "s"} from “${data.sheetTitle}” — review them now.`);
-        setTimeout(() => router.push("/review"), 900);
+        const n = data.resultCount as number;
+        setMsg(`Imported ${n} contact${n === 1 ? "" : "s"} from “${data.sheetTitle}”. Filling in missing info and validating…`);
+        // Second pass: validate the existing contact info + fill the blanks BEFORE sending the user to
+        // Review, so the cards they review already carry verified/mismatch badges and any filled fields.
+        if (n > 0 && data.runId) {
+          try {
+            const vr = await fetch("/api/contacts/validate", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ researchRunId: data.runId }),
+            });
+            const vd = await vr.json().catch(() => null);
+            setMsg(`Imported ${n} from “${data.sheetTitle}”. ${vd?.message ?? ""} Review them now.`.replace(/\s+/g, " ").trim());
+          } catch {
+            setMsg(`Imported ${n} contact${n === 1 ? "" : "s"} from “${data.sheetTitle}” — review them now.`);
+          }
+        }
+        setTimeout(() => router.push("/review"), 1100);
       }
     } catch {
       setErr("Network error.");

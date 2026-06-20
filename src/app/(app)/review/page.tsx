@@ -7,11 +7,13 @@ import { ResearchRunCard } from "@/components/ResearchRunCard";
 import { OpportunityRunCard } from "@/components/OpportunityRunCard";
 import { ReviewItemCard } from "@/components/items/ReviewItemCard";
 import { BackfillButton } from "@/components/items/BackfillButton";
+import { apolloEnabled } from "@/lib/apollo";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReviewPage() {
   const supabase = await createClient();
+  const apolloOn = apolloEnabled();
   // Email-derived items + both research agents land their suggestions here; one queue, newest first.
   const [items, peopleRuns, opportunityRuns] = await Promise.all([
     loadReviewItems(supabase),
@@ -56,7 +58,7 @@ export default async function ReviewPage() {
           entry.kind === "item" ? (
             <ReviewItemCard key={`i-${entry.item.id}`} item={entry.item} />
           ) : entry.kind === "people" ? (
-            <ResearchRunCard key={`p-${entry.run.id}`} run={entry.run} />
+            <ResearchRunCard key={`p-${entry.run.id}`} run={entry.run} apolloEnabled={apolloOn} />
           ) : (
             <OpportunityRunCard key={`o-${entry.run.id}`} run={entry.run} />
           ),

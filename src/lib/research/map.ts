@@ -15,7 +15,7 @@ export type ContactRow = {
   confidence: number | null;
   review_status: "review" | "accepted" | "dismissed";
   outreach_status: ContactOutreachStatus | null;
-  field_sources: Record<string, { url?: string; quote?: string; confidence?: number }> | null;
+  field_sources: Record<string, { url?: string; quote?: string; confidence?: number; status?: string }> | null;
 };
 export type ChannelRow = {
   contact_id: string;

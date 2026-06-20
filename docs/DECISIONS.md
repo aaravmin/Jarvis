@@ -2,6 +2,30 @@
 
 > One entry per non-obvious decision: date, decision, why. Never edit past entries; append new ones.
 
+- **2026-06-20 — Contact validation verdicts live in `contacts.field_sources` (jsonb), not new
+  columns; `contact_channels` has no `verified` column.** Why: rule #3 already makes `field_sources` the
+  per-field provenance store, and adding a verdict needs no migration (I never apply migrations to the
+  live DB). The `FieldSource` type gained an optional `status` ("verified" | "mismatch" | "unconfirmed"
+  | "invalid" | "enriched"); `PersonCard` reads it to render coloured badges. Validation-of-an-existing
+  email deliberately writes NO `url` on its verdict (the email VALUE came from the sheet, the contact's
+  primary source — Apollo only vouches for it; a url would make `rowsToPerson` mis-pick Apollo as the
+  card's primary permalink). Filled-from-Apollo fields DO carry `url: apollo.io` (Apollo is genuinely
+  that field's source).
+- **2026-06-20 — Validate/enrich is a SECOND pass over already-imported rows, not folded into import.**
+  Why: keep Sheet import fast + deterministic (no LLM, no network beyond Sheets) and let validation
+  re-run on demand (a button) or after a re-import. It auto-runs once right after import for the
+  expected flow, but is idempotent and safe to repeat. Contacts stay in Review (L0) the whole time, so
+  every filled/flagged field is re-approved by the user — Apollo data is never silently promoted to a
+  trusted fact (rule #5). Channel fills are dedup-safe in code (fresh-check + insert + keep-lowest-id
+  prune) because `contact_channels` lacks a UNIQUE(contact_id, kind, value) constraint; the airtight fix
+  is that constraint, left as a suggested migration for Aarav.
+- **2026-06-20 — People-discovery prompt flipped from "prefer precision over recall" to "exhaustive
+  within what you can verify."** Why: the user explicitly wants "as MANY Brown alumni in X as possible."
+  The citation/verification bar is unchanged (every person still needs a verbatim-substring quote from a
+  retrieved result, or they're dropped) — only the breadth target changed: search several angles, report
+  every backed match, `MAX_TURNS` 8→12. Precision is still enforced by `backs()` server-side; recall is
+  now encouraged in the prompt rather than suppressed.
+
 - **2026-06-17 — Daily Plan is ephemeral and the model only SEQUENCES; it never emits a time.** Why:
   hard rule #2. `build_day_plan` (`src/lib/agents/today/plan.ts`) returns order/part_of_day/priority/
   action/why only — no date/time field. Real times come from `sources.occurred_at` (formatted by code);

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, X } from "lucide-react";
+import { Check, X, ShieldCheck, AlertTriangle, Sparkles } from "lucide-react";
 import { Card } from "@/components/Card";
 import { AddToGoal } from "@/components/goals/AddToGoal";
 import { DraftToContact } from "@/components/google/DraftToContact";
@@ -47,6 +47,49 @@ function valueForField(person: DiscoveredPerson, key: string): string {
     default:
       return "";
   }
+}
+
+/**
+ * At-a-glance verdicts from the validate/enrich pass (stored in field_sources[*].status). The full
+ * "why" rides in each field's source chip; these coloured pills surface the headline so the user can
+ * spot a bad/mismatched email — or newly-filled info — without clicking into the provenance.
+ */
+function ValidationBadges({ person }: { person: DiscoveredPerson }) {
+  const emailStatus = person.fieldSources.email?.status;
+  const linkedinStatus = person.fieldSources.linkedin?.status;
+  const enriched = Object.values(person.fieldSources).some((f) => f.status === "enriched");
+
+  const pills: { key: string; tone: "ok" | "warn" | "bad" | "muted"; icon: typeof Check; label: string }[] = [];
+  if (emailStatus === "verified") pills.push({ key: "email", tone: "ok", icon: ShieldCheck, label: "Email verified" });
+  else if (emailStatus === "mismatch") pills.push({ key: "email", tone: "bad", icon: AlertTriangle, label: "Email mismatch" });
+  else if (emailStatus === "invalid") pills.push({ key: "email", tone: "bad", icon: X, label: "Email invalid" });
+  else if (emailStatus === "unconfirmed") pills.push({ key: "email", tone: "muted", icon: Check, label: "Email format-checked" });
+  if (linkedinStatus === "invalid") pills.push({ key: "li", tone: "warn", icon: AlertTriangle, label: "LinkedIn looks invalid" });
+  if (enriched) pills.push({ key: "enr", tone: "ok", icon: Sparkles, label: "Enriched" });
+
+  if (pills.length === 0) return null;
+  const tones: Record<string, string> = {
+    ok: "border-success/40 bg-success/10 text-success",
+    warn: "border-warning/40 bg-warning/10 text-warning",
+    bad: "border-danger/40 bg-danger/10 text-danger",
+    muted: "border-border bg-surface-2 text-muted",
+  };
+  return (
+    <div className="mb-2 flex flex-wrap items-center gap-1.5">
+      {pills.map((p) => {
+        const Icon = p.icon;
+        return (
+          <span
+            key={p.key}
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${tones[p.tone]}`}
+          >
+            <Icon className="h-3 w-3" />
+            {p.label}
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 /**
@@ -219,7 +262,10 @@ export function PersonCard({
             Added by you
           </span>
         </div>
-        <div className="mt-2">{body}</div>
+        <div className="mt-2">
+          <ValidationBadges person={person} />
+          {body}
+        </div>
         {reasoning && (
           <p className="mt-2 text-xs italic text-muted">
             <span className="not-italic text-muted-strong">Notes: </span>
@@ -233,6 +279,7 @@ export function PersonCard({
 
   return (
     <Card title={person.fullName} source={source} reasoning={reasoning} meta={meta} actions={actions}>
+      <ValidationBadges person={person} />
       {body}
     </Card>
   );

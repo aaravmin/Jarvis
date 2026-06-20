@@ -26,7 +26,7 @@ const WEB_SEARCH_FN = {
   },
 };
 
-const MAX_TURNS = 8;
+const MAX_TURNS = 12; // room for several search angles — recall matters ("find as many as you can")
 const MAX_TOKENS = 8000;
 // Phase 2 (the structured report) needs more room: a cohort of people, each with verbatim quotes
 // and channels, can be large, and truncated output would silently drop candidates.
@@ -82,7 +82,7 @@ Rules:
 1. Every person must be justified by a web search result you actually retrieved. When you state a person matches, cite the source and quote the EXACT short sentence (<= ~150 characters) that asserts it — verbatim, never paraphrased or stitched together.
 2. Only assert a fact (email, company, role, background) if a search result supports it. Never guess or invent contact information.
 3. Never compute or emit any date or "reach out by" value.
-4. Prefer precision over recall: omit anyone you cannot verify rather than guessing.
+4. Be exhaustive within what you can verify. The user wants as MANY real matches as possible (e.g. "find as many Brown alumni at X as you can"), so search from several angles and report EVERY distinct person you can back with a citation — do not stop at two or three. But the verification bar never drops: omit anyone you cannot cite rather than guessing, and never pad the list with unverifiable names.
 5. Put uncertainty in plain language (same-name ambiguity, low confidence) so it can go into a notes field.`;
 
 const REPORT_TOOL = {
@@ -307,7 +307,7 @@ export async function runPeopleResearch(
 The user's goals (reference these ids in goal_links; do not invent ids):
 ${goalsDigest}
 
-Search the web (call web_search, possibly several times) and identify real, named people who match this cohort. For each person, note the exact short sentence from a result that proves they match.`,
+Search the web (call web_search several times, from different angles) and identify as many real, named people as you can who match this cohort — aim for breadth, not just the first few. For each person, note the exact short sentence from a result that proves they match.`,
           },
         ],
       },
@@ -334,7 +334,7 @@ Here are the web search results you retrieved. Use ONLY these — do not introdu
 
 ${corpus}
 
-Report every qualifying person. Each source_quote MUST be an exact verbatim substring of one source's CONTENT above (never a paraphrase). Set channel/field source_url values only to URLs that appear above. Omit any field you cannot back. Do not include any dates.`,
+Report EVERY qualifying person you can back from the results above — do not truncate to a handful; if ten people are supported by citations, return all ten. Each source_quote MUST be an exact verbatim substring of one source's CONTENT above (never a paraphrase). Set channel/field source_url values only to URLs that appear above. Omit any field you cannot back. Do not include any dates.`,
       schema: REPORT_TOOL.input_schema,
       maxTokens: REPORT_MAX_TOKENS,
     });

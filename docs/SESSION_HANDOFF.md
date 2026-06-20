@@ -17,6 +17,24 @@ controllable by voice. Full product definition: `/docs/PRD.md`. Full roadmap: `/
 - Ship autonomy L0 (suggest-only) first; narrowest OAuth scopes; tokens server-side.
 
 ## Current state
+- ✅ **Contacts: discover MANY · import a Sheet · validate + enrich.** Three things the user asked for,
+  three states: (1) **Discover many** — `runPeopleSearch` (`src/lib/research/run.ts`) already loops over
+  ALL validated candidates; the discovery prompt (`src/lib/research/extract.ts`) is now tuned for
+  **recall** ("find as many Brown alumni in X as you can" — exhaustive within what's citable, several
+  search angles, `MAX_TURNS` 12). (2) **Import a Sheet** — `importContactsFromSheet`
+  (`src/lib/google/import-contacts.ts`) lands each row in Review with the row as provenance. (3) **NEW:
+  validate + enrich** — `src/lib/contacts/validate-enrich.ts` + `POST /api/contacts/validate`:
+  Tier-1 format-checks the existing email/LinkedIn (no key needed) and, when `APOLLO_API_KEY` is set,
+  Tier-2 cross-checks the sheet's email against Apollo (verified/mismatch/unconfirmed/invalid) and fills
+  missing email/company/title/LinkedIn. **No migration** — verdicts live in `contacts.field_sources`
+  jsonb (`FieldSource` gained an optional `status`); rows stay in Review (L0); RLS-scoped; channel fills
+  are dedup-safe in code. UI: auto-runs after a Sheet import; "Validate & enrich" button on each Review
+  people-run (`ResearchRunCard`) and on the People toolbar (`ContactsToolbar`); coloured verdict badges
+  on `PersonCard`. **Verify next:** Connections → import a Sheets link → watch it import + validate, then
+  Review shows badges. Or People → "Validate & enrich". With no `APOLLO_API_KEY` it's format-only (the
+  button tooltips + response message say so). **Suggested follow-up migration for Aarav:** a
+  UNIQUE(contact_id, kind, value) on `contact_channels` (airtight dup-channel guard), and persisting
+  channel `sourceUrl`/`confidence` (today they're lost on reload — pre-existing).
 - ✅ **ONE LLM provider now — everything runs on xAI Grok.** `src/lib/llm/grok.ts` is the only real LLM
   client (`grokStructured` / `grokToolLoop` / `grokText`, OpenAI-compatible, `XAI_API_KEY` + optional
   `XAI_MODEL`, default grok-4.3). `src/lib/llm/gemini.ts` is now a thin **adapter**: it keeps the old

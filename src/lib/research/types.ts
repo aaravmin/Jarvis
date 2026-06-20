@@ -18,8 +18,13 @@ export const CONTACT_OUTREACH_STATUSES: { value: ContactOutreachStatus; label: s
   { value: "follow_up", label: "Follow up" },
 ];
 
-/** Provenance for a single auto-filled field (validated against real web_search citations). */
-export type FieldSource = { url?: string; quote?: string; confidence?: number };
+/**
+ * Provenance for a single auto-filled field (validated against real web_search citations).
+ * `status` is an optional machine-readable verdict written by the validate/enrich pass — e.g. the
+ * `email` field carries "verified" | "mismatch" | "unconfirmed" | "invalid" so the card can show a
+ * coloured "checked" badge, not just the prose quote.
+ */
+export type FieldSource = { url?: string; quote?: string; confidence?: number; status?: string };
 
 /** A contact method discovered for a person, with whether its source survived validation. */
 export type DiscoveredChannel = {

@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCw, Sheet, ExternalLink, Loader2 } from "lucide-react";
+import { RefreshCw, Sheet, ExternalLink, Loader2, ShieldCheck } from "lucide-react";
 
 /**
  * Toolbar for the People tab. "Sync outreach from email" deterministically advances contacts you've
  * corresponded with to "Spoke" (manual edits are never overwritten). "Export to Google Sheets" creates
  * a sheet of your full contact list with an editable status dropdown.
  */
-export function ContactsToolbar() {
+export function ContactsToolbar({ apolloEnabled = false }: { apolloEnabled?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -17,6 +17,29 @@ export function ContactsToolbar() {
   const [exporting, setExporting] = useState(false);
   const [exportUrl, setExportUrl] = useState<string | null>(null);
   const [exportErr, setExportErr] = useState<string | null>(null);
+
+  const [validating, setValidating] = useState(false);
+  const [validateMsg, setValidateMsg] = useState<string | null>(null);
+
+  // Re-validate the whole accepted list: format-check + Apollo cross-check emails and fill any blanks.
+  async function validate() {
+    setValidating(true);
+    setValidateMsg(null);
+    try {
+      const res = await fetch("/api/contacts/validate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "accepted" }),
+      });
+      const data = await res.json().catch(() => null);
+      setValidateMsg(data?.message ?? (res.ok ? "Validation finished." : "Validation failed."));
+      if (res.ok) router.refresh();
+    } catch {
+      setValidateMsg("Network error.");
+    } finally {
+      setValidating(false);
+    }
+  }
 
   async function sync() {
     setBusy(true);
@@ -75,6 +98,21 @@ export function ContactsToolbar() {
 
       <button
         type="button"
+        onClick={validate}
+        disabled={validating}
+        title={
+          apolloEnabled
+            ? "Validate every contact's email (format + Apollo.io cross-check) and fill any missing email / company / title / LinkedIn."
+            : "Format-check every contact's email and LinkedIn. Set APOLLO_API_KEY to also cross-check against Apollo and fill missing emails."
+        }
+        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-muted-strong transition-colors hover:border-accent/50 hover:text-foreground disabled:opacity-50"
+      >
+        {validating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+        Validate &amp; enrich
+      </button>
+
+      <button
+        type="button"
         onClick={exportSheet}
         disabled={exporting}
         className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-muted-strong transition-colors hover:border-accent/50 hover:text-foreground disabled:opacity-50"
@@ -94,6 +132,7 @@ export function ContactsToolbar() {
         </a>
       )}
       {msg && <span className="text-xs text-muted">{msg}</span>}
+      {validateMsg && <span className="text-xs text-muted">{validateMsg}</span>}
       {exportErr && <span className="text-xs text-danger">{exportErr}</span>}
     </div>
   );

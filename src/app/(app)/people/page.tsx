@@ -28,7 +28,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
         <ManualContactForm apolloEnabled={apolloOn} />
         {apolloOn && <ApolloFinder />}
       </div>
-      {people.length > 0 && <ContactsToolbar />}
+      {people.length > 0 && <ContactsToolbar apolloEnabled={apolloOn} />}
 
       {people.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border-strong bg-surface/40 px-6 py-12 text-center">
