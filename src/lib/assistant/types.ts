@@ -6,7 +6,7 @@ export type AskFileRef = { path: string; bytes: number };
 
 /** Something the assistant DID this turn (created an event, drafted an email, saved a template). */
 export type AskActionRef = {
-  kind: "event" | "draft" | "template";
+  kind: "event" | "draft" | "template" | "contact";
   label: string;
   url?: string;
   /** The deterministic, code-resolved fact (e.g. the parsed event time, the draft recipient) shown

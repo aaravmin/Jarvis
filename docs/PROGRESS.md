@@ -39,6 +39,33 @@ email+meeting→items extraction engine and the task loop** are live. The **Goog
 once the user connects Google on the Connections tab.
 
 ## Task log (most recent first)
+- **Wired the LinkedIn/Apollo contact-scraping into the conversational assistant (the orb)** — ✅
+  shipped to `main`, tsc + eslint green, `/api/ask` smoke-tested (401 unauthed; mounts clean),
+  3-finding adversarial review (all HIGH, all confirmed, all fixed + re-verified), pushed. The user
+  reported the orb said it had "no Playwright or any scraping tools — only web search." **It was telling
+  the truth about itself:** the scrape+enrich capability lived only on the People tab
+  (`importContactFromLinkedIn`), never in the assistant's tool loop (`ask.ts`). Fix: a new **`add_contact`
+  assistant tool**.
+  1. **NEW — `src/lib/contacts/add-contact.ts` (`addContact`).** Resolves a person to a saved contact
+     three ways: (a) a pasted LinkedIn URL → `importContactFromLinkedIn`; (b) a NAME (+ optional company)
+     → `searchLinkedInPeople` in the user's own logged-in browser → `pickBest` match → import; (c) browser
+     off / no match → `apolloMatchPerson` by name → import its `linkedinUrl`, or `insertFromApollo` (a
+     contact from Apollo data alone). Honest failure when neither backend is configured (names the env
+     vars). Every path → `created_by='user'`, `review_status='accepted'` (explicit single-person user
+     action, like the People-tab importer — not Review).
+  2. **Wired into the brain.** `ask.ts` gains the `add_contact` function schema, adds it to the tool list
+     when `ctx.actions` is present, a system-prompt capability + rule, and an `execute()` branch.
+     `actions.ts` gains an `addContact` method on `AskActions`/`buildAskActions` that returns an
+     `ActionOutcome` with a `kind:'contact'` receipt; `AskActionRef.kind` gains `'contact'`;
+     `JarvisConsole` renders the receipt with a `UserPlus` icon linking to the person's LinkedIn.
+  - **Review fixes (all verified):** (HIGH) don't overwrite an existing contact's `notes` on the
+    already-exists path (`!r.alreadyExisted` guard); (HIGH) the system-prompt no longer tells the model
+    it can *unconditionally* look people up — it says don't refuse pre-emptively but RELAY exactly what
+    `add_contact` returns (login-needed / needs-a-URL / backend-not-configured), so it can't claim a save
+    that didn't happen (rule #7); (HIGH) `insertFromApollo` now always seeds a url-bearing `field_sources`
+    entry so the card's source chip links back even for a bare-name Apollo match — **and the same guard
+    was added to `importContactFromLinkedIn`** (a sparse profile with no role/company/bio/email + no
+    Apollo would otherwise leave `field_sources` empty and the chip link-less). No new findings dismissed.
 - **"Add a contact from a LinkedIn URL" + removed the manual Calendar-event tool** — ✅ shipped to
   `main`, tsc + eslint green, route smoke-tested (`POST /api/contacts/import-linkedin` 401 unauthed;
   `/people` + `/connections` 307 auth-redirect), 4-dimension adversarial review (correctness /

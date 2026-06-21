@@ -189,6 +189,12 @@ export async function importContactFromLinkedIn(
   const sourceQuote =
     (headline || [roleTitle, company].filter(Boolean).join(" at ") || `LinkedIn profile: ${profileUrl}`).slice(0, 500);
   const confidence = email && emailStatus === "verified" ? 0.9 : usedBrowser ? 0.75 : usedApollo ? 0.65 : 0.5;
+  // Always keep a url-bearing field_sources entry (the profile itself) so the card's source chip links
+  // back even for a sparse profile that yielded no role/company/bio/email (rowsToPerson picks the first
+  // field_sources url as the card's permalink).
+  if (!Object.values(fieldSources).some((v) => v?.url)) {
+    fieldSources.profile = { url: profileUrl, quote: sourceQuote, confidence };
+  }
 
   const relevance = ["Imported from LinkedIn.", location].filter(Boolean).join(" · ");
   const noteBits: string[] = [];

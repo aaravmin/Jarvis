@@ -7,6 +7,7 @@ import { createEvent } from "@/lib/google/calendar";
 import { createDraft } from "@/lib/google/gmail";
 import { extractFileId, findDocsByName, readDocText } from "@/lib/google/drive";
 import { saveDriveTemplate, listTemplates as loadTemplates } from "@/lib/templates/store";
+import { addContact as addContactByQuery } from "@/lib/contacts/add-contact";
 import { formatWhen } from "@/lib/format";
 import type { AskActionRef } from "@/lib/assistant/types";
 
@@ -36,6 +37,8 @@ export type AskActions = {
   saveTemplate: (a: { document?: string; name?: string }) => Promise<ActionOutcome>;
   /** Read-only: the user's saved templates, so Jarvis can adapt one before drafting. No ref/receipt. */
   listTemplates: () => Promise<{ ok: boolean; message: string }>;
+  /** Find a person online (LinkedIn scrape + Apollo) and save them as a contact. */
+  addContact: (a: { name?: string; linkedin_url?: string; company?: string; context?: string }) => Promise<ActionOutcome>;
 };
 
 const MAX_DATE_INPUT = 200;
@@ -339,6 +342,31 @@ export function buildAskActions(supabase: SupabaseClient, userId: string): AskAc
         return { ok: true, message: text };
       } catch {
         return { ok: false, message: "I couldn't load your saved templates just now." };
+      }
+    },
+
+    async addContact({ name, linkedin_url, company, context }) {
+      try {
+        const r = await addContactByQuery(supabase, userId, {
+          name: name?.trim() || undefined,
+          linkedinUrl: linkedin_url?.trim() || undefined,
+          company: company?.trim() || undefined,
+          context: context?.trim() || undefined,
+        });
+        if (!r.ok || !r.contactId) return { ok: false, message: r.message };
+        return {
+          ok: true,
+          message: r.message,
+          ref: {
+            kind: "contact",
+            // Link to their LinkedIn (the source) when we have it; otherwise it's a plain receipt.
+            label: r.profileUrl ? `Open ${r.fullName ?? "this contact"} on LinkedIn` : `${r.fullName ?? "Contact"} — saved to People`,
+            url: r.profileUrl ?? undefined,
+            detail: [r.role, r.email].filter(Boolean).join(" · ") || undefined,
+          },
+        };
+      } catch {
+        return { ok: false, message: "I couldn't add that contact just now — try again, or paste their LinkedIn URL." };
       }
     },
   };

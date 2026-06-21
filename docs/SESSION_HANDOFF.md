@@ -17,6 +17,20 @@ controllable by voice. Full product definition: `/docs/PRD.md`. Full roadmap: `/
 - Ship autonomy L0 (suggest-only) first; narrowest OAuth scopes; tokens server-side.
 
 ## Current state
+- ✅ **NEW — the orb assistant can now look people up and make contact cards.** Previously the
+  conversational assistant (`ask.ts`) had no scrape/contact tool, so it correctly said it "couldn't" —
+  the capability lived only on the People tab. Now it has an **`add_contact`** tool
+  (`src/lib/contacts/add-contact.ts` → `addContact`): say "make a contact card for <name> at <org>" or
+  paste a LinkedIn URL, and Jarvis resolves the person (pasted URL → LinkedIn People-search in the user's
+  own logged-in browser → Apollo match-by-name) and saves an enriched contact (role, company, bio, work
+  email when available), straight into People (`created_by='user'`/`accepted`). The orb's reply shows a
+  "Done by Jarvis" receipt (UserPlus icon) linking to their LinkedIn. Wiring: `add_contact` schema + fn
+  list + system-prompt rule + `execute()` in `ask.ts`; `addContact` on `buildAskActions`
+  (`src/lib/assistant/actions.ts`); `AskActionRef.kind += 'contact'` (`types.ts`); receipt in
+  `src/components/JarvisConsole.tsx`. Honest when a backend is off (tells the user to paste a URL / set
+  `JARVIS_BROWSER` / `APOLLO_API_KEY`) and on a LinkedIn login wall (sign into the opened window, ask
+  again). **Verify next:** open the orb, "add a contact for <someone> at <company>" → a contact card
+  appears in People; the reply links to their LinkedIn. Reviewed (3 HIGH findings, all fixed).
 - ✅ **NEW — Add a contact from a pasted LinkedIn URL (+ removed the manual Calendar-event tool).**
   On the People tab, paste someone's `linkedin.com/in/…` link → `AddFromLinkedIn`
   (`src/components/contacts/AddFromLinkedIn.tsx`) → `POST /api/contacts/import-linkedin` →
@@ -167,6 +181,8 @@ npm run build        # production build / typecheck
 - **Web search:** `src/lib/search/tavily.ts`. **Voice:** `src/lib/voice/elevenlabs.ts` +
   `src/app/api/voice/route.ts`; client playback in `src/components/JarvisConsole.tsx`.
 - **Orb assistant:** `src/lib/assistant/{ask,data-tools,fs-tools,actions}.ts` + `src/app/api/ask/route.ts`.
+  Its write tools (create event, draft email, save/list templates, **add_contact**) are in `actions.ts`;
+  `add_contact` finds + saves a person via `src/lib/contacts/add-contact.ts` (LinkedIn scrape + Apollo).
 - **Research agents:** `src/lib/research/*` (people) and `src/lib/agents/opportunity/*` (`deadline.ts` is
   the hard-rule-#2 chrono boundary).
 - **Home/nav:** `src/components/{JarvisSphere,JarvisConsole,LiveClock,NavDrawer,Topbar,AppBackground}.tsx`.

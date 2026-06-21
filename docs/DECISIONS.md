@@ -2,6 +2,25 @@
 
 > One entry per non-obvious decision: date, decision, why. Never edit past entries; append new ones.
 
+- **2026-06-20 — The conversational assistant gets a single `add_contact` tool that REUSES the People-tab
+  importer, not a parallel implementation.** Why: the orb (`ask.ts`) and the People tab were separate code
+  paths, so the orb genuinely couldn't make a contact card (it had no scrape/contact tool). Rather than
+  duplicate the scrape+enrich logic, `add-contact.ts` resolves a person to a LinkedIn URL (pasted URL →
+  browser People-search by name → Apollo match) and then delegates to the SAME
+  `importContactFromLinkedIn`, so provenance/dedup/source-chip behavior is identical everywhere. The only
+  bespoke path is `insertFromApollo` (Apollo matched a name but returned no LinkedIn URL) — a rare case
+  the importer can't serve because it requires a `/in/` URL. The assistant action stays thin (delegates),
+  matching how `createCalendarEvent`/`draftEmail` delegate to the google libs.
+- **2026-06-20 — The assistant's contact tool is gated behind `ctx.actions` and lands `accepted`, and the
+  system prompt is honest about when it can't.** Why: `add_contact` is a WRITE tool, so it's only offered
+  when an actions context is present (same gating as create-event / draft-email). It's an explicit
+  single-person user request → `created_by='user'`/`accepted` (rule #5, like the manual form). The prompt
+  tells the model NOT to refuse pre-emptively (the original bug was the orb disclaiming it had no
+  scraping) but to RELAY exactly what the tool returns — login-needed, needs-a-URL, or backend-not-
+  configured — so it never claims a save that didn't happen (rule #7). A url-bearing `field_sources` entry
+  is always seeded (in both `insertFromApollo` and `importContactFromLinkedIn`) so the card's source chip
+  links back even when the only datum is a bare name (rule #4 — the chip renders from `source_quote`, but
+  a missing permalink would break the click-back-to-source provenance).
 - **2026-06-20 — Paste-a-LinkedIn-URL import lands the contact `accepted` (NOT Review), with NO
   `sources` row.** Why: hard rule #5 sends *autonomous discovery* to Review, but this is an explicit,
   single-person user action (the user chose THIS person and pasted THEIR link) — identical in kind to

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Mic, Send, Globe, FileText, ExternalLink, Square, Volume2, VolumeX, Headphones, CalendarPlus, Mail, BookmarkPlus, CheckCircle2, Loader2 } from "lucide-react";
+import { Mic, Send, Globe, FileText, ExternalLink, Square, Volume2, VolumeX, Headphones, CalendarPlus, Mail, BookmarkPlus, UserPlus, CheckCircle2, Loader2 } from "lucide-react";
 import { JarvisOrb, type OrbState } from "@/components/JarvisOrb";
 import { JarvisSphere } from "@/components/JarvisSphere";
 import { LiveClock } from "@/components/LiveClock";
@@ -609,7 +609,7 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
               </p>
               <ul className="space-y-1.5">
                 {answer.actions.map((a, i) => {
-                  const Icon = a.kind === "event" ? CalendarPlus : a.kind === "draft" ? Mail : BookmarkPlus;
+                  const Icon = a.kind === "event" ? CalendarPlus : a.kind === "draft" ? Mail : a.kind === "contact" ? UserPlus : BookmarkPlus;
                   return (
                     <li key={`${a.kind}-${i}`}>
                       {a.url ? (

@@ -126,6 +126,22 @@ const LIST_TEMPLATES_FN = {
   parameters: { type: "object" as const, properties: {}, required: [] },
 };
 
+const ADD_CONTACT_FN = {
+  name: "add_contact",
+  description:
+    "Find a real person online and save them to the user's Contacts. Jarvis opens the user's own logged-in LinkedIn in a real browser, reads the person's profile (role, company, bio), and — when configured — looks up their work email, then creates the contact card. Use this whenever the user asks to add/create/save a contact, 'make a contact card for X', or to look someone up and keep them. Pass `linkedin_url` when the user gives a LinkedIn link (most reliable); otherwise pass `name` (and `company`/org if known) and Jarvis will search for them. If it reports the user must log in, tell them to sign into the window that opened and try again. Confirm who you saved and what details you got — never invent a person or their details.",
+  parameters: {
+    type: "object" as const,
+    properties: {
+      name: { type: "string", description: "The person's full name, if known." },
+      linkedin_url: { type: "string", description: "Their LinkedIn profile URL (linkedin.com/in/…), if the user gave one — the most reliable input." },
+      company: { type: "string", description: "Their company, organization, or school — helps disambiguate a name search. Optional." },
+      context: { type: "string", description: "A short note on who they are or why the user wants them saved (e.g. 'CS101 professor', 'recruiter at Acme'). Optional; saved to the contact's notes." },
+    },
+    required: [],
+  },
+};
+
 const MAX_TURNS = 8;
 const MAX_TOKENS = 8000;
 
@@ -137,13 +153,15 @@ function systemPrompt(todayISO: string, dataDigest?: string, canAct?: boolean): 
     ? `\n- create_calendar_event: add a real event to the user's Google Calendar. Pass their EXACT words for the time in \`when\` — never a date you worked out yourself; the system resolves it deterministically.
 - draft_email: compose an email and save it as a DRAFT in Gmail (it is never sent — the user reviews and sends it). Write the full body from their intent.
 - save_drive_template: save a Google Doc the user names as a reusable template.
-- list_templates: read the user's saved templates (name, subject, full body). Use it when they ask to draft from a template or to adapt one.`
+- list_templates: read the user's saved templates (name, subject, full body). Use it when they ask to draft from a template or to adapt one.
+- add_contact: find a person online and save them to Contacts — Jarvis reads their LinkedIn in a real logged-in browser (role, company, bio) and their work email when available. Give a LinkedIn URL when the user has one, otherwise their name (plus company/org to disambiguate).`
     : "";
   const actRules = canAct
     ? `\n- Taking actions: when the user asks you to schedule something, draft an email, or save a template, actually call the matching tool — don't just describe what you would do. Confirm concretely afterward (what you created and when).
 - You only ever create a DRAFT email — you cannot and must not send mail. Always say the draft is waiting in their Gmail for them to send.
 - For event times, pass the user's words verbatim to create_calendar_event; if their phrasing has no clear date/time, ask them for one rather than guessing.
-- Templates: when the user references one of their saved templates ("use my outreach template", "draft from my X template"), call list_templates, pick the one they mean, and MEANINGFULLY adapt it to their request — fill in the {{placeholders}} with the specifics they gave, and change tone, length, or content as asked — then call draft_email with your edited subject and body. Don't just echo the template back unchanged.`
+- Templates: when the user references one of their saved templates ("use my outreach template", "draft from my X template"), call list_templates, pick the one they mean, and MEANINGFULLY adapt it to their request — fill in the {{placeholders}} with the specifics they gave, and change tone, length, or content as asked — then call draft_email with your edited subject and body. Don't just echo the template back unchanged.
+- Adding contacts: when the user asks you to add/create/save a contact, "make a contact card" for someone, or look a person up to keep, call add_contact — pass linkedin_url if they gave a link, otherwise the name (and company/org if they mentioned one). Don't refuse before trying: you look people up by reading LinkedIn in a real logged-in browser, so call the tool rather than assuming you can't. Then RELAY exactly what add_contact returns — if it says the user must log into LinkedIn, tell them to sign into the window that opened and ask again; if it says it needs a LinkedIn URL or a backend that isn't configured, pass that along honestly instead of pretending you saved someone. Afterward, state plainly who you saved and which details you found (role, company, email), and name any detail that wasn't available rather than inventing it.`
     : "";
   const dataBlock = dataDigest
     ? `\n\nThe user's connected data (your working memory — use it directly for quick questions, and search_my_data for anything more specific):\n${dataDigest}`
@@ -167,7 +185,7 @@ export async function ask(message: string, ctx?: AskDataContext): Promise<AskRes
   const functions = [
     WEB_SEARCH_FN,
     ...(ctx?.searchData ? [SEARCH_MY_DATA_FN] : []),
-    ...(ctx?.actions ? [CREATE_EVENT_FN, DRAFT_EMAIL_FN, SAVE_TEMPLATE_FN, LIST_TEMPLATES_FN] : []),
+    ...(ctx?.actions ? [CREATE_EVENT_FN, DRAFT_EMAIL_FN, SAVE_TEMPLATE_FN, LIST_TEMPLATES_FN, ADD_CONTACT_FN] : []),
     LIST_DIR_FN,
     READ_FILE_FN,
   ];
@@ -236,6 +254,11 @@ export async function ask(message: string, ctx?: AskDataContext): Promise<AskRes
     if (name === "list_templates" && ctx?.actions) {
       const out = await ctx.actions.listTemplates(); // read-only — no action ref to surface
       return { ok: out.ok, content: out.message };
+    }
+    if (name === "add_contact" && ctx?.actions) {
+      const out = await ctx.actions.addContact(args as Parameters<typeof ctx.actions.addContact>[0]);
+      if (out.ref) actions.push(out.ref);
+      return { ok: out.ok, result: out.message };
     }
     return { ok: false, content: `Unknown tool: ${name || "(unnamed)"}` };
   }
