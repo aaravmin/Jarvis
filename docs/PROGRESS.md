@@ -39,6 +39,43 @@ email+meeting→items extraction engine and the task loop** are live. The **Goog
 once the user connects Google on the Connections tab.
 
 ## Task log (most recent first)
+- **"Add a contact from a LinkedIn URL" + removed the manual Calendar-event tool** — ✅ shipped to
+  `main`, tsc + eslint green, route smoke-tested (`POST /api/contacts/import-linkedin` 401 unauthed;
+  `/people` + `/connections` 307 auth-redirect), 4-dimension adversarial review (correctness /
+  hard-rules / security / ux, per-finding verification) run — **13 raised, 9 confirmed (7 distinct,
+  2 dup pairs); all 7 fixed and re-verified**; pushed. The user's directive: "take away the manual
+  entry of Google Calendar events … And then make it so that if I put in a contact link, like their
+  LinkedIn URL, then Jarvis would … scrape and identify as much information: their email, what they do
+  … and then we'll automatically put that in the contact tab."
+  1. **NEW — paste a LinkedIn URL → one enriched contact.** `src/lib/contacts/import-linkedin.ts`
+     (`importContactFromLinkedIn`) + `POST /api/contacts/import-linkedin` + `AddFromLinkedIn` on the
+     People page. Two independent enrichment tiers, merged: **(A)** read the profile page via the
+     user's own logged-in Chromium (`scrapeLinkedInProfile`, new in `linkedin/search.ts`) → name,
+     headline, role/company, location, About bio; **(B)** Apollo by LinkedIn URL → the work email
+     LinkedIn hides + a clean title/org. Either tier alone makes a useful contact; with neither
+     configured it says so plainly (names the env vars) instead of saving a bare link. Dedups by the
+     `/in/<slug>` identity. Lands `created_by='user'`, `review_status='accepted'` — straight into the
+     People tab, exactly like the manual "Add a contact" form (it's an explicit, single-person user
+     action, NOT autonomous discovery, so it does **not** go to Review — see DECISIONS).
+  2. **Provenance with no `sources` row.** `sources.source_type` has no `'linkedin'` value, and a
+     `created_by='user'` contact needs no `source_id` to satisfy `contacts_provenance_chk`. So
+     provenance rides in `field_sources` (LinkedIn URL for page-read fields, apollo.io for the email,
+     each with a quote + confidence + status) and `source_quote` (the headline) — the card renders a
+     working source chip (hard rule #4) and the LinkedIn URL is its primary permalink. **No migration.**
+  3. **REMOVED — the manual "add a Google Calendar event" tool** from the Connections tab
+     (`CalendarEventTool` deleted; intro/fallback/scope-notice copy updated). The `calendar.events`
+     write scope stays (the assistant still creates events autonomously); only the redundant manual
+     form is gone.
+  - **Review fixes (all verified):** capture the `contact_channels` insert error and surface it
+    (contact still renders via `source_quote`, but warn the user their link/email wasn't saved); the
+    route's 500-path now returns all 12 `ImportLinkedInResult` fields; `company` field_sources now
+    carries a quote (was empty); safe `decodeURIComponent` in `slugOf` + `normalizeLinkedInProfileUrl`
+    (a malformed `%` in a pasted URL no longer 500s); skip `router.refresh()` on an already-exists
+    import; Connections scope-notice no longer implies a removed manual calendar tool. (Dismissed as
+    not-real: SSRF — the `https://www.linkedin.com/in/` prefix is enforced before any navigation; auth
+    bypass — TS narrows `user`; IDOR — every query is RLS-scoped to `user_id`; eval injection — the
+    page-reader is a hardcoded const string. Accepted by-design: the persistent logged-in Chromium
+    holds the user's LinkedIn cookie — that's pre-existing shared infra and persistence is the point.)
 - **Contact "Validate & enrich" + people-discovery recall tune** — ✅ shipped to `main`, tsc + eslint
   green, route smoke-tested (validate 401 unauthed; /review + /people compile, 307 auth-redirect), an
   adversarial 4-dimension review run (9 confirmed findings, in-scope ones fixed), pushed. The user's

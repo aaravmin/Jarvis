@@ -17,6 +17,23 @@ controllable by voice. Full product definition: `/docs/PRD.md`. Full roadmap: `/
 - Ship autonomy L0 (suggest-only) first; narrowest OAuth scopes; tokens server-side.
 
 ## Current state
+- ✅ **NEW — Add a contact from a pasted LinkedIn URL (+ removed the manual Calendar-event tool).**
+  On the People tab, paste someone's `linkedin.com/in/…` link → `AddFromLinkedIn`
+  (`src/components/contacts/AddFromLinkedIn.tsx`) → `POST /api/contacts/import-linkedin` →
+  `importContactFromLinkedIn` (`src/lib/contacts/import-linkedin.ts`). Two best-effort enrichment tiers,
+  merged: **(A)** read the profile page via the user's own logged-in Chromium (`scrapeLinkedInProfile`,
+  new in `src/lib/agents/linkedin/search.ts`) → name, headline, role/company, location, About bio;
+  **(B)** Apollo by LinkedIn URL → the work email + a clean title/org. The contact lands **straight in
+  People** (`created_by='user'`, `review_status='accepted'` — it's an explicit single-person user action,
+  like the manual "Add a contact" form, so NOT Review). Dedups by `/in/<slug>`. **No `sources` row, no
+  migration** — provenance lives in `field_sources` (LinkedIn URL primary, `apollo.io` for the email) +
+  `source_quote` (headline) so the card's source chip works (rule #4). Degrades: Apollo-only (no
+  browser) gets the email; browser-only fills role/company/bio with no email; neither configured returns
+  an honest message naming `JARVIS_BROWSER=playwright` / `APOLLO_API_KEY`. **Also removed** the manual
+  "add a Google Calendar event" tool from the Connections tab (redundant — the assistant already creates
+  events); the `calendar.events` scope stays. **Verify next:** People → paste a LinkedIn URL → Import →
+  the new card appears (with email if Apollo is on; needs a one-time LinkedIn login in the opened window
+  for page details). Reviewed: 4-dimension adversarial pass, 7 distinct findings fixed + re-verified.
 - ✅ **Contacts: discover MANY · import a Sheet · validate + enrich.** Three things the user asked for,
   three states: (1) **Discover many** — `runPeopleSearch` (`src/lib/research/run.ts`) already loops over
   ALL validated candidates; the discovery prompt (`src/lib/research/extract.ts`) is now tuned for

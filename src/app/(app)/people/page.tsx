@@ -7,6 +7,7 @@ import { FindPeopleBar } from "@/components/FindPeopleBar";
 import { ApolloFinder } from "@/components/ApolloFinder";
 import { ManualContactForm } from "@/components/manual/ManualContactForm";
 import { ContactsToolbar } from "@/components/contacts/ContactsToolbar";
+import { AddFromLinkedIn } from "@/components/contacts/AddFromLinkedIn";
 import { apolloEnabled } from "@/lib/apollo";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <FindPeopleBar />
+      <AddFromLinkedIn apolloEnabled={apolloOn} />
       <div className="flex flex-wrap items-center gap-2">
         <ManualContactForm apolloEnabled={apolloOn} />
         {apolloOn && <ApolloFinder />}

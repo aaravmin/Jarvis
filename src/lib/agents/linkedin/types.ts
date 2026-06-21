@@ -23,6 +23,30 @@ export type LinkedInPerson = {
   location: string;
 };
 
+/**
+ * Everything we can read off ONE profile page (all best-effort — LinkedIn's markup churns and an
+ * out-of-network profile shows far less). The orchestrator merges this with Apollo (which supplies the
+ * work email LinkedIn hides) into a single contact. `profileUrl` is normalized to /in/<slug>.
+ */
+export type LinkedInProfile = {
+  profileUrl: string;
+  name?: string;
+  /** The tagline under the name, e.g. "Founding Engineer at Acme · ex-Google". */
+  headline?: string;
+  /** Current role title, parsed from the page title / experience when separable from the company. */
+  title?: string;
+  /** Current employer, parsed the same way. */
+  company?: string;
+  location?: string;
+  /** The "About" section text, trimmed. */
+  about?: string;
+};
+
+/** Result of scraping one profile page: the data, or a typed reason it couldn't. */
+export type LinkedInProfileResult =
+  | { ok: true; profile: LinkedInProfile }
+  | { ok: false; reason: "unavailable" | "needs_login" | "error"; message: string };
+
 /** Result of one search pass against the live results page. */
 export type LinkedInSearchResult =
   | { ok: true; people: LinkedInPerson[] }

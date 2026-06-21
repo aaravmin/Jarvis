@@ -2,7 +2,7 @@ import "server-only";
 import os from "os";
 import path from "path";
 import { browserEnabled, launchPersistentContext, type PwPage, type PwPersistentContext } from "@/lib/agents/application/browser";
-import type { LinkedInPerson, LinkedInSearchResult } from "./types";
+import type { LinkedInPerson, LinkedInProfile, LinkedInProfileResult, LinkedInSearchResult } from "./types";
 
 /**
  * The LinkedIn "eyes": drive the user's own logged-in browser to a People search and read the result
@@ -185,4 +185,179 @@ export async function searchLinkedInPeople(query: string, limit: number): Promis
 
   if (limit > 0) people = people.slice(0, limit);
   return { ok: true, people };
+}
+
+// ── Single profile scrape ───────────────────────────────────────────────────────────────────────
+const PROFILE_TIMEOUT_MS = 30_000;
+
+/** Normalize any LinkedIn profile link to the canonical https://www.linkedin.com/in/<slug>. Null if
+ *  it isn't a /in/ profile URL (company pages, posts, etc. aren't people). */
+export function normalizeLinkedInProfileUrl(url: string): string | null {
+  const m = (url || "").match(/linkedin\.com\/in\/([^/?#\s]+)/i);
+  if (!m) return null;
+  // decodeURIComponent throws on a malformed %-sequence in a pasted link — fall back to the raw slug.
+  let slug = m[1];
+  try {
+    slug = decodeURIComponent(m[1]);
+  } catch {
+    /* keep raw */
+  }
+  return `https://www.linkedin.com/in/${slug.toLowerCase()}`;
+}
+
+/**
+ * Read one profile page. Anchored on stable structures where possible (h1, the #about / #experience
+ * section anchors, the page <title> and og:description) rather than LinkedIn's churning utility class
+ * names, with several fallbacks each. Everything is best-effort — an out-of-network profile or a
+ * shifted layout simply yields fewer fields; the orchestrator backfills the email from Apollo.
+ */
+const PROFILE_READER = `(() => {
+  const clean = (s) => (s || "").replace(/\\s+/g, " ").trim();
+  const out = {};
+  const h1 = document.querySelector("main h1") || document.querySelector("h1");
+  out.name = clean(h1 && h1.textContent);
+  const head =
+    document.querySelector("main .text-body-medium.break-words") ||
+    document.querySelector(".text-body-medium.break-words") ||
+    document.querySelector("main .text-body-medium");
+  out.headline = clean(head && head.textContent);
+  const loc =
+    document.querySelector("main .pv-text-details__left-panel .text-body-small") ||
+    document.querySelector(".text-body-small.inline.t-black--light.break-words");
+  out.location = clean(loc && loc.textContent);
+  // About: the #about anchor sits inside its section; the long-form copy is the visually-hidden span.
+  let about = "";
+  const aboutAnchor = document.getElementById("about");
+  const aboutSection = aboutAnchor ? aboutAnchor.closest("section") : null;
+  if (aboutSection) {
+    const span =
+      aboutSection.querySelector(".inline-show-more-text span[aria-hidden=\\"true\\"]") ||
+      aboutSection.querySelector("span[aria-hidden=\\"true\\"]");
+    about = clean(span && span.textContent);
+  }
+  out.about = about.slice(0, 1200);
+  // First experience entry → current title + company.
+  const expAnchor = document.getElementById("experience");
+  const expSection = expAnchor ? expAnchor.closest("section") : null;
+  if (expSection) {
+    const item = expSection.querySelector("li");
+    if (item) {
+      const bold = item.querySelector("span[aria-hidden=\\"true\\"]");
+      out.expTitle = clean(bold && bold.textContent);
+      const subs = item.querySelectorAll(".t-14.t-normal span[aria-hidden=\\"true\\"]");
+      if (subs && subs[0]) out.expCompany = clean(subs[0].textContent).split(" · ")[0];
+    }
+  }
+  out.docTitle = clean(document.title);
+  const ogd = document.querySelector('meta[property="og:description"]');
+  out.ogDescription = clean(ogd && ogd.getAttribute("content"));
+  return out;
+})()`;
+
+/** "(99+) Jane Doe - Founding Engineer | LinkedIn" → "Jane Doe". */
+function nameFromTitle(docTitle: string): string {
+  const t = docTitle.replace(/^\(\d+\+?\)\s*/, "").replace(/\s*[|│]\s*LinkedIn.*$/i, "");
+  const dash = t.indexOf(" - ");
+  return (dash > 0 ? t.slice(0, dash) : t).trim();
+}
+/** The headline portion of the page title, when present. */
+function headlineFromTitle(docTitle: string): string {
+  const t = docTitle.replace(/^\(\d+\+?\)\s*/, "").replace(/\s*[|│]\s*LinkedIn.*$/i, "");
+  const dash = t.indexOf(" - ");
+  return dash > 0 ? t.slice(dash + 3).trim() : "";
+}
+/** "Founding Engineer at Acme · ex-Google" → { title, company }. Empty when there's no " at ". */
+function splitRoleCompany(s: string): { title?: string; company?: string } {
+  const m = s.split(/\s*·\s*/)[0].match(/^(.*?)\s+(?:at|@)\s+(.+)$/i);
+  if (!m) return {};
+  return { title: m[1].trim() || undefined, company: m[2].trim() || undefined };
+}
+
+function buildProfile(profileUrl: string, raw: Record<string, string>): LinkedInProfile {
+  const docTitle = raw.docTitle || "";
+  const name = raw.name || nameFromTitle(docTitle);
+  const headline = raw.headline || headlineFromTitle(docTitle) || raw.ogDescription || "";
+  let title = raw.expTitle || "";
+  let company = raw.expCompany || "";
+  if ((!title || !company) && headline) {
+    const sc = splitRoleCompany(headline);
+    title = title || sc.title || "";
+    company = company || sc.company || "";
+  }
+  return {
+    profileUrl,
+    name: name || undefined,
+    headline: headline || undefined,
+    title: title || undefined,
+    company: company || undefined,
+    location: raw.location || undefined,
+    about: raw.about || undefined,
+  };
+}
+
+/**
+ * Scrape ONE LinkedIn profile via the user's own logged-in window. Same boundaries as the search: it
+ * reads a page the user could open themselves, never logs in / connects / messages. Returns the data,
+ * or a typed reason (unavailable when the browser backend is off, needs_login when LinkedIn shows an
+ * auth wall — the window is left on the login page for the user to sign in and retry).
+ */
+export async function scrapeLinkedInProfile(profileUrl: string): Promise<LinkedInProfileResult> {
+  if (!browserEnabled()) {
+    return {
+      ok: false,
+      reason: "unavailable",
+      message: "LinkedIn page-scraping needs the browser backend (set JARVIS_BROWSER=playwright).",
+    };
+  }
+  const context = await getContext();
+  if (!context) {
+    return {
+      ok: false,
+      reason: "unavailable",
+      message: "Couldn't start the browser. Install Playwright (npm i playwright && npx playwright install chromium).",
+    };
+  }
+
+  const page = context.pages()[0] ?? (await context.newPage());
+  try {
+    await page.goto(profileUrl, { waitUntil: "domcontentloaded", timeout: PROFILE_TIMEOUT_MS });
+  } catch {
+    return { ok: false, reason: "error", message: "LinkedIn didn't load in time. Try again in a moment." };
+  }
+
+  const needsLogin = (): LinkedInProfileResult => ({
+    ok: false,
+    reason: "needs_login",
+    message: "Log into LinkedIn in the window Jarvis just opened, then import the profile again.",
+  });
+
+  if (isLoginWall(page.url())) {
+    try {
+      await page.goto("https://www.linkedin.com/login", { waitUntil: "domcontentloaded", timeout: PROFILE_TIMEOUT_MS });
+      await page.bringToFront();
+    } catch {
+      /* best effort */
+    }
+    return needsLogin();
+  }
+
+  try {
+    await page.waitForSelector("main h1, h1", { timeout: PROFILE_TIMEOUT_MS });
+  } catch {
+    /* slow render — read whatever is present */
+  }
+  await page.waitForTimeout(800);
+
+  const raw = (await page.evaluate(PROFILE_READER as unknown as () => Record<string, string>)) as Record<string, string>;
+  const profile = buildProfile(profileUrl, raw || {});
+
+  if (!profile.name) {
+    if (isLoginWall(page.url())) return needsLogin();
+    return {
+      ok: false,
+      reason: "error",
+      message: "Couldn't read this profile. Make sure you're signed into LinkedIn in the open window, then try again.",
+    };
+  }
+  return { ok: true, profile };
 }

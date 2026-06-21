@@ -12,7 +12,6 @@ import {
   Copy,
   ExternalLink,
   Inbox,
-  CalendarPlus,
   RefreshCw,
   Check,
 } from "lucide-react";
@@ -55,8 +54,8 @@ export function ConnectionsPanel({
         <h1 className="text-lg font-semibold text-foreground">Connections</h1>
         <p className="mt-1 text-sm text-muted">
           Connect Google so Jarvis can read your Gmail, Calendar, Drive &amp; Sheets — and now save
-          email drafts, add calendar events, and export your contacts. After an update, click Reconnect
-          to grant the new permissions.
+          email drafts and export your contacts. After an update, click Reconnect to grant the new
+          permissions.
         </p>
       </header>
 
@@ -114,12 +113,11 @@ export function ConnectionsPanel({
         <>
           <ImportContactsTool />
           <DraftEmailTool />
-          <CalendarEventTool />
         </>
       ) : (
         <p className="text-sm text-muted">
-          Once connected, you&apos;ll be able to import contacts from a Google Sheet, draft emails from a
-          Drive template (and save them to Gmail), and add events to your calendar here.
+          Once connected, you&apos;ll be able to import contacts from a Google Sheet and draft emails from
+          a Drive template (and save them to Gmail) here.
         </p>
       )}
     </div>
@@ -134,7 +132,7 @@ function WriteScopeNotice({ scopes }: { scopes: string[] }) {
   return (
     <p className="flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
       <AlertTriangle className="h-4 w-4 shrink-0" />
-      Write features (save drafts, add calendar events, export contacts) need new permissions.{" "}
+      Write features (save email drafts, let the assistant add calendar events, and export contacts) need new permissions.{" "}
       <a href="/api/connect/google" className="font-semibold underline">
         Reconnect Google
       </a>{" "}
@@ -376,96 +374,6 @@ function DraftEmailTool() {
             )}
           </div>
         </div>
-      )}
-    </section>
-  );
-}
-
-function CalendarEventTool() {
-  const [title, setTitle] = useState("");
-  const [datetime, setDatetime] = useState(""); // <input type="datetime-local"> value
-  const [location, setLocation] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const [created, setCreated] = useState<{ summary: string; htmlLink?: string } | null>(null);
-
-  async function run() {
-    setBusy(true);
-    setErr(null);
-    setCreated(null);
-    try {
-      // datetime-local has no timezone; new Date() interprets it in the browser's local zone, then we
-      // send a real ISO instant. Our code resolves the time — the model never touches it (hard rule #2).
-      const startISO = datetime ? new Date(datetime).toISOString() : "";
-      const res = await fetch("/api/google/calendar/create-event", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ summary: title, startISO, location: location.trim() || undefined }),
-      });
-      const data = await res.json();
-      if (!res.ok) setErr(data?.error ?? "Could not create the event.");
-      else setCreated(data.event);
-    } catch {
-      setErr("Network error.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <section className="rounded-xl border border-border bg-surface-2 p-4">
-      <div className="mb-2 flex items-center gap-2">
-        <CalendarPlus className="h-4 w-4 text-accent" />
-        <h2 className="text-sm font-semibold text-foreground">Add an event to your calendar</h2>
-      </div>
-      <p className="mb-3 text-xs text-muted">
-        Creates a real event on your primary Google Calendar (1 hour by default). The time you pick is
-        resolved by the app, never guessed by the model.
-      </p>
-      <div className="space-y-2">
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          disabled={busy}
-          placeholder="Event title — e.g. “Coffee with Dr. Chen”"
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="datetime-local"
-            value={datetime}
-            onChange={(e) => setDatetime(e.target.value)}
-            disabled={busy}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none"
-          />
-          <input
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            disabled={busy}
-            placeholder="Location (optional)"
-            className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
-          />
-        </div>
-        <button
-          type="button"
-          onClick={run}
-          disabled={busy || title.trim().length < 2 || !datetime}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-[#04181f] transition-colors hover:bg-accent-strong disabled:opacity-50"
-        >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarPlus className="h-4 w-4" />}
-          Add to calendar
-        </button>
-      </div>
-      {err && <p className="mt-2 text-xs text-danger">{err}</p>}
-      {created && (
-        <p className="mt-2 text-xs text-success">
-          Added “{created.summary}”.{" "}
-          {created.htmlLink && (
-            <a href={created.htmlLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline">
-              Open in Calendar <ExternalLink className="h-3 w-3" />
-            </a>
-          )}
-        </p>
       )}
     </section>
   );

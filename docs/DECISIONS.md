@@ -2,6 +2,31 @@
 
 > One entry per non-obvious decision: date, decision, why. Never edit past entries; append new ones.
 
+- **2026-06-20 — Paste-a-LinkedIn-URL import lands the contact `accepted` (NOT Review), with NO
+  `sources` row.** Why: hard rule #5 sends *autonomous discovery* to Review, but this is an explicit,
+  single-person user action (the user chose THIS person and pasted THEIR link) — identical in kind to
+  the manual "Add a contact" form and the Apollo "Find email" flow, both of which create `accepted`
+  contacts. So `importContactFromLinkedIn` writes `created_by='user'`, `review_status='accepted'`. No
+  `sources` row is created because `sources.source_type` has no `'linkedin'` value (inserting one would
+  violate the CHECK), and a `created_by='user'` contact needs no `source_id` to satisfy
+  `contacts_provenance_chk`. Provenance (rule #3) therefore rides entirely in `field_sources` (the
+  LinkedIn URL for page-read fields, `apollo.io` for the Apollo email, each with a quote + confidence +
+  status) plus `source_quote` (the headline) — enough for the card's source chip (rule #4), with the
+  LinkedIn URL ordered first so `rowsToPerson` picks it as the primary permalink. No migration.
+- **2026-06-20 — Enrichment is two independent best-effort tiers (page read + Apollo), merged,
+  attributed per field.** Why: LinkedIn hides emails (so Apollo is the only reliable email source) but
+  Apollo's title/org can be stale or a guess (so the visible profile page is preferred for role/company
+  VALUE, which also keeps the LinkedIn URL as the card's primary source). Each tier degrades alone:
+  Apollo-only needs no browser; browser-only fills role/company/bio with no email; neither configured
+  returns an honest message naming `JARVIS_BROWSER=playwright` / `APOLLO_API_KEY` instead of saving a
+  bare link. `scrapeLinkedInProfile` reuses the ONE persistent, user-logged-in Chromium context (shared
+  with people-search) — accepted that it holds the user's LinkedIn cookie in a local on-disk profile;
+  persistence is the point (the login survives), tokens never touch the browser/client (rule #6).
+- **2026-06-20 — Removed the manual "add a Google Calendar event" tool from Connections; kept the
+  `calendar.events` scope.** Why: the user called the manual form redundant ("That's in the connections
+  tab"), and the assistant already creates calendar events autonomously — so the scope is still needed
+  and stays in `WRITE_SCOPES` (the reconnect nudge still fires). Only the duplicate manual UI + its
+  now-misleading copy were removed.
 - **2026-06-20 — Contact validation verdicts live in `contacts.field_sources` (jsonb), not new
   columns; `contact_channels` has no `verified` column.** Why: rule #3 already makes `field_sources` the
   per-field provenance store, and adding a verdict needs no migration (I never apply migrations to the
