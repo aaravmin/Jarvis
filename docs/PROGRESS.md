@@ -39,6 +39,37 @@ email+meeting→items extraction engine and the task loop** are live. The **Goog
 once the user connects Google on the Connections tab.
 
 ## Task log (most recent first)
+- **Productization batch: white/green theme · spreadsheet data pages · em-dash purge · onboarding ·
+  encrypted login vault + per-user auto-login** — ✅ shipped to `main` across 7 commits, each tsc +
+  eslint + build green. Driven by a multi-part user directive ("make it for anyone", "white and green
+  theme", "exportable spreadsheet-like Contacts/Opportunities, inline-editable, grouped", "no
+  em-dashes anywhere", "save site logins so Playwright can auto-log-in"). Decisions captured in
+  DECISIONS.
+  1. **Theme white/green.** `globals.css` tokens flipped to a light, white-and-green palette (green-700
+     accent that reads as text on white and takes white button text); orb + ambient recolored green;
+     `/jarvis` hero stays dark (orb uses screen blend) but is now deep green. On-accent button text
+     `text-[#04181f]` → `text-white` across 32 files; the one `bg-sky-400` removed.
+  2. **Spreadsheet Contacts + Opportunities.** New reusable `src/components/data/` (declarative
+     `ColumnDef`, a `DataTable` with sticky header / group-by / sort / inline select-then-edit /
+     row-select / delete, a `Workspace` shell with Table+Grid toggle, search, CSV export, optimistic
+     edits + toast). Default Table view; Grid toggle reuses the existing cards 4-wide. Contacts edits
+     route to `/api/contacts` (+ status) ; opportunities to a **new** `PATCH /api/opportunities`
+     (partial field edit, deadline chrono-resolved) and `DELETE /api/opportunities`. No migration.
+  3. **Em-dash purge.** New `stripDashes()` (`src/lib/text.ts`); the assistant strips dashes from its
+     answer (read aloud) + web-search citations, and its prompt forbids them. Swept every em/en dash
+     out of source copy + comments (607 replacements, 171 files, newline-safe so no lines merged).
+  4. **Onboarding + de-personalize ("anyone can use it").** The app was already multi-tenant
+     (per-user RLS, per-user Google tokens / profile / documents). Added a first-run `/onboard`
+     checklist (profile → Google → documents, with live done/not-done status); new sign-ups land
+     there; a "Set up" nav item. De-personalized placeholders that named a specific school/person.
+     `/dev` was already 404-gated in production.
+  5. **Encrypted login vault + per-user auto-login.** **Migration 0017** (`site_credentials`,
+     per-user, RLS, **NOT applied yet**). AES-256-GCM crypto (`src/lib/crypto/secrets.ts`, key
+     `CREDENTIALS_SECRET`); store + `/api/credentials` (save encrypts, list masks, delete); a
+     Connections "Saved site logins" UI. The Playwright LinkedIn flow now uses a **per-user** browser
+     profile/context (fixes a real cross-user session-leak hazard) and **auto-logs-in** from the vault
+     when it hits a login wall, falling back to the manual "finish signing in" path on a 2FA/captcha
+     checkpoint. (The LinkedIn login automation itself is unverified headlessly.)
 - **Wired the LinkedIn/Apollo contact-scraping into the conversational assistant (the orb)** — ✅
   shipped to `main`, tsc + eslint green, `/api/ask` smoke-tested (401 unauthed; mounts clean),
   3-finding adversarial review (all HIGH, all confirmed, all fixed + re-verified), pushed. The user

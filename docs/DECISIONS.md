@@ -2,6 +2,36 @@
 
 > One entry per non-obvious decision: date, decision, why. Never edit past entries; append new ones.
 
+- **2026-06-22 — Login passwords are stored AES-256-GCM encrypted (key `CREDENTIALS_SECRET`), never
+  plaintext, and never returned to the client.** Why: the user wants saved site logins so Playwright can
+  auto-sign-in, which means storing real third-party passwords. We encrypt in the app before insert
+  (`src/lib/crypto/secrets.ts`), store only ciphertext (migration 0017 `site_credentials`, per-user RLS),
+  decrypt only server-side at scrape time (`getCredentialForSite`), and the list endpoint returns the
+  username + a "saved" flag only. With no `CREDENTIALS_SECRET` the vault is off and the UI says so. This
+  keeps hard rule #6 (secrets server-side only) while enabling the feature.
+- **2026-06-22 — The LinkedIn browser profile + context are keyed PER USER (`profileDir/<userId>`, a Map
+  of contexts on globalThis).** Why: the old single globalThis context + one shared profile dir would, on
+  a multi-user deployment, let one user see another's LinkedIn session (a real isolation hazard flagged in
+  the multi-tenancy audit). Per-user keying fixes it. Auto-login is non-regressive: it only fires when a
+  saved login exists and the page is on a wall; on a 2FA/captcha checkpoint it falls back to the existing
+  manual "finish signing in" message. The LinkedIn login automation could not be verified headlessly.
+- **2026-06-22 — Data pages are a TABLE by default with a Grid (4-wide) toggle, not one card per row.**
+  Why: the user wants a Google-Sheets feel (dense, many records, every field labeled, inline edit,
+  grouping). A research pass (Airtable/Notion/Sheets/Linear/Todoist) confirmed a table is the right
+  primary view; the Grid reuses the existing PersonCard/OpportunityCard (so provenance + the source-chip
+  invariant stay intact) for visual browsing. Inline edit is save-on-blur + optimistic with revert+toast;
+  select pills edit in one click, text/date/link via double-click or Enter. Advanced spreadsheet features
+  (keyboard grid nav, drag-reorder, fill handle, command palette, undo stack) were deferred.
+- **2026-06-22 — Em-dashes are stripped from generated output AND swept from all source copy.** Why: the
+  user asked for none anywhere, especially in web-search answers. `stripDashes()` cleans the assistant's
+  answer (also what is read aloud) and web-search citations at runtime, the prompt forbids them, and a
+  one-time newline-safe sweep removed them from existing copy/comments. The stripper util itself keeps
+  the dash characters (its regex matches on them), so it is excluded from the sweep.
+- **2026-06-22 — Jarvis is productized via a first-run /onboard checklist, not by changing the data
+  model.** Why: the audit showed the app is already multi-tenant (per-user RLS everywhere, per-user Google
+  tokens / profile / documents), so "anyone can use it" needed onboarding + de-personalization, not a
+  re-architecture. New sign-ups land on /onboard (profile → Google → documents) instead of an empty
+  dashboard; placeholders that named a specific school/person were genericized.
 - **2026-06-20 — The conversational assistant gets a single `add_contact` tool that REUSES the People-tab
   importer, not a parallel implementation.** Why: the orb (`ask.ts`) and the People tab were separate code
   paths, so the orb genuinely couldn't make a contact card (it had no scrape/contact tool). Rather than

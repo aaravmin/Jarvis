@@ -17,6 +17,22 @@ controllable by voice. Full product definition: `/docs/PRD.md`. Full roadmap: `/
 - Ship autonomy L0 (suggest-only) first; narrowest OAuth scopes; tokens server-side.
 
 ## Current state
+- ✅ **NEW — white/green theme · spreadsheet Contacts+Opportunities · em-dash-free · onboarding ·
+  encrypted login vault.** A productization batch (7 commits): (1) the whole app is now a light
+  white-and-green theme (`globals.css` tokens; orb recolored green; `/jarvis` hero is deep green).
+  (2) **Contacts and Opportunities open as a spreadsheet** by default: `src/components/data/`
+  (`DataTable` + `Workspace` + `ColumnDef`), with sticky header, group-by, sort, search, inline
+  select-then-edit (save-on-blur, optimistic + toast), row delete, CSV export, and a Grid toggle that
+  reuses the cards 4-wide. Opportunity field edits use a new `PATCH /api/opportunities` (deadline
+  chrono-resolved) + `DELETE`. (3) Em-dashes are gone everywhere and stripped from the assistant's
+  answer + web-search citations (`src/lib/text.ts` `stripDashes`). (4) New `/onboard` first-run
+  checklist (profile → Google → documents); new sign-ups land there; a "Set up" nav item. (5) An
+  **encrypted per-user site-login vault**: migration **0017** `site_credentials` (NOT applied yet),
+  AES-256-GCM (`CREDENTIALS_SECRET`), `/api/credentials`, a Connections "Saved site logins" UI, and the
+  Playwright LinkedIn flow now uses a **per-user** browser profile and **auto-logs-in** from the vault
+  (falls back to manual sign-in on a 2FA/captcha checkpoint). **Verify next:** Contacts/Opportunities
+  show the new table (try inline edit + Export CSV + group-by); Connections shows Saved site logins;
+  a new signup lands on /onboard.
 - ✅ **NEW — the orb assistant can now look people up and make contact cards.** Previously the
   conversational assistant (`ask.ts`) had no scrape/contact tool, so it correctly said it "couldn't" —
   the capability lived only on the People tab. Now it has an **`add_contact`** tool
@@ -196,3 +212,8 @@ npm run build        # production build / typecheck
    `ELEVENLABS_API_KEY`, Supabase anon/URL, Google OAuth client. (`GEMINI_*` and `ANTHROPIC_*` are
    retired — safe to delete from `.env.local`.)
 4. Later: a Vercel login if/when we deploy; `gmail.send` write scope only when we add send-from-Jarvis.
+5. **Apply migration `0017_site_credentials.sql`** (Supabase dashboard SQL editor, like 0016) to turn on
+   the saved-login vault. Until applied, the Connections "Saved site logins" form will error on save.
+6. **Set `CREDENTIALS_SECRET`** in `.env.local` to enable the encrypted vault: run `openssl rand -base64 32`
+   and paste the result. With it unset, the vault UI shows a clear "off" notice and auto-login is skipped
+   (the LinkedIn flow still works with a manual one-time sign-in).
