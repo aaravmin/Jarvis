@@ -54,8 +54,10 @@ once the user connects Google on the Connections tab.
      migration **0018** `style_examples` (per-user, RLS, append-only, **NOT applied**); when the user
      edits a generated draft and saves it, the composer posts the (ai, final) pair to
      `POST /api/learning` (`src/lib/learning/store.ts`); future drafts read recent pairs back
-     (`styleExamplesBlock`) so Jarvis matches the user's revealed style. Same store + capture + inject
-     pattern is ready to extend to application fields and tasks (not yet wired there).
+     (`styleExamplesBlock`) so Jarvis matches the user's revealed style. **Now also wired into the Apply
+     agent** (kind `application_field`): the grounder injects your recent field edits, and editing a
+     grounded value + Save captures the (proposed, your-edit) override. Same store/endpoint. Tasks
+     surface not yet wired.
   3. **Trimmed verbose copy** on the login page and Connections (self-evident helper text cut to one
      line, keeping the useful security/nothing-is-sent notes).
   - **Still open from this directive (next pass):** ground the *follow-up* suggestions and the
