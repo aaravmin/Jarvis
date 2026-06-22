@@ -40,7 +40,7 @@ export function SyncButton({ endpoint, label }: { endpoint: string; label: strin
         type="button"
         onClick={() => void go()}
         disabled={busy}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-[#04181f] transition-colors hover:bg-accent-strong disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-accent-strong disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
         {label}

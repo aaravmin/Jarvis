@@ -96,7 +96,7 @@ export function ConnectionsPanel({
           ) : (
             <a
               href="/api/connect/google"
-              className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-[#04181f] transition-colors hover:bg-accent-strong"
+              className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-accent-strong"
             >
               Connect Google
             </a>
@@ -209,7 +209,7 @@ function ImportContactsTool() {
           type="button"
           onClick={run}
           disabled={busy || sheet.trim().length < 8}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-[#04181f] transition-colors hover:bg-accent-strong disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-strong disabled:opacity-50"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           Import
@@ -321,7 +321,7 @@ function DraftEmailTool() {
           type="button"
           onClick={run}
           disabled={busy || template.trim().length < 2}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-[#04181f] transition-colors hover:bg-accent-strong disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-strong disabled:opacity-50"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           Draft email
@@ -366,7 +366,7 @@ function DraftEmailTool() {
                 type="button"
                 onClick={saveToGmail}
                 disabled={saving}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-[#04181f] transition-colors hover:bg-accent-strong disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-accent-strong disabled:opacity-50"
               >
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Inbox className="h-3.5 w-3.5" />}
                 Save to Gmail Drafts

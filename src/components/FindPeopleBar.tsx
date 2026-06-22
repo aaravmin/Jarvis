@@ -53,7 +53,7 @@ export function FindPeopleBar() {
           <button
             type="submit"
             disabled={query.trim().length < 4}
-            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-[#04181f] transition-colors hover:bg-accent-strong disabled:opacity-50"
+            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-accent-strong disabled:opacity-50"
           >
             {config.label}
           </button>

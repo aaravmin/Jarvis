@@ -30,7 +30,7 @@ export function JarvisOrb({
         className="absolute inset-0 rounded-full blur-2xl"
         style={{
           background:
-            "radial-gradient(circle, rgba(56,189,248,0.45) 0%, rgba(14,165,233,0.18) 45%, transparent 70%)",
+            "radial-gradient(circle, rgba(34,197,94,0.45) 0%, rgba(22,163,74,0.18) 45%, transparent 70%)",
           opacity: active ? 0.9 : 0.6,
         }}
       />
@@ -51,7 +51,7 @@ export function JarvisOrb({
         className={`absolute inset-2 rounded-full ${state === "thinking" ? "orb-spin-fast" : "orb-spin"}`}
         style={{
           background:
-            "conic-gradient(from 0deg, transparent 0deg, rgba(56,189,248,0.0) 200deg, rgba(56,189,248,0.9) 320deg, #e6f7ff 350deg, transparent 360deg)",
+            "conic-gradient(from 0deg, transparent 0deg, rgba(34,197,94,0.0) 200deg, rgba(34,197,94,0.9) 320deg, #ecfff2 350deg, transparent 360deg)",
           mask: "radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px))",
           WebkitMask:
             "radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px))",
@@ -63,7 +63,7 @@ export function JarvisOrb({
         className="orb-spin-rev absolute inset-8 rounded-full border border-accent/20"
         style={{
           background:
-            "conic-gradient(from 180deg, transparent 0deg, rgba(14,165,233,0.5) 90deg, transparent 200deg)",
+            "conic-gradient(from 180deg, transparent 0deg, rgba(22,163,74,0.5) 90deg, transparent 200deg)",
           mask: "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))",
           WebkitMask:
             "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px))",
@@ -75,8 +75,8 @@ export function JarvisOrb({
         className="orb-breathe absolute inset-[28%] rounded-full border border-accent/40"
         style={{
           background:
-            "radial-gradient(circle at 35% 30%, rgba(230,247,255,0.95), rgba(56,189,248,0.55) 40%, rgba(12,37,51,0.9) 75%)",
-          boxShadow: "0 0 40px 6px rgba(56,189,248,0.45), inset 0 0 24px rgba(56,189,248,0.5)",
+            "radial-gradient(circle at 35% 30%, rgba(230,247,255,0.95), rgba(34,197,94,0.55) 40%, rgba(4,40,22,0.9) 75%)",
+          boxShadow: "0 0 40px 6px rgba(34,197,94,0.45), inset 0 0 24px rgba(34,197,94,0.5)",
         }}
       />
 

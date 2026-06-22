@@ -59,7 +59,7 @@ export function LoginForm({ initialError }: { initialError?: string }) {
           name="intent"
           value="signin"
           disabled={pending}
-          className="w-full rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-[#04181f] transition-colors hover:bg-accent-strong disabled:opacity-60"
+          className="w-full rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-strong disabled:opacity-60"
         >
           {pending ? "…" : "Sign in"}
         </button>

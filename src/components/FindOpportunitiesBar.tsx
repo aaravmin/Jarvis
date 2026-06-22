@@ -51,7 +51,7 @@ export function FindOpportunitiesBar() {
             className={[
               "rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50",
               kindFilter === f.key
-                ? "bg-accent text-[#04181f]"
+                ? "bg-accent text-white"
                 : "border border-border text-muted hover:text-foreground",
             ].join(" ")}
           >
@@ -88,7 +88,7 @@ export function FindOpportunitiesBar() {
           <button
             type="submit"
             disabled={query.trim().length < 4}
-            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-[#04181f] transition-colors hover:bg-accent-strong disabled:opacity-50"
+            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-accent-strong disabled:opacity-50"
           >
             Find
           </button>

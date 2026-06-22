@@ -31,7 +31,7 @@ export function LiveClock() {
     <div className="select-none text-center">
       <div
         className="text-6xl font-light tabular-nums tracking-[0.08em] text-foreground sm:text-7xl"
-        style={{ textShadow: "0 0 28px rgba(56,189,248,0.30)" }}
+        style={{ textShadow: "0 0 28px rgba(34,197,94,0.30)" }}
         suppressHydrationWarning
       >
         {time}

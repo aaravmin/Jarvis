@@ -78,7 +78,7 @@ export function ManualContactForm({ apolloEnabled = false }: { apolloEnabled?: b
         type="button"
         onClick={() => void submit()}
         disabled={busy || f.fullName.trim().length < 2}
-        className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-[#04181f] hover:bg-accent-strong disabled:opacity-50"
+        className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
       >
         {busy && <Loader2 className="h-4 w-4 animate-spin" />} Add contact
       </button>

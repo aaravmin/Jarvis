@@ -30,7 +30,7 @@ export default async function CalendarPage() {
         {connection ? (
           <SyncButton endpoint="/api/google/sync-calendar" label="Sync Calendar" />
         ) : (
-          <Link href="/connections" className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-[#04181f] hover:bg-accent-strong">
+          <Link href="/connections" className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent-strong">
             Connect Google
           </Link>
         )}

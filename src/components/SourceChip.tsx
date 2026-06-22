@@ -186,7 +186,7 @@ export function SourceChip({ source }: { source: CardSource }) {
                   href={source.permalink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-[#04181f] transition-colors hover:bg-accent-strong"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent-strong"
                 >
                   <ExternalLink className="h-4 w-4" />
                   View original

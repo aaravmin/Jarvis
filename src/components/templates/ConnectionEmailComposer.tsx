@@ -229,7 +229,7 @@ export function ConnectionEmailComposer({
         type="button"
         onClick={compose}
         disabled={busy || contactName.trim().length < 2 || connectionDetail.trim().length < 3}
-        className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-[#04181f] transition-colors hover:bg-accent-strong disabled:opacity-50"
+        className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-strong disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <PenLine className="h-4 w-4" />} Draft email
       </button>
@@ -248,7 +248,7 @@ export function ConnectionEmailComposer({
                   <Check className="h-3.5 w-3.5" /> Saved to Gmail — open Drafts
                 </a>
               ) : (
-                <button type="button" onClick={saveDraftToGmail} disabled={savingDraft} className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-[#04181f] hover:bg-accent-strong disabled:opacity-50">
+                <button type="button" onClick={saveDraftToGmail} disabled={savingDraft} className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-strong disabled:opacity-50">
                   {savingDraft ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Inbox className="h-3.5 w-3.5" />} Save to Gmail Drafts
                 </button>
               )}

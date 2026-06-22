@@ -76,7 +76,7 @@ export function ReviewItemCard({ item }: { item: ReviewItem }) {
             type="button"
             onClick={() => void act("accept")}
             disabled={busy !== null}
-            className="inline-flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-xs font-semibold text-[#04181f] transition-colors hover:bg-accent-strong disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-accent-strong disabled:opacity-50"
           >
             {busy === "accept" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
             Accept

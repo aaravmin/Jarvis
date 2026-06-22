@@ -202,7 +202,7 @@ export function PersonCard({
         type="button"
         onClick={onAccept}
         disabled={pending}
-        className="inline-flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-[#04181f] transition-colors hover:bg-accent-strong disabled:opacity-50"
+        className="inline-flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-accent-strong disabled:opacity-50"
       >
         <Check className="h-3.5 w-3.5" />
         Accept

@@ -122,7 +122,7 @@ export function DraftToContact({ name, email }: { name: string; email?: string }
             type="button"
             onClick={() => void generate()}
             disabled={busy || (!template.trim() && context.trim().length < 3)}
-            className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-[#04181f] hover:bg-accent-strong disabled:opacity-50"
+            className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <PenLine className="h-4 w-4" />} Draft
           </button>
@@ -147,7 +147,7 @@ export function DraftToContact({ name, email }: { name: string; email?: string }
                     type="button"
                     onClick={() => void saveToGmail()}
                     disabled={saving}
-                    className="inline-flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-[#04181f] hover:bg-accent-strong disabled:opacity-50"
+                    className="inline-flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-white hover:bg-accent-strong disabled:opacity-50"
                   >
                     {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Inbox className="h-3.5 w-3.5" />} Save to Gmail Drafts
                   </button>

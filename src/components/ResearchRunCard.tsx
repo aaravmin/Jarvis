@@ -179,7 +179,7 @@ export function ResearchRunCard({
               <button
                 type="button"
                 onClick={() => actAll("accept-all")}
-                className="rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-[#04181f] transition-colors hover:bg-accent-strong"
+                className="rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-accent-strong"
               >
                 Accept all ({pendingReview.length})
               </button>

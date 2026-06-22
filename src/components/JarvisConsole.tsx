@@ -526,7 +526,7 @@ export function JarvisConsole({ hero = false }: { hero?: boolean }) {
         <button
           type="submit"
           disabled={thinking || input.trim().length === 0}
-          className="rounded-lg bg-accent p-1.5 text-[#04181f] transition-colors hover:bg-accent-strong disabled:opacity-40"
+          className="rounded-lg bg-accent p-1.5 text-white transition-colors hover:bg-accent-strong disabled:opacity-40"
           aria-label="Send"
         >
           <Send className="h-4 w-4" />

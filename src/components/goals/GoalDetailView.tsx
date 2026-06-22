@@ -74,7 +74,7 @@ export function GoalDetailView({ detail }: { detail: GoalDetail }) {
                   <button type="button" onClick={() => void linkAction(e.linkId, "dismiss")} className="rounded-lg border border-border px-2 py-1 text-xs text-muted hover:text-danger">
                     <X className="h-3.5 w-3.5" />
                   </button>
-                  <button type="button" onClick={() => void linkAction(e.linkId, "accept")} className="rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-[#04181f] hover:bg-accent-strong">
+                  <button type="button" onClick={() => void linkAction(e.linkId, "accept")} className="rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-white hover:bg-accent-strong">
                     <Check className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -198,7 +198,7 @@ function IntersectionCard({
           type="button"
           onClick={() => void generate()}
           disabled={busy}
-          className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-[#04181f] hover:bg-accent-strong disabled:opacity-50"
+          className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-white hover:bg-accent-strong disabled:opacity-50"
         >
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
           Draft one combined ask

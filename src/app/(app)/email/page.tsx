@@ -51,7 +51,7 @@ export default async function EmailPage() {
         {connection ? (
           <SyncButton endpoint="/api/google/sync-email" label="Sync Gmail" />
         ) : (
-          <Link href="/connections" className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-[#04181f] hover:bg-accent-strong">
+          <Link href="/connections" className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent-strong">
             Connect Google
           </Link>
         )}

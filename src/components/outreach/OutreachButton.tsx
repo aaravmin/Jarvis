@@ -127,7 +127,7 @@ export function OutreachButton({ contactId, name }: { contactId: string; name: s
                 type="button"
                 onClick={() => void draft()}
                 disabled={busy !== null}
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-[#04181f] hover:bg-accent-strong disabled:opacity-50"
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
               >
                 {busy === "draft" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 {busy === "draft" ? "Drafting…" : "Draft email"}
@@ -148,7 +148,7 @@ export function OutreachButton({ contactId, name }: { contactId: string; name: s
                   type="button"
                   onClick={() => void saveToGmail()}
                   disabled={busy !== null}
-                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-[#04181f] hover:bg-accent-strong disabled:opacity-50"
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
                 >
                   {busy === "save" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

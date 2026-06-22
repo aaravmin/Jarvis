@@ -131,14 +131,14 @@ function AddGoal({ onChanged }: { onChanged: () => void }) {
         <button
           type="button"
           onClick={() => setMode("manual")}
-          className={`rounded-full px-2.5 py-1 text-xs font-medium ${mode === "manual" ? "bg-accent text-[#04181f]" : "border border-border text-muted hover:text-foreground"}`}
+          className={`rounded-full px-2.5 py-1 text-xs font-medium ${mode === "manual" ? "bg-accent text-white" : "border border-border text-muted hover:text-foreground"}`}
         >
           <Plus className="mr-1 inline h-3.5 w-3.5" /> Add a goal
         </button>
         <button
           type="button"
           onClick={() => setMode("ai")}
-          className={`rounded-full px-2.5 py-1 text-xs font-medium ${mode === "ai" ? "bg-accent text-[#04181f]" : "border border-border text-muted hover:text-foreground"}`}
+          className={`rounded-full px-2.5 py-1 text-xs font-medium ${mode === "ai" ? "bg-accent text-white" : "border border-border text-muted hover:text-foreground"}`}
         >
           <Sparkles className="mr-1 inline h-3.5 w-3.5" /> From context
         </button>
@@ -163,7 +163,7 @@ function AddGoal({ onChanged }: { onChanged: () => void }) {
           <button
             type="submit"
             disabled={busy || title.trim().length < 2}
-            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-[#04181f] hover:bg-accent-strong disabled:opacity-50"
+            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
           >
             Add
           </button>
@@ -182,7 +182,7 @@ function AddGoal({ onChanged }: { onChanged: () => void }) {
             type="button"
             onClick={() => void generate()}
             disabled={busy || context.trim().length < 10}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-[#04181f] hover:bg-accent-strong disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             Generate goals
@@ -228,7 +228,7 @@ function ReviewGoalRow({ goal, onChanged }: { goal: GoalSummary; onChanged: () =
           type="button"
           onClick={() => void act("accepted")}
           disabled={busy}
-          className="inline-flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-[#04181f] hover:bg-accent-strong disabled:opacity-50"
+          className="inline-flex items-center gap-1 rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-white hover:bg-accent-strong disabled:opacity-50"
         >
           <Check className="h-3.5 w-3.5" /> Keep
         </button>

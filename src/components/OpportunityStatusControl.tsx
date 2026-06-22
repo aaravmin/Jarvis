@@ -6,7 +6,7 @@ import { APPLICATION_STATUSES, type ApplicationStatus } from "@/lib/agents/oppor
 /** Dot color per pipeline state — quick visual scan down a list of opportunities. */
 const DOT: Record<ApplicationStatus, string> = {
   not_applied: "bg-muted",
-  waiting_to_open: "bg-sky-400",
+  waiting_to_open: "bg-muted-strong",
   applied: "bg-accent",
   interviewing: "bg-warning",
   accepted: "bg-success",
