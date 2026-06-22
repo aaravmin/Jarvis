@@ -13,6 +13,7 @@ import {
   FileText,
   FolderOpen,
   Wand2,
+  Rocket,
   type LucideIcon,
 } from "lucide-react";
 
@@ -37,6 +38,13 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Sparkles,
     description: "Ask Jarvis anything, it searches the web and reads your files.",
     deliveredBy: "Assistant",
+  },
+  {
+    label: "Set up",
+    href: "/onboard",
+    icon: Rocket,
+    description: "Tailor Jarvis to you, add your profile, connect Google, and upload your resume.",
+    deliveredBy: "Onboarding",
   },
   {
     label: "Today",

@@ -21,7 +21,7 @@ export function LoginForm({ initialError }: { initialError?: string }) {
           type="email"
           autoComplete="email"
           required
-          placeholder="you@brown.edu"
+          placeholder="you@example.com"
           className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-accent"
         />
       </div>

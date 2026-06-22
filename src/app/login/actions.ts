@@ -41,10 +41,11 @@ export async function authenticate(
     });
     if (error) return { error: error.message };
 
-    // If the project has email confirmation disabled, sign-up returns a live session.
+    // If the project has email confirmation disabled, sign-up returns a live session. Send new users
+    // to the setup checklist so they tailor Jarvis to themselves (profile, Google, documents).
     if (data.session) {
       revalidatePath("/", "layout");
-      redirect("/jarvis");
+      redirect("/onboard");
     }
     return {
       notice: "Account created. Check your email to confirm, then sign in.",

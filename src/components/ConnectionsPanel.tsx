@@ -306,7 +306,7 @@ function DraftEmailTool() {
           value={to}
           onChange={(e) => setTo(e.target.value)}
           disabled={busy}
-          placeholder="Recipient (optional), e.g. “Dr. Jane Smith, Brown alum at Acme”"
+          placeholder="Recipient (optional), e.g. “Dr. Jane Smith, engineer at Acme”"
           className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
         />
         <textarea
