@@ -16,6 +16,7 @@ import {
   Check,
 } from "lucide-react";
 import type { GoogleConnection } from "@/lib/google/store";
+import { SiteLoginsTool } from "@/components/connections/SiteLoginsTool";
 
 /** Write scopes that light up the draft/calendar/export features once re-granted. */
 const WRITE_SCOPES = [
@@ -120,6 +121,8 @@ export function ConnectionsPanel({
           a Drive template (and save them to Gmail) here.
         </p>
       )}
+
+      <SiteLoginsTool />
     </div>
   );
 }
