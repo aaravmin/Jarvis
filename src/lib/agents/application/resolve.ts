@@ -1,6 +1,7 @@
 import "server-only";
 import { grokStructured } from "@/lib/llm/grok";
 import { backs, clamp01 } from "@/lib/agents/citation-gate";
+import { styleExamplesBlock } from "@/lib/learning/store";
 import type { FormField, FieldPlanItem, FieldValueSource } from "./types";
 
 /**
@@ -20,6 +21,8 @@ export type MaterialsBundle = {
   profileDigest?: string;
   /** Title/org/description of the opportunity this application is for, if launched from a card. */
   opportunityContext?: string;
+  /** Recent (ai, final) edits the user made to past field answers, so the model matches their style. */
+  styleExamples?: { aiText: string; finalText: string }[];
 };
 
 const VALUE_SOURCES: FieldValueSource[] = ["resume", "profile", "document", "opportunity", "inferred", "user"];
@@ -126,9 +129,12 @@ export async function resolveFields(
 
   const user = [
     `MATERIALS:\n${corpus}`,
+    styleExamplesBlock(materials.styleExamples ?? []),
     `FORM FIELDS (${fields.length}):\n${describeFields(fields)}`,
     "Return the field_plan now.",
-  ].join("\n\n");
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   const out = await grokStructured<{
     fields?: Array<Partial<FieldPlanItem>>;

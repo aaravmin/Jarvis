@@ -5,6 +5,7 @@ import { resolveFields, type MaterialsBundle } from "./resolve";
 import { countUnfilled, type ApplicationKind, type ApplicationRunResult, type ApplicationRunView, type FieldPlanItem } from "./types";
 import { loadAgentMaterials } from "@/lib/documents/store";
 import { loadProfile, profileDigest } from "@/lib/profile";
+import { recentStyleExamples } from "@/lib/learning/store";
 
 /**
  * Run-and-persist for the Application agent. Owns the full flow so the page and the agent router share
@@ -147,13 +148,14 @@ export async function runApplication(
   const runId = run.id as string;
 
   try {
-    const [form, { resume, materials }, profile, oppCtx] = await Promise.all([
+    const [form, { resume, materials }, profile, oppCtx, styleExamples] = await Promise.all([
       scrapeForm(targetUrl),
       loadAgentMaterials(supabase, userId),
       loadProfile(supabase),
       opts.opportunityId
         ? opportunityContext(supabase, userId, opts.opportunityId)
         : Promise.resolve({} as Awaited<ReturnType<typeof opportunityContext>>),
+      recentStyleExamples(supabase, userId, "application_field", 4),
     ]);
 
     const bundle: MaterialsBundle = {
@@ -162,6 +164,7 @@ export async function runApplication(
       documents: materials.map((d) => ({ name: d.name, text: d.extractedText ?? "" })),
       profileDigest: profileDigest(profile) || undefined,
       opportunityContext: oppCtx.context,
+      styleExamples,
     };
 
     const { plan, notes } = await resolveFields(form.fields, bundle);

@@ -71,6 +71,19 @@ export function ApplicationRunCard({ run }: { run: ApplicationRunView }) {
     });
     setBusy(null);
     if (res.ok) {
+      // Learn from any field value the user changed from what Jarvis proposed (overrides only; a field
+      // the user fills from blank is a fact, not a style signal, so it is skipped server-side).
+      for (let i = 0; i < plan.length; i++) {
+        const original = (run.fieldPlan[i]?.value ?? "").trim();
+        const edited = (plan[i]?.value ?? "").trim();
+        if (original && edited && original !== edited) {
+          void fetch("/api/learning", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ kind: "application_field", context: plan[i].name || "field", aiText: original, finalText: edited }),
+          }).catch(() => {});
+        }
+      }
       setDirty(false);
       router.refresh();
     }
