@@ -53,11 +53,7 @@ export function ConnectionsPanel({
     <div className="space-y-5">
       <header>
         <h1 className="text-lg font-semibold text-foreground">Connections</h1>
-        <p className="mt-1 text-sm text-muted">
-          Connect Google so Jarvis can read your Gmail, Calendar, Drive &amp; Sheets, and now save
-          email drafts and export your contacts. After an update, click Reconnect to grant the new
-          permissions.
-        </p>
+        <p className="mt-1 text-sm text-muted">Connect Google and save logins for sites Jarvis works with.</p>
       </header>
 
       <StatusBanner status={status} />
@@ -196,10 +192,7 @@ function ImportContactsTool() {
         <Users className="h-4 w-4 text-accent" />
         <h2 className="text-sm font-semibold text-foreground">Import contacts from a Google Sheet</h2>
       </div>
-      <p className="mb-3 text-xs text-muted">
-        Paste a Sheets link (e.g. your alumni database). Each row becomes a suggested contact in Review,
-        with the sheet + the row as its source. Nothing is added until you accept it.
-      </p>
+      <p className="mb-3 text-xs text-muted">Each row becomes a suggested contact in Review, sourced to the sheet.</p>
       <div className="flex items-center gap-2">
         <input
           value={sheet}
@@ -293,10 +286,7 @@ function DraftEmailTool() {
         <FileText className="h-4 w-4 text-accent" />
         <h2 className="text-sm font-semibold text-foreground">Draft an email from a Drive template</h2>
       </div>
-      <p className="mb-3 text-xs text-muted">
-        Name a Google Doc template (or paste its link). Jarvis fills its placeholders from your context
-        and drafts the email, draft only, nothing is sent.
-      </p>
+      <p className="mb-3 text-xs text-muted">Jarvis fills the template and saves a draft. Nothing is sent.</p>
       <div className="space-y-2">
         <input
           value={template}
