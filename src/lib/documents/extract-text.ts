@@ -54,6 +54,48 @@ async function fromDocx(buffer: Buffer): Promise<string> {
   return value;
 }
 
+function isSpreadsheet(mimeType: string | undefined, name: string): boolean {
+  return (
+    mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+    /\.(xlsx|xlsm)$/i.test(name)
+  );
+}
+
+/** A spreadsheet cell may be a string, number, date, or a rich object (hyperlink, formula, rich text). */
+function cellText(v: unknown): string {
+  if (v == null) return "";
+  if (typeof v === "object") {
+    const o = v as Record<string, unknown>;
+    if (typeof o.text === "string") return o.text;
+    if (o.result != null) return String(o.result);
+    if (typeof o.hyperlink === "string") return String(o.text ?? o.hyperlink);
+    const rich = (o as { richText?: { text?: string }[] }).richText;
+    if (Array.isArray(rich)) return rich.map((r) => r.text ?? "").join("");
+    return "";
+  }
+  return String(v);
+}
+
+/** Read every sheet of an .xlsx into tab-separated rows so a spreadsheet of people becomes readable text. */
+async function fromSpreadsheet(buffer: Buffer): Promise<string> {
+  const ExcelJS = await import("exceljs");
+  const wb = new ExcelJS.Workbook();
+  // exceljs's types expect its own Buffer shape; cast to its load() parameter type.
+  await wb.xlsx.load(buffer as unknown as Parameters<typeof wb.xlsx.load>[0]);
+  const out: string[] = [];
+  wb.eachSheet((sheet) => {
+    if (sheet.rowCount === 0) return;
+    out.push(`# ${sheet.name}`);
+    sheet.eachRow((row) => {
+      const vals = Array.isArray(row.values) ? row.values.slice(1) : [];
+      const cells = vals.map((v) => cellText(v));
+      if (cells.some((c) => c.length)) out.push(cells.join("\t"));
+    });
+    out.push("");
+  });
+  return out.join("\n");
+}
+
 /**
  * Best-effort text from a document's bytes. Never throws, on any failure it returns "" so the upload
  * still succeeds and the user can paste text manually. `name` is the original filename (for extension
@@ -67,6 +109,8 @@ export async function extractDocumentText(
   try {
     if (isPdf(mimeType, name)) return tidy(await fromPdf(buffer));
     if (isDocx(mimeType, name)) return tidy(await fromDocx(buffer));
+    // Spreadsheets keep their tab structure (not run through tidy, which would merge columns).
+    if (isSpreadsheet(mimeType, name)) return (await fromSpreadsheet(buffer)).slice(0, MAX_TEXT);
     if (isPlainish(mimeType, name)) return tidy(buffer.toString("utf8"));
     return "";
   } catch {
@@ -76,5 +120,5 @@ export async function extractDocumentText(
 
 /** Which file kinds we can pull text from, used by the UI to set expectations. */
 export function canExtract(mimeType: string | undefined, name: string): boolean {
-  return isPdf(mimeType, name) || isDocx(mimeType, name) || isPlainish(mimeType, name);
+  return isPdf(mimeType, name) || isDocx(mimeType, name) || isSpreadsheet(mimeType, name) || isPlainish(mimeType, name);
 }

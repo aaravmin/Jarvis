@@ -37,6 +37,8 @@ export type DataSearchResult = { ok: boolean; text: string };
 export type AskDataContext = {
   dataDigest: string;
   searchData: (q: DataQuery) => Promise<DataSearchResult>;
+  /** Read the user's uploaded documents (resumes, spreadsheets, materials). No name lists them all. */
+  readDocument: (q: { name?: string }) => Promise<DataSearchResult>;
   actions?: AskActions;
 };
 
@@ -232,6 +234,19 @@ export async function buildDataDigest(supabase: SupabaseClient): Promise<string>
     );
   }
 
+  const { data: docData } = await supabase
+    .from("documents")
+    .select("name, doc_type")
+    .order("created_at", { ascending: false })
+    .limit(12);
+  const docRows = (docData ?? []) as { name: string; doc_type: string | null }[];
+  if (docRows.length) {
+    sections.push(
+      `Uploaded documents (resumes, spreadsheets, materials, call read_document with the name to read one):\n` +
+        docRows.map((d) => `- ${d.name}${d.doc_type ? ` (${d.doc_type})` : ""}`).join("\n"),
+    );
+  }
+
   if (!sections.length) {
     return "The user has not connected Google or added any tasks/contacts/opportunities yet, so there is no personal data to draw on. If they ask about their email, calendar, meetings or tasks, tell them to connect Google on the Connections page and sync, or add items manually.";
   }
@@ -337,12 +352,44 @@ export async function searchMyData(supabase: SupabaseClient, q: DataQuery): Prom
   return { ok: true, text: out.join("\n\n").slice(0, 6000) };
 }
 
+/**
+ * Read the user's uploaded documents (the Documents tab: resumes, spreadsheets, grant materials). With
+ * no name, lists what is on file; with a name, returns the best match's extracted text so the assistant
+ * can actually use it (e.g. read a spreadsheet of people and act on each row). RLS-scoped.
+ */
+export async function readDocumentTool(supabase: SupabaseClient, q: { name?: string }): Promise<DataSearchResult> {
+  const { data } = await supabase
+    .from("documents")
+    .select("name, doc_type, extracted_text")
+    .order("created_at", { ascending: false })
+    .limit(50);
+  const docs = (data ?? []) as { name: string; doc_type: string | null; extracted_text: string | null }[];
+  if (!docs.length) {
+    return { ok: true, text: "The user has no uploaded documents yet. They can add resumes, spreadsheets, or materials on the Documents page." };
+  }
+  const name = (q.name ?? "").trim().toLowerCase();
+  if (!name) {
+    const list = docs.map((d) => `- ${d.name}${d.doc_type ? ` (${d.doc_type})` : ""}, ${d.extracted_text?.length ?? 0} chars of text`).join("\n");
+    return { ok: true, text: `Uploaded documents:\n${list}\n\nAsk to read one by name to get its contents.` };
+  }
+  const match = docs.find((d) => d.name.toLowerCase().includes(name)) ?? docs.find((d) => name.includes(d.name.toLowerCase()));
+  if (!match) {
+    return { ok: true, text: `No uploaded document matches "${q.name}". Available: ${docs.map((d) => d.name).join(", ")}.` };
+  }
+  const text = (match.extracted_text ?? "").trim();
+  if (!text) {
+    return { ok: true, text: `"${match.name}" is uploaded but no readable text was extracted (it may be an image-only PDF or an unsupported format). Ask the user to re-upload it.` };
+  }
+  return { ok: true, text: `Document "${match.name}":\n${text.slice(0, 15000)}` };
+}
+
 /** Bundle the digest + search closure + write actions for ask(). One call per assistant request. */
 export async function buildAskDataContext(supabase: SupabaseClient, userId: string): Promise<AskDataContext> {
   const dataDigest = await buildDataDigest(supabase);
   return {
     dataDigest,
     searchData: (query: DataQuery) => searchMyData(supabase, query),
+    readDocument: (query: { name?: string }) => readDocumentTool(supabase, query),
     actions: buildAskActions(supabase, userId),
   };
 }

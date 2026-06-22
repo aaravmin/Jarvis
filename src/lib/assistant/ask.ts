@@ -73,6 +73,19 @@ const SEARCH_MY_DATA_FN = {
   },
 };
 
+const READ_DOCUMENT_FN = {
+  name: "read_document",
+  description:
+    "Read one of the user's UPLOADED documents (the Documents tab: resumes, spreadsheets, grant materials). Use this whenever the user refers to a file they gave you (e.g. 'the Transfer Peer Advisor spreadsheet', 'my resume') so you can act on its real contents, including reading a spreadsheet of people row by row. Pass the document's name (a partial name is fine). Omit the name to list every uploaded document. Returns the document's extracted text. If a referenced document is not found or has no text, say so plainly.",
+  parameters: {
+    type: "object" as const,
+    properties: {
+      name: { type: "string", description: "The document's name or part of it. Omit to list all uploaded documents." },
+    },
+    required: [],
+  },
+};
+
 // --- Write tools (only offered when an action context is present) ---------------------------------
 
 const CREATE_EVENT_FN = {
@@ -130,7 +143,7 @@ const LIST_TEMPLATES_FN = {
 const ADD_CONTACT_FN = {
   name: "add_contact",
   description:
-    "Find a real person online and save them to the user's Contacts. Jarvis opens the user's own logged-in LinkedIn in a real browser, reads the person's profile (role, company, bio), and, when configured, looks up their work email, then creates the contact card. Use this whenever the user asks to add/create/save a contact, 'make a contact card for X', or to look someone up and keep them. Pass `linkedin_url` when the user gives a LinkedIn link (most reliable); otherwise pass `name` (and `company`/org if known) and Jarvis will search for them. If it reports the user must log in, tell them to sign into the window that opened and try again. Confirm who you saved and what details you got, never invent a person or their details.",
+    "Find a real person online and save them to the user's Contacts. Jarvis opens the user's own logged-in LinkedIn in a real browser (this IS the Playwright browser automation, so if the user says 'use Playwright' to gather information on someone, this is the tool), reads the person's profile (role, company, bio), and, when configured, looks up their work email, then creates the contact card. Use this whenever the user asks to add/create/save a contact, 'make a contact card for X', or to look someone up and keep them. To add several people, call this once per person. Pass `linkedin_url` when the user gives a LinkedIn link (most reliable); otherwise pass `name` (and `company`/org if known) and Jarvis will search for them. If it reports the user must log in, tell them to sign into the window that opened and try again. Confirm who you saved and what details you got, never invent a person or their details.",
   parameters: {
     type: "object" as const,
     properties: {
@@ -148,7 +161,8 @@ const MAX_TOKENS = 8000;
 
 function systemPrompt(todayISO: string, dataDigest?: string, canAct?: boolean): string {
   const dataCap = dataDigest
-    ? `\n- search_my_data: read the user's OWN connected data, their Gmail, Google Calendar, meetings, tasks, contacts, and opportunities. Use it for any question about their inbox, schedule, meetings, to-dos, people, or applications. Only state what the data shows; if something isn't there, say you don't see it rather than guessing. Refer to items by their subject/title and date, and include their link when you have one.`
+    ? `\n- search_my_data: read the user's OWN connected data, their Gmail, Google Calendar, meetings, tasks, contacts, and opportunities. Use it for any question about their inbox, schedule, meetings, to-dos, people, or applications. Only state what the data shows; if something isn't there, say you don't see it rather than guessing. Refer to items by their subject/title and date, and include their link when you have one.
+- read_document: read the user's UPLOADED documents (the Documents tab: resumes, spreadsheets, materials). Whenever the user refers to a file they gave you ("the X spreadsheet", "my resume"), call read_document with its name and act on the real contents (e.g. read a spreadsheet of people and process each row). Omit the name to list what is uploaded. Do not claim a document is missing without calling this first.`
     : "";
   const actCap = canAct
     ? `\n- create_calendar_event: add a real event to the user's Google Calendar. Pass their EXACT words for the time in \`when\`, never a date you worked out yourself; the system resolves it deterministically.
@@ -162,7 +176,8 @@ function systemPrompt(todayISO: string, dataDigest?: string, canAct?: boolean): 
 - You only ever create a DRAFT email, you cannot and must not send mail. Always say the draft is waiting in their Gmail for them to send.
 - For event times, pass the user's words verbatim to create_calendar_event; if their phrasing has no clear date/time, ask them for one rather than guessing.
 - Templates: when the user references one of their saved templates ("use my outreach template", "draft from my X template"), call list_templates, pick the one they mean, and MEANINGFULLY adapt it to their request, fill in the {{placeholders}} with the specifics they gave, and change tone, length, or content as asked, then call draft_email with your edited subject and body. Don't just echo the template back unchanged.
-- Adding contacts: when the user asks you to add/create/save a contact, "make a contact card" for someone, or look a person up to keep, call add_contact, pass linkedin_url if they gave a link, otherwise the name (and company/org if they mentioned one). Don't refuse before trying: you look people up by reading LinkedIn in a real logged-in browser, so call the tool rather than assuming you can't. Then RELAY exactly what add_contact returns, if it says the user must log into LinkedIn, tell them to sign into the window that opened and ask again; if it says it needs a LinkedIn URL or a backend that isn't configured, pass that along honestly instead of pretending you saved someone. Afterward, state plainly who you saved and which details you found (role, company, email), and name any detail that wasn't available rather than inventing it.`
+- Adding contacts: when the user asks you to add/create/save a contact, "make a contact card" for someone, or look a person up to keep, call add_contact, pass linkedin_url if they gave a link, otherwise the name (and company/org if they mentioned one). To add several people (e.g. everyone in a spreadsheet, or a named person), call add_contact once per person. Don't refuse before trying: you look people up by reading LinkedIn in a real logged-in browser, which IS Playwright, so if the user says "use Playwright" to research someone, that means add_contact. Call the tool rather than claiming you have no browser or scraping ability. Then RELAY exactly what add_contact returns, if it says the user must log into LinkedIn, tell them to sign into the window that opened and ask again; if it says it needs a LinkedIn URL or a backend that isn't configured, pass that along honestly instead of pretending you saved someone. Afterward, state plainly who you saved and which details you found (role, company, email), and name any detail that wasn't available rather than inventing it.
+- Don't abandon a multi-part request because one input is missing. If a referenced document truly is not found after calling read_document, still do every other part you can (research and add any named people with add_contact, use the data you do have), then tell the user exactly which part you could not do and why.`
     : "";
   const dataBlock = dataDigest
     ? `\n\nThe user's connected data (your working memory, use it directly for quick questions, and search_my_data for anything more specific):\n${dataDigest}`
@@ -187,6 +202,7 @@ export async function ask(message: string, ctx?: AskDataContext): Promise<AskRes
   const functions = [
     WEB_SEARCH_FN,
     ...(ctx?.searchData ? [SEARCH_MY_DATA_FN] : []),
+    ...(ctx?.readDocument ? [READ_DOCUMENT_FN] : []),
     ...(ctx?.actions ? [CREATE_EVENT_FN, DRAFT_EMAIL_FN, SAVE_TEMPLATE_FN, LIST_TEMPLATES_FN, ADD_CONTACT_FN] : []),
     LIST_DIR_FN,
     READ_FILE_FN,
@@ -236,6 +252,10 @@ export async function ask(message: string, ctx?: AskDataContext): Promise<AskRes
       const out = await ctx.searchData(
         (args as Parameters<NonNullable<AskDataContext["searchData"]>>[0]) ?? {},
       );
+      return { ok: out.ok, content: out.text };
+    }
+    if (name === "read_document" && ctx?.readDocument) {
+      const out = await ctx.readDocument((args as { name?: string }) ?? {});
       return { ok: out.ok, content: out.text };
     }
     if (name === "create_calendar_event" && ctx?.actions) {
