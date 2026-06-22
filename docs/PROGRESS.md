@@ -39,6 +39,28 @@ email+meeting→items extraction engine and the task loop** are live. The **Goog
 once the user connects Google on the Connections tab.
 
 ## Task log (most recent first)
+- **Google sign-on · grounded, self-learning email composer · copy trims** — ✅ shipped to `main`
+  (3 commits), tsc + eslint + build green. Driven by: "add sign on with google", "remove unnecessary
+  explanations", "operate using memory it has access to and ground follow-ups in it", "apply to
+  jobs/grants and write emails with that in mind plus a template", "for autonomous tasks I should be
+  able to edit the output AND IT SHOULD LEARN FROM THE EDITS".
+  1. **Sign on with Google.** "Continue with Google" on the login screen (Supabase Google OAuth, PKCE)
+     + new `/auth/callback` route that exchanges the code and routes a new user to `/onboard`, a
+     returning user to `/today`. (Enable the Google provider in the Supabase dashboard; see
+     SESSION_HANDOFF.) Identity sign-on is separate from the Gmail/Calendar data connector.
+  2. **Email composer grounded in memory + learns from edits.** `composeConnectionEmail` now feeds the
+     model the user's profile digest + a digest of their uploaded materials (resume/bio text) alongside
+     the template, told to write in the user's voice from real background. **Learn-from-edits**:
+     migration **0018** `style_examples` (per-user, RLS, append-only, **NOT applied**); when the user
+     edits a generated draft and saves it, the composer posts the (ai, final) pair to
+     `POST /api/learning` (`src/lib/learning/store.ts`); future drafts read recent pairs back
+     (`styleExamplesBlock`) so Jarvis matches the user's revealed style. Same store + capture + inject
+     pattern is ready to extend to application fields and tasks (not yet wired there).
+  3. **Trimmed verbose copy** on the login page and Connections (self-evident helper text cut to one
+     line, keeping the useful security/nothing-is-sent notes).
+  - **Still open from this directive (next pass):** ground the *follow-up* suggestions and the
+    Apply/Outreach *autonomous* paths in the broader memory (email/calendar/meeting transcripts), and
+    wire the same learn-from-edits capture into the Apply field plan + the Tasks edit surfaces.
 - **Productization batch: white/green theme · spreadsheet data pages · em-dash purge · onboarding ·
   encrypted login vault + per-user auto-login** — ✅ shipped to `main` across 7 commits, each tsc +
   eslint + build green. Driven by a multi-part user directive ("make it for anyone", "white and green

@@ -217,3 +217,8 @@ npm run build        # production build / typecheck
 6. **Set `CREDENTIALS_SECRET`** in `.env.local` to enable the encrypted vault: run `openssl rand -base64 32`
    and paste the result. With it unset, the vault UI shows a clear "off" notice and auto-login is skipped
    (the LinkedIn flow still works with a manual one-time sign-in).
+7. **Apply migration `0018_style_examples.sql`** (Supabase SQL editor) so the email composer can learn
+   from your edits. Until applied, the learn-from-edits capture silently no-ops (composing still works).
+8. **Enable Google sign-on:** in the Supabase dashboard, Auth > Providers > Google, add an OAuth client
+   whose authorized redirect is `<your-supabase-url>/auth/v1/callback` and set the app redirect to
+   `<origin>/auth/callback`. Until enabled, the "Continue with Google" button returns a provider error.

@@ -2,6 +2,24 @@
 
 > One entry per non-obvious decision: date, decision, why. Never edit past entries; append new ones.
 
+- **2026-06-22 — Learn-from-edits is a before/after example store fed back as few-shot, not fine-tuning.**
+  Why: the user wants Jarvis to "learn from the edits" to autonomous output. The cheapest, transparent,
+  immediately-effective mechanism is to capture (ai_text, final_text) pairs when the user edits and keeps
+  a generated draft (migration 0018 `style_examples`, per-user RLS), then inject the most recent pairs
+  into the next generation's prompt with an instruction to match the user's revealed style. No model
+  training, no opaque state; the user can see exactly what is stored, and it works from the first edit.
+  First wired on the outreach email composer (the clearest editable surface); the same store + capture +
+  inject extends to application fields and tasks. Capture is a no-op when the user changed nothing.
+- **2026-06-22 — Generated emails are grounded in the user's own memory (profile + uploaded materials)
+  in addition to the template.** Why: the user wants outputs to use "memory it has access to (files,
+  email, calendar, meetings)". For a single outreach email the highest-signal memory is the user's
+  profile + their resume/bio text, so `composeConnectionEmail` feeds both (with a never-invent rule).
+  Broader memory (email/calendar/meeting transcripts) and the follow-up/Apply surfaces are a planned
+  next pass, reusing the existing `buildDataDigest`/`loadAgentMaterials` grounding.
+- **2026-06-22 — Google sign-on is Supabase OAuth, separate from the data connector.** Why: signing IN
+  with Google (identity) and granting Gmail/Calendar READ access (the connector on Connections) are
+  different consents with different scopes. The login button uses `signInWithOAuth` to `/auth/callback`;
+  the data connector stays its own flow. Enabling the provider is a Supabase-dashboard step (infra).
 - **2026-06-22 — Login passwords are stored AES-256-GCM encrypted (key `CREDENTIALS_SECRET`), never
   plaintext, and never returned to the client.** Why: the user wants saved site logins so Playwright can
   auto-sign-in, which means storing real third-party passwords. We encrypt in the app before insert
