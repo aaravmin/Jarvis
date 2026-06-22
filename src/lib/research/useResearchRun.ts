@@ -9,7 +9,7 @@ export type RunPhase = "idle" | "running" | "done" | "error";
 /**
  * Drives a cohort research run from the browser. v1 POSTs and awaits completion (the request is the
  * long-poll), tracking an elapsed timer and supporting client-side cancel. The same submit(query)
- * signature is what Phase 8 voice will call with a speech transcript — no rewrite.
+ * signature is what Phase 8 voice will call with a speech transcript, no rewrite.
  */
 export function useResearchRun(onDone?: (view: ResearchRunView) => void) {
   const [phase, setPhase] = useState<RunPhase>("idle");

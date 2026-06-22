@@ -32,7 +32,7 @@ export function TemplatesManager({
   if (tpls.length === 0 && types.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-border bg-surface-2 p-6 text-center text-sm text-muted">
-        No saved templates yet. Compose an email with a connection above — Jarvis will offer to save a
+        No saved templates yet. Compose an email with a connection above, Jarvis will offer to save a
         reusable template for that kind of connection.
       </p>
     );

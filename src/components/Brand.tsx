@@ -1,4 +1,4 @@
-/** The Jarvis "orb" mark — a cyan arc-reactor circle. Used in the sidebar and on small screens. */
+/** The Jarvis "orb" mark, a cyan arc-reactor circle. Used in the sidebar and on small screens. */
 export function Brand({ withWordmark = true }: { withWordmark?: boolean }) {
   return (
     <div className="flex items-center gap-3">

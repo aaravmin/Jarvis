@@ -67,7 +67,7 @@ export function ManualOpportunityForm() {
         </select>
         <input className={input} placeholder="Deadline (e.g. March 15, 2026)" value={f.rawDeadline} onChange={set("rawDeadline")} />
         <input className={input} placeholder="Location (or Remote)" value={f.location} onChange={set("location")} />
-        <input className={input} placeholder="Event dates (e.g. Feb 7–9)" value={f.rawEventDates} onChange={set("rawEventDates")} />
+        <input className={input} placeholder="Event dates (e.g. Feb 7-9)" value={f.rawEventDates} onChange={set("rawEventDates")} />
         <input className={input} placeholder="Required skills (comma-separated)" value={f.requiredSkills} onChange={set("requiredSkills")} />
         <input className={input} placeholder="Comp / prize / stipend" value={f.compOrPrize} onChange={set("compOrPrize")} />
         <input className={`${input} sm:col-span-2`} placeholder="How to apply (URL)" value={f.howToApplyUrl} onChange={set("howToApplyUrl")} />

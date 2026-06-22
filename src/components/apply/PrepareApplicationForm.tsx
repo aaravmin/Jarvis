@@ -16,7 +16,7 @@ const KINDS: { value: ApplicationKind; label: string }[] = [
 
 /**
  * Prepare an application from a link. The agent reads the form and fills what it can ground in the
- * user's documents — it never submits. Accepts prefilled values (e.g. launched from an Opportunity)
+ * user's documents, it never submits. Accepts prefilled values (e.g. launched from an Opportunity)
  * and auto-runs once when `autostart` is set.
  */
 export function PrepareApplicationForm({
@@ -104,7 +104,7 @@ export function PrepareApplicationForm({
       </div>
       {err && <p className="mt-2 text-xs text-danger">{err}</p>}
       <p className="mt-2 text-xs text-muted">
-        Jarvis reads the form and fills what it can ground in your documents — it never submits. You
+        Jarvis reads the form and fills what it can ground in your documents, it never submits. You
         review and submit.
       </p>
     </div>

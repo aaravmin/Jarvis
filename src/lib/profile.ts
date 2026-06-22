@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** The user's lightweight profile — makes auto-population relevant to who they are. */
+/** The user's lightweight profile, makes auto-population relevant to who they are. */
 export type Profile = {
   headline?: string;
   age?: number;

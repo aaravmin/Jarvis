@@ -62,7 +62,7 @@ export function AddToGoal({ entityType, entityId }: { entityType: GoalEntityType
       });
       const data = await res.json();
       if (res.ok) {
-        setNote(data.created ? `${data.created} suggestion${data.created === 1 ? "" : "s"} — review on the goal page` : (data.message ?? "No clear fit"));
+        setNote(data.created ? `${data.created} suggestion${data.created === 1 ? "" : "s"}, review on the goal page` : (data.message ?? "No clear fit"));
         router.refresh();
       } else setNote(data?.error ?? "Failed");
     } finally {

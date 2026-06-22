@@ -1,7 +1,7 @@
 import "server-only";
 
 /**
- * The citation-allowlist validation gate — shared across research agents.
+ * The citation-allowlist validation gate, shared across research agents.
  *
  * Hard rule #3 in code form: the model's reported URLs and quotes are UNTRUSTED. We harvest the real
  * citations the server-side web_search tool produced (url + cited_text), then any claim a candidate
@@ -22,7 +22,7 @@ export function norm(s: string): string {
 /**
  * Is `quote` genuinely backed by the real citation `citedText`? Directional on purpose: the quote
  * must be (essentially) a substring OF the citation. We tolerate the ~150-char cited_text truncation
- * by also accepting the reverse direction — but ONLY when the real citation fragment is itself
+ * by also accepting the reverse direction, but ONLY when the real citation fragment is itself
  * substantial (>= 40 chars), so a short real fragment can never "back" a long model-authored paraphrase.
  */
 export function backs(citedText: string, quote: string): boolean {

@@ -10,7 +10,7 @@ import type { CardSource } from "@/lib/types";
 import type { DiscoveredPerson, ResearchRunView } from "@/lib/research/types";
 
 /**
- * Component lab (P0-T5 demo). Not a real product surface — a place to click the source chip and
+ * Component lab (P0-T5 demo). Not a real product surface, a place to click the source chip and
  * to see the "no card without a source" guardrail fire.
  */
 
@@ -25,7 +25,7 @@ const emailSource: CardSource = {
 
 const meetingSource: CardSource = {
   type: "meeting",
-  title: "Weekly sync — Product",
+  title: "Weekly sync, Product",
   occurredAt: "2026-06-16T17:00:00Z",
   quote: "Aarav will own the onboarding flow and share a doc by Friday",
   rawText:
@@ -39,9 +39,9 @@ const fakePerson: DiscoveredPerson = {
   company: "Helix Bio (YC W23)",
   roleTitle: "Co-founder & CSO",
   background: "Brown ScB '14; former Ginkgo Bioworks scientist working on enzyme design.",
-  relevance: "Brown alum + YC biotech founder — matches your cohort and your 'biotech network' goal.",
+  relevance: "Brown alum + YC biotech founder, matches your cohort and your 'biotech network' goal.",
   theAsk: "A 20-minute intro call about breaking into computational biology.",
-  notes: "Email inferred from company pattern — confirm before sending.",
+  notes: "Email inferred from company pattern, confirm before sending.",
   sourceQuote: "Maya Chen (Brown '14) co-founded Helix Bio, a YC W23 biotech startup.",
   sourceUrl: "https://www.ycombinator.com/companies/helix-bio",
   confidence: 0.88,
@@ -97,7 +97,7 @@ export default function DevPage() {
       <div>
         <h2 className="text-lg font-semibold text-foreground">Component lab</h2>
         <p className="mt-1 text-sm text-muted">
-          P0-T5 — the provenance <code className="text-accent">{"<Card>"}</code> primitive. Click a
+          P0-T5, the provenance <code className="text-accent">{"<Card>"}</code> primitive. Click a
           source chip to see the exact quote and a link to the original.
         </p>
       </div>
@@ -150,7 +150,7 @@ export default function DevPage() {
           <ErrorBoundary
             fallback={(message) => (
               <div className="rounded-xl border border-danger/40 bg-danger/10 p-4 text-sm text-danger">
-                <p className="font-semibold">Guardrail fired — the card refused to render:</p>
+                <p className="font-semibold">Guardrail fired, the card refused to render:</p>
                 <p className="mt-1 font-mono text-xs leading-relaxed">{message}</p>
               </div>
             )}
@@ -167,7 +167,7 @@ export default function DevPage() {
         <div className="flex items-center gap-2">
           <Globe className="h-4 w-4 text-accent" />
           <h3 className="text-xs font-medium uppercase tracking-wider text-muted">
-            Auto-populate — discovered person (per-field provenance)
+            Auto-populate, discovered person (per-field provenance)
           </h3>
         </div>
         <p className="text-sm text-muted">
@@ -179,7 +179,7 @@ export default function DevPage() {
         <PersonCard person={fakePerson} showActions />
 
         <h3 className="pt-2 text-xs font-medium uppercase tracking-wider text-muted">
-          Research run — lifecycle states
+          Research run, lifecycle states
         </h3>
         <ResearchRunCard run={runningRun} elapsed={7} onCancel={() => {}} />
         <ResearchRunCard run={doneRun} />

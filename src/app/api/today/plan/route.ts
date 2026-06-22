@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { buildDayPlan } from "@/lib/agents/today/plan";
 
-// Builds the plan with one Claude call over the day's real data — give it room.
+// Builds the plan with one Claude call over the day's real data, give it room.
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 

@@ -5,14 +5,14 @@ import type { FormField, FormFieldType } from "./types";
 /**
  * Reads an application form (the agent's "eyes"). Two backends:
  *
- *   • static  (always available, no deps) — fetch the HTML and parse <form> controls. Works for
+ *   • static  (always available, no deps), fetch the HTML and parse <form> controls. Works for
  *     server-rendered forms (Greenhouse, Lever, many ATS, most grant portals).
- *   • browser (optional, env-gated JARVIS_BROWSER=playwright) — render with Playwright and read the
+ *   • browser (optional, env-gated JARVIS_BROWSER=playwright), render with Playwright and read the
  *     live DOM, so JS-built forms (Workday, embedded widgets) are visible too. Falls back to static if
  *     Playwright isn't installed. This is the "hands/eyes" the roadmap calls for; enable it once the
  *     `playwright` package + a browser are provisioned (npm i playwright && npx playwright install chromium).
  *
- * Either way the agent only READS the form here — it never fills or submits (hard rule #5).
+ * Either way the agent only READS the form here, it never fills or submits (hard rule #5).
  */
 
 export type ScrapedForm = {
@@ -156,7 +156,7 @@ function parseFields(html: string): FormField[] {
     fields.push(f);
   };
 
-  // <input> — skip controls that carry no applicant data.
+  // <input>, skip controls that carry no applicant data.
   const inputRe = /<input\b([^>]*)>/gi;
   let m: RegExpExecArray | null;
   while ((m = inputRe.exec(html))) {
@@ -316,7 +316,7 @@ function toFormField(r: RawDomField): FormField {
 /**
  * Optional Playwright backend. Renders the page and reads the LIVE DOM (so JS-built forms are visible),
  * capturing each control's label, type, options and a re-locatable selector. Returns null when
- * Playwright is unavailable — the caller then uses the static path.
+ * Playwright is unavailable, the caller then uses the static path.
  */
 async function browserScrape(url: string): Promise<ScrapedForm | null> {
   const browser = await launchBrowser({ headless: true });
@@ -329,7 +329,7 @@ async function browserScrape(url: string): Promise<ScrapedForm | null> {
     try {
       await page.waitForLoadState("networkidle", { timeout: 5_000 });
     } catch {
-      /* networkidle can never settle on chatty pages — proceed with what's rendered */
+      /* networkidle can never settle on chatty pages, proceed with what's rendered */
     }
     const raw = (await page.evaluate<RawDomField[]>(DOM_READER as unknown as () => RawDomField[])) ?? [];
     const fields = raw.map(toFormField);

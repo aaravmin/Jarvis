@@ -14,7 +14,7 @@ const FILTERS: { key: OpportunityKindFilter; label: string }[] = [
 ];
 
 const PLACEHOLDER: Record<OpportunityKindFilter, string> = {
-  all: "Describe what to find — e.g. biotech hackathons with upcoming deadlines",
+  all: "Describe what to find, e.g. biotech hackathons with upcoming deadlines",
   programs: "e.g. summer research fellowships for CS sophomores",
   jobs: "e.g. new-grad software engineer roles at climate-tech startups",
   hackathons: "e.g. AI hackathons with cash prizes in the next 2 months",
@@ -97,7 +97,7 @@ export function FindOpportunitiesBar() {
       {error && <p className="mt-2 px-6 text-xs text-danger">{error}</p>}
       {running && (
         <p className="mt-2 px-6 text-xs text-muted">
-          Searching the web and verifying every match against real citations — this can take up to a
+          Searching the web and verifying every match against real citations, this can take up to a
           minute. Results appear in Review.
         </p>
       )}

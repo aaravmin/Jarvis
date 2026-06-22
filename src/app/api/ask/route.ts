@@ -7,7 +7,7 @@ import { buildAskDataContext, type AskDataContext } from "@/lib/assistant/data-t
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
-/** POST /api/ask — { message } → { answer, citations[], files[] }. Auth-gated. */
+/** POST /api/ask, { message } → { answer, citations[], files[] }. Auth-gated. */
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
   // Give the assistant read access to the user's own connected data (Gmail/Calendar/meetings/tasks/
   // contacts/opportunities) so it can answer questions about them. Never let a data hiccup block the
-  // answer — fall back to the web/files-only assistant if the context can't be built.
+  // answer, fall back to the web/files-only assistant if the context can't be built.
   let dataCtx: AskDataContext | undefined;
   try {
     dataCtx = await buildAskDataContext(supabase, user.id);

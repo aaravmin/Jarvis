@@ -5,7 +5,7 @@ import { Topbar } from "@/components/Topbar";
 
 /**
  * The dashboard shell: a content column (a Topbar + scrollable main). Navigation lives entirely
- * behind the Topbar's left hamburger <NavDrawer> — there's no always-on rail, so opening Jarvis
+ * behind the Topbar's left hamburger <NavDrawer>, there's no always-on rail, so opening Jarvis
  * shows just the orb and the clock until you toggle the menu.
  *
  * This layout is the server-side auth gate (defense-in-depth behind the middleware):

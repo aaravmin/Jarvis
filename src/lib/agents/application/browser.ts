@@ -10,7 +10,7 @@ import "server-only";
  * these helpers light up the real browser.
  *
  * Scope (hard rule #5): this module opens pages, reads forms, and FILLS fields. It never clicks a
- * Submit/Apply button — submission is always the user's explicit action in the window we leave open.
+ * Submit/Apply button, submission is always the user's explicit action in the window we leave open.
  *
  * Local-only by design: launching a visible browser requires a display, so this is meant to run on the
  * user's machine (the local dev server). On a headless server it degrades gracefully (returns null /
@@ -51,7 +51,7 @@ export type PwContext = {
   close: () => Promise<void>;
 };
 
-/** A persistent (profile-backed) context — its cookies/localStorage survive on disk, so a login sticks. */
+/** A persistent (profile-backed) context, its cookies/localStorage survive on disk, so a login sticks. */
 export type PwPersistentContext = {
   pages: () => PwPage[];
   newPage: () => Promise<PwPage>;
@@ -123,7 +123,7 @@ export async function newPage(browser: PwBrowser): Promise<PwPage> {
 
 /**
  * Launch a profile-backed (persistent) context. Unlike `launchBrowser`, cookies/localStorage written
- * here survive on disk in `userDataDir`, so a site login (e.g. LinkedIn) persists across runs — the
+ * here survive on disk in `userDataDir`, so a site login (e.g. LinkedIn) persists across runs, the
  * user signs in ONCE in the visible window and later scrapes reuse that session. Returns null when
  * Playwright is unavailable. Always run headed for an authenticated flow (login needs a real window,
  * and a real profile is far less likely to trip a site's bot checks).

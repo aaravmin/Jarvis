@@ -5,7 +5,7 @@ import { ingestCalendar } from "@/lib/google/ingest";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-/** POST /api/google/sync-calendar — pull upcoming events as-is into the Calendar tab. */
+/** POST /api/google/sync-calendar, pull upcoming events as-is into the Calendar tab. */
 export async function POST() {
   const supabase = await createClient();
   const {

@@ -15,7 +15,7 @@ const CATEGORIES: OpportunityCategory[] = [
 ];
 
 /**
- * POST /api/opportunities — start (and, in v1, run to completion) an opportunity search.
+ * POST /api/opportunities, start (and, in v1, run to completion) an opportunity search.
  * Body: { query: string, kindFilter?: 'all'|'programs'|'jobs'|'hackathons' }.
  * Returns the finished OpportunityRunView (or a reused in-flight run).
  */
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 }
 
 /**
- * PATCH /api/opportunities — edit one opportunity's fields inline. Body: { id, ...fields }. Only the
+ * PATCH /api/opportunities, edit one opportunity's fields inline. Body: { id, ...fields }. Only the
  * provided fields are written (partial update). Editing rawDeadline re-resolves deadline_at with
  * chrono (hard rule #2: the model and the user never set a computed date directly). RLS scopes the
  * write to the caller's own row.
@@ -109,7 +109,7 @@ export async function PATCH(request: Request) {
   return NextResponse.json({ ok: true });
 }
 
-/** DELETE /api/opportunities?id=<id> — remove one opportunity. RLS scopes to the caller's own row. */
+/** DELETE /api/opportunities?id=<id>, remove one opportunity. RLS scopes to the caller's own row. */
 export async function DELETE(request: Request) {
   const supabase = await createClient();
   const {

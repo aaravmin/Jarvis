@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 /**
- * POST /api/outreach/:id/gmail — save this outreach run's draft into the user's Gmail Drafts.
+ * POST /api/outreach/:id/gmail, save this outreach run's draft into the user's Gmail Drafts.
  * Body (optional): { to, subject, body } to override the stored draft (after the user edits it).
  * Never sends (autonomy L0). Requires gmail.compose; records the gmail_draft_id back on the run.
  */
@@ -26,7 +26,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     body = await request.json();
   } catch {
-    /* body is optional — fall back to the stored draft */
+    /* body is optional, fall back to the stored draft */
   }
 
   const { data: run } = await supabase
@@ -40,7 +40,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const subject = (body.subject ?? run.draft_subject ?? "").trim();
   const text = (body.body ?? run.draft_body ?? "").trim();
   if (!subject && !text) {
-    return NextResponse.json({ error: "Nothing to save — draft the email first." }, { status: 400 });
+    return NextResponse.json({ error: "Nothing to save, draft the email first." }, { status: 400 });
   }
 
   // Resolve the recipient: explicit override, else the contact's primary email.

@@ -10,7 +10,7 @@ const input =
   "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted";
 
 /**
- * "Add your own template" — type one or upload a .txt/.md file. Saves to the user's templates
+ * "Add your own template", type one or upload a .txt/.md file. Saves to the user's templates
  * (source "user") so Jarvis can reuse and adapt it. Verbatim: no scrubbing, the user authored it.
  */
 export function NewTemplateForm() {
@@ -30,7 +30,7 @@ export function NewTemplateForm() {
     setErr(null);
     // Reject oversized files BEFORE reading megabytes into the browser (server caps at the same size).
     if (file.size > MAX_BODY) {
-      setErr(`That file is too large — keep templates under ${Math.round(MAX_BODY / 1000)}KB.`);
+      setErr(`That file is too large, keep templates under ${Math.round(MAX_BODY / 1000)}KB.`);
       if (fileRef.current) fileRef.current.value = "";
       return;
     }

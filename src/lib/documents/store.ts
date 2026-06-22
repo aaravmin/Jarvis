@@ -4,7 +4,7 @@ import type { AppDocument, DocType } from "./types";
 
 /**
  * CRUD for the user's application documents. Supabase is the system of record (hard rule #1); RLS
- * scopes every row to the signed-in user. The binary lives in the private 'documents' Storage bucket —
+ * scopes every row to the signed-in user. The binary lives in the private 'documents' Storage bucket -
  * this layer owns the metadata row and keeps the two in sync (deleting a row also removes the object).
  */
 

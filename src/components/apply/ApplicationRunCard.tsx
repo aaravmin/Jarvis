@@ -42,7 +42,7 @@ const STATUS: Record<ApplicationRunView["status"], { label: string; cls: string 
 
 /**
  * One prepared application. Shows the grounded field_plan (each field with its value, provenance, and
- * whether it still needs the user), editable before submitting. The agent never submits — the user
+ * whether it still needs the user), editable before submitting. The agent never submits, the user
  * opens the link, submits, then marks it submitted here (hard rule #5).
  */
 export function ApplicationRunCard({ run }: { run: ApplicationRunView }) {
@@ -158,7 +158,7 @@ export function ApplicationRunCard({ run }: { run: ApplicationRunView }) {
                 className="min-h-[2.25rem] w-full resize-y rounded-md border border-border bg-surface px-2 py-1 text-xs text-foreground outline-none placeholder:text-muted"
                 rows={f.value.length > 80 ? 3 : 1}
                 value={f.value}
-                placeholder={f.required ? "Required — add a value" : "Optional"}
+                placeholder={f.required ? "Required, add a value" : "Optional"}
                 onChange={(e) => editValue(i, e.target.value)}
               />
               {f.filled && f.source_quote && (
@@ -185,7 +185,7 @@ export function ApplicationRunCard({ run }: { run: ApplicationRunView }) {
             type="button"
             onClick={() => void autofill()}
             disabled={busy !== null}
-            title="Open a real browser and type the grounded values into the live form. Jarvis never submits — you review and submit."
+            title="Open a real browser and type the grounded values into the live form. Jarvis never submits, you review and submit."
             className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 bg-accent-soft/30 px-3 py-1.5 text-xs font-semibold text-accent hover:bg-accent-soft/50 disabled:opacity-50"
           >
             {busy === "autofill" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}

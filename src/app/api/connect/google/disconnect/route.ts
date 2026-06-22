@@ -4,7 +4,7 @@ import { disconnect } from "@/lib/google/store";
 
 export const dynamic = "force-dynamic";
 
-/** POST /api/connect/google/disconnect — remove the stored Google connection for the signed-in user. */
+/** POST /api/connect/google/disconnect, remove the stored Google connection for the signed-in user. */
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {

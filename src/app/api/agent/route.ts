@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 /**
- * POST /api/agent — the multi-agent entry point. Classifies one free-text request and dispatches it
+ * POST /api/agent, the multi-agent entry point. Classifies one free-text request and dispatches it
  * to exactly ONE specialized agent (never all of them):
  *   • opportunity / contact → run the research engine, results land in Review
  *   • application           → read a form URL and build a field plan (Apply tab)
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       r.status === "error"
         ? { decision, outcome: "error", runId: r.runId, error: r.error }
         : r.status === "reused"
-          ? { decision, outcome: "done", runId: r.runId, redirectTo: "/review", message: "A matching search is already running — see Review." }
+          ? { decision, outcome: "done", runId: r.runId, redirectTo: "/review", message: "A matching search is already running, see Review." }
           : { decision, outcome: "done", runId: r.view.id, resultCount: r.view.resultCount, redirectTo: "/review" };
     return NextResponse.json(result);
   }
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       r.status === "error"
         ? { decision, outcome: "error", runId: r.runId, error: r.error }
         : r.status === "reused"
-          ? { decision, outcome: "done", runId: r.runId, redirectTo: "/review", message: "A matching search is already running — see Review." }
+          ? { decision, outcome: "done", runId: r.runId, redirectTo: "/review", message: "A matching search is already running, see Review." }
           : { decision, outcome: "done", runId: r.view.id, resultCount: r.view.resultCount, redirectTo: "/review" };
     return NextResponse.json(result);
   }
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
       r.status === "error"
         ? { decision, outcome: "error", runId: r.runId, error: r.error }
         : r.status === "reused"
-          ? { decision, outcome: "done", runId: r.runId, redirectTo: "/apply", message: "That application is already being prepared — see Apply." }
+          ? { decision, outcome: "done", runId: r.runId, redirectTo: "/apply", message: "That application is already being prepared, see Apply." }
           : {
               decision,
               outcome: "done",
@@ -117,15 +117,15 @@ export async function POST(request: Request) {
   }
 
   if (decision.agent === "email") {
-    // "Turn my inbox into tasks" — mine already-synced mail into the Review queue (the same engine the
+    // "Turn my inbox into tasks", mine already-synced mail into the Review queue (the same engine the
     // Scan button uses). Each click processes a bounded batch and reports how much is left.
     try {
       const { scanned, inserted, remaining } = await backfillExtraction(supabase, user.id);
       const message =
         inserted > 0
-          ? `Found ${inserted} action item${inserted === 1 ? "" : "s"} in ${scanned} message${scanned === 1 ? "" : "s"} — review them now.${remaining ? ` ${remaining} more to scan.` : ""}`
+          ? `Found ${inserted} action item${inserted === 1 ? "" : "s"} in ${scanned} message${scanned === 1 ? "" : "s"}, review them now.${remaining ? ` ${remaining} more to scan.` : ""}`
           : scanned > 0
-            ? `Scanned ${scanned} message${scanned === 1 ? "" : "s"} — nothing actionable.${remaining ? ` ${remaining} more to scan.` : ""}`
+            ? `Scanned ${scanned} message${scanned === 1 ? "" : "s"}, nothing actionable.${remaining ? ` ${remaining} more to scan.` : ""}`
             : "No un-scanned email left. Sync new mail on the Email tab, then ask again.";
       const result: AgentDispatchResult = {
         decision,
@@ -141,7 +141,7 @@ export async function POST(request: Request) {
     }
   }
 
-  // assistant — answer inline (the orb brain: web search + local files + the user's connected data).
+  // assistant, answer inline (the orb brain: web search + local files + the user's connected data).
   try {
     let dataCtx: AskDataContext | undefined;
     try {

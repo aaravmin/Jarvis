@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { importContactFromLinkedIn } from "@/lib/contacts/import-linkedin";
 
-// Reads a LinkedIn profile (headed, logged-in browser) and/or Apollo — can take 20-40s. Server-side
+// Reads a LinkedIn profile (headed, logged-in browser) and/or Apollo, can take 20-40s. Server-side
 // only; the LinkedIn session lives in an on-disk Chromium profile, never the browser.
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 /**
- * POST /api/contacts/import-linkedin — add one contact from a pasted LinkedIn profile URL, enriched
+ * POST /api/contacts/import-linkedin, add one contact from a pasted LinkedIn profile URL, enriched
  * from the page + Apollo. Body: { url }. Always 200 on a handled outcome; the body's `message` carries
  * the user-facing result (incl. needsLogin / already-exists / nothing-configured states).
  */

@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 /**
- * POST /api/google/gmail/create-draft — { to?, subject, body }. Saves a DRAFT in the user's Gmail
- * (never sends — autonomy L0). Requires the gmail.compose scope; returns a friendly reconnect error
+ * POST /api/google/gmail/create-draft, { to?, subject, body }. Saves a DRAFT in the user's Gmail
+ * (never sends, autonomy L0). Requires the gmail.compose scope; returns a friendly reconnect error
  * if the user connected before write scopes were added.
  */
 export async function POST(request: Request) {

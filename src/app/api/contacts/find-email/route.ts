@@ -5,7 +5,7 @@ import { apolloEnabled, apolloMatchPerson } from "@/lib/apollo";
 export const dynamic = "force-dynamic";
 
 /**
- * POST /api/contacts/find-email — find a person's work email via Apollo.io.
+ * POST /api/contacts/find-email, find a person's work email via Apollo.io.
  * Body: { contactId?, fullName, company?, domain?, linkedin? }.
  *   • Always returns { email, found, title?, organization? } (email null when not found).
  *   • When contactId is given, also saves the email as that contact's primary email channel and
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       const fieldSources = {
         ...((existing.field_sources as Record<string, unknown> | null) ?? {}),
         email: {
-          // Apollo is the source of the EMAIL — its provenance URL is apollo.io, not the person's
+          // Apollo is the source of the EMAIL, its provenance URL is apollo.io, not the person's
           // LinkedIn (that's a separate channel). Mislabeling it would misattribute where the fact came from.
           url: "https://apollo.io",
           quote: `Found via Apollo.io (email status: ${match?.emailStatus ?? "match"})`,
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
         },
       };
       await supabase.from("contacts").update({ field_sources: fieldSources }).eq("id", id);
-      // Upsert the primary email channel. Insert FIRST, then prune any other email rows — so a failed
+      // Upsert the primary email channel. Insert FIRST, then prune any other email rows, so a failed
       // write never leaves the contact with no email at all (the old non-atomic delete-then-insert could).
       const channels = (existing as { contact_channels?: { kind: string; value: string }[] }).contact_channels ?? [];
       const already = channels.some((c) => c.kind === "email" && c.value === email);

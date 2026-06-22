@@ -14,10 +14,10 @@ import type { FieldPlanItem } from "./types";
 /**
  * The Application agent's "hands": drive a REAL browser to type the grounded field_plan into the live
  * form, attach the resume, then LEAVE THE WINDOW OPEN for the user to review and submit. It never clicks
- * Submit/Apply — submission is the user's explicit action (hard rule #5, submit-only-on-click).
+ * Submit/Apply, submission is the user's explicit action (hard rule #5, submit-only-on-click).
  *
  * Only grounded values (filled=true) are entered; everything left for the user stays blank so the user
- * sees exactly what still needs them. Each field fills independently — one stubborn control never aborts
+ * sees exactly what still needs them. Each field fills independently, one stubborn control never aborts
  * the rest, and every skip is reported back with a reason.
  *
  * Requires JARVIS_BROWSER=playwright + an installed browser. Otherwise returns { unavailable:true } and
@@ -31,7 +31,7 @@ export type AutofillSkip = { label: string; reason: string };
 
 export type AutofillResult = {
   ok: boolean;
-  /** Playwright isn't enabled/installed — caller should fall back to manual. */
+  /** Playwright isn't enabled/installed, caller should fall back to manual. */
   unavailable?: boolean;
   filledCount: number;
   totalFillable: number;
@@ -69,7 +69,7 @@ async function locate(page: PwPage, item: FieldPlanItem): Promise<PwLocator | nu
       const loc = page.locator(sel).first();
       if ((await loc.count()) > 0) return loc;
     } catch {
-      /* invalid selector — try the next */
+      /* invalid selector, try the next */
     }
   }
   // Last resort: match by the visible label the way a human would.
@@ -225,7 +225,7 @@ export async function autofillApplication(
     try {
       await page.waitForLoadState("networkidle", { timeout: 5_000 });
     } catch {
-      /* chatty pages never go idle — proceed with what's rendered */
+      /* chatty pages never go idle, proceed with what's rendered */
     }
 
     for (const item of fillable) {
@@ -247,7 +247,7 @@ export async function autofillApplication(
           attachedResume = true;
         }
       } catch {
-        /* no usable file input, or the page rejected it — the user can attach manually */
+        /* no usable file input, or the page rejected it, the user can attach manually */
       }
     }
 
@@ -263,8 +263,8 @@ export async function autofillApplication(
     const parts = [
       `Filled ${filledCount} of ${fillable.length} grounded field${fillable.length === 1 ? "" : "s"} in the open browser window.`,
       attachedResume ? "Attached your resume." : null,
-      skipped.length ? `${skipped.length} couldn't be matched — finish those by hand.` : null,
-      "Review everything, then submit it yourself — Jarvis never submits for you.",
+      skipped.length ? `${skipped.length} couldn't be matched, finish those by hand.` : null,
+      "Review everything, then submit it yourself, Jarvis never submits for you.",
     ].filter(Boolean);
 
     return {

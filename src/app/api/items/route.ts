@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 /**
- * PATCH /api/items — act on a review-queue item. Body: { id, action: "accept" | "dismiss" }.
+ * PATCH /api/items, act on a review-queue item. Body: { id, action: "accept" | "dismiss" }.
  *   accept  → status='accepted' (graduates out of Review; tasks then appear on the Tasks page).
  *   dismiss → status='dismissed'.
  * This is the L0 approve/reject loop (hard rule #5). RLS scopes the row to the signed-in user.

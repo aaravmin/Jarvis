@@ -52,7 +52,7 @@ export const APPLICATION_STATUSES: { value: ApplicationStatus; label: string }[]
 export type FieldSource = { url?: string; quote?: string; confidence?: number };
 
 /**
- * A discovered opportunity as returned to the UI — AFTER server-side validation and date resolution.
+ * A discovered opportunity as returned to the UI, AFTER server-side validation and date resolution.
  * `sourceQuote` is guaranteed non-empty (unprovenanced rows are dropped server-side), so a <Card>
  * built from this never trips its guardrail.
  */
@@ -69,7 +69,7 @@ export type DiscoveredOpportunity = {
   requiredSkills: string[];
   compOrPrize?: string;
 
-  // Dates — raw (verbatim, from the model) + resolved (chrono, by our code).
+  // Dates, raw (verbatim, from the model) + resolved (chrono, by our code).
   rawDeadline?: string;
   deadlineAt?: string; // ISO; undefined when unparseable (e.g. "rolling")
   rawEventDates?: string;

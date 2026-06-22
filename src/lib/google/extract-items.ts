@@ -5,13 +5,13 @@ import { resolveDeadline } from "@/lib/agents/opportunity/deadline";
 import { backs, clamp01, norm } from "@/lib/agents/citation-gate";
 
 /**
- * Email → items extraction (roadmap B1) — the engine that turns ingested mail into tracked work.
+ * Email → items extraction (roadmap B1), the engine that turns ingested mail into tracked work.
  *
  * For each important email we ask the model for genuine commitments the USER must act on (a task, a
  * meeting/event, or a follow-up they owe). The model returns, per candidate, a VERBATIM `source_quote`
- * and a literal `raw_due` phrase — it NEVER computes a date (hard rule #2) and its quote is UNTRUSTED
+ * and a literal `raw_due` phrase, it NEVER computes a date (hard rule #2) and its quote is UNTRUSTED
  * (hard rule #3). Our code then:
- *   1. verifies the quote is actually present in the email body (citation gate — drop it otherwise),
+ *   1. verifies the quote is actually present in the email body (citation gate, drop it otherwise),
  *   2. resolves `raw_due` deterministically with chrono, anchored to when the email arrived,
  *   3. stores the item with source_id + source_quote + confidence at status='review' (L0, rule #5).
  *
@@ -55,7 +55,7 @@ const EXTRACT_SCHEMA = {
             type: "string",
             description: "The literal date/time PHRASE from the email if any ('by Friday', 'March 3', 'end of week'). Copy it verbatim; do NOT compute or convert a date. Empty string if none.",
           },
-          confidence: { type: "number", description: "0..1 — how sure this is a real action item for the user." },
+          confidence: { type: "number", description: "0..1, how sure this is a real action item for the user." },
           reasoning: { type: "string", description: "One short sentence: why this is on the user's plate." },
         },
         required: ["item_type", "title", "source_quote"],
@@ -82,12 +82,12 @@ Return ONLY genuine commitments ${owner} must act on:
 - follow_up: the user owes someone a reply or a promised thing.
 
 Do NOT extract: ${skip}.
-If the ${noun} has nothing actionable for the user, return an empty list — that is a common case.
+If the ${noun} has nothing actionable for the user, return an empty list, that is a common case.
 
 CRITICAL RULES:
 - source_quote MUST be copied verbatim from the ${noun}. Do not paraphrase, summarize, or invent.
 - raw_due MUST be the literal phrase as written ("by next Tuesday", "March 3rd", "EOD"). NEVER compute,
-  convert, or guess an actual date — our system resolves dates itself. Empty string if no date is stated.
+  convert, or guess an actual date, our system resolves dates itself. Empty string if no date is stated.
 - Be conservative: a wrong task is worse than a missed one. Set confidence honestly (0..1).`;
 }
 
@@ -123,7 +123,7 @@ export async function extractItemsFromSource(
       maxTokens: 2000,
     });
   } catch {
-    return { inserted: 0, considered: 0 }; // model/transport failure — skip this email, keep ingesting
+    return { inserted: 0, considered: 0 }; // model/transport failure, skip this email, keep ingesting
   }
 
   const candidates = (out?.items ?? []).filter((c): c is RawCandidate => !!c);
@@ -140,7 +140,7 @@ export async function extractItemsFromSource(
     const quote = (c.source_quote ?? "").trim();
     if (title.length < 3 || !quote) continue;
 
-    // Hard rule #3: the quote is untrusted — keep the item ONLY if it's actually in the email.
+    // Hard rule #3: the quote is untrusted, keep the item ONLY if it's actually in the email.
     if (!backs(corpus, quote)) continue;
 
     const confidence = clamp01(c.confidence) ?? 0.5;

@@ -5,7 +5,7 @@ import type { FieldPlanItem } from "@/lib/agents/application/types";
 export const dynamic = "force-dynamic";
 
 /**
- * PATCH /api/applications/:id — user actions on a prepared application.
+ * PATCH /api/applications/:id, user actions on a prepared application.
  *   { status: "submitted" }      mark it submitted AFTER the user submits the form themselves.
  *   { fieldPlan: FieldPlanItem[] } save edits the user made to the field values before submitting.
  * The agent itself never sets 'submitted' (submit-only-on-click, hard rule #5).
@@ -43,7 +43,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   return NextResponse.json({ ok: true });
 }
 
-/** DELETE /api/applications/:id — discard a prepared application (RLS scopes to the user). */
+/** DELETE /api/applications/:id, discard a prepared application (RLS scopes to the user). */
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
   const {

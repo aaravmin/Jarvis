@@ -1,22 +1,22 @@
 import "server-only";
 
 /**
- * ElevenLabs text-to-speech — Jarvis's voice. The API key lives ONLY here on the server (hard rule
+ * ElevenLabs text-to-speech, Jarvis's voice. The API key lives ONLY here on the server (hard rule
  * #6: tokens server-side, never in the browser). The client asks /api/voice for audio; this module
  * is the only place that touches the key.
  *
  * Entirely gated on ELEVENLABS_API_KEY. With no key set, elevenLabsEnabled() is false and the route
- * returns 503 so the UI silently falls back to a voiceless (text-only) answer — speaking is a
+ * returns 503 so the UI silently falls back to a voiceless (text-only) answer, speaking is a
  * progressive enhancement, never a hard dependency.
  */
 
 const ENDPOINT = "https://api.elevenlabs.io/v1/text-to-speech";
-// "George — Warm, Captivating Storyteller": one of the default voices present on a fresh (incl. free)
+// "George, Warm, Captivating Storyteller": one of the default voices present on a fresh (incl. free)
 // account, so it works via the API the moment a key is added. NOTE: most *library* voices (e.g.
-// "Rachel") return 402 paid_plan_required for free users — that was the original silent-voice bug.
+// "Rachel") return 402 paid_plan_required for free users, that was the original silent-voice bug.
 // Override with ELEVENLABS_VOICE_ID to use any voice that appears in YOUR account's voice list.
 const DEFAULT_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb";
-// Turbo v2.5: low-latency, good quality — the right default for a snappy assistant reply.
+// Turbo v2.5: low-latency, good quality, the right default for a snappy assistant reply.
 const DEFAULT_MODEL = "eleven_turbo_v2_5";
 // Cap the spoken text: long answers would cost a lot and take forever to synthesize. The on-screen
 // answer is always the full text; the voice just reads a sensible lead.
@@ -33,7 +33,7 @@ export type SpeechResult =
   | { ok: false; status: number; error: string };
 
 /**
- * Synthesize `text` to MP3 audio. Returns the raw bytes (the route streams them back). Never throws —
+ * Synthesize `text` to MP3 audio. Returns the raw bytes (the route streams them back). Never throws -
  * any failure (no key, outage, bad text) comes back as { ok: false } so the caller degrades quietly.
  */
 export async function synthesizeSpeech(text: string): Promise<SpeechResult> {

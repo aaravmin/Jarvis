@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 /**
- * POST /api/contacts — manually add a contact. Body: { fullName, company?, roleTitle?, email?,
+ * POST /api/contacts, manually add a contact. Body: { fullName, company?, roleTitle?, email?,
  * linkedin?, notes? }. User-created → accepted (no provenance needed).
  */
 export async function POST(request: Request) {
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 }
 
 /**
- * PATCH /api/contacts — edit a contact. Body: { id, fullName, company?, roleTitle?, email?,
+ * PATCH /api/contacts, edit a contact. Body: { id, fullName, company?, roleTitle?, email?,
  * linkedin?, notes? }. RLS scopes every write to the caller's own rows. Email/linkedin live in
  * contact_channels: we only rewrite a channel when its value actually changed, so an unchanged,
  * research-discovered channel keeps its original provenance (source_url / confidence).
@@ -101,7 +101,7 @@ export async function PATCH(request: Request) {
       .eq("contact_id", id)
       .eq("kind", kind);
     const current = existing ?? [];
-    if (val && current.some((c) => c.value === val)) continue; // unchanged — keep its provenance
+    if (val && current.some((c) => c.value === val)) continue; // unchanged, keep its provenance
     if (current.length) await supabase.from("contact_channels").delete().eq("contact_id", id).eq("kind", kind);
     if (val) await supabase.from("contact_channels").insert({ contact_id: id, kind, value: val, is_primary: true });
   }
@@ -110,7 +110,7 @@ export async function PATCH(request: Request) {
 }
 
 /**
- * DELETE /api/contacts?id=<contactId> — remove a contact and its channels. User-driven; RLS scopes
+ * DELETE /api/contacts?id=<contactId>, remove a contact and its channels. User-driven; RLS scopes
  * the delete to the signed-in user's own rows, so it can never touch another user's contacts.
  */
 export async function DELETE(request: Request) {
@@ -123,7 +123,7 @@ export async function DELETE(request: Request) {
   const id = new URL(request.url).searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id is required." }, { status: 400 });
 
-  // Remove channels first — contact_channels.contact_id references contacts, so without a guaranteed
+  // Remove channels first, contact_channels.contact_id references contacts, so without a guaranteed
   // ON DELETE CASCADE deleting the contact while channels still reference it would fail.
   await supabase.from("contact_channels").delete().eq("contact_id", id);
   const { error } = await supabase.from("contacts").delete().eq("id", id);

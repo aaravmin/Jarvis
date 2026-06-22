@@ -133,7 +133,7 @@ export async function ingestGmail(supabase: SupabaseClient, userId: string): Pro
       })
       .select("id")
       .single();
-    if (srcErr || !src) continue; // skip on insert failure (e.g. a dedup race) — don't count it
+    if (srcErr || !src) continue; // skip on insert failure (e.g. a dedup race), don't count it
     imported++;
     newSources.push({ id: src.id, title: e.subject, body: e.body || e.snippet, occurredAt: e.dateISO });
     groups.set(c.group, (groups.get(c.group) ?? 0) + 1);
@@ -148,7 +148,7 @@ export async function ingestGmail(supabase: SupabaseClient, userId: string): Pro
           full_name: e.fromName,
           notes: `From email: ${e.subject}`,
           source_id: src.id,
-          source_quote: `${e.subject} — ${e.snippet}`.slice(0, 500),
+          source_quote: `${e.subject}, ${e.snippet}`.slice(0, 500),
           review_status: "review",
           created_by: "jarvis",
         })
@@ -198,7 +198,7 @@ export async function ingestCalendar(supabase: SupabaseClient, userId: string): 
   let imported = 0;
   for (const ev of events) {
     // End time lives in its own column (ends_at) so it stays a real timestamp the UI/assistant format
-    // deterministically — never a raw ISO buried in raw_text for the model to misread. raw_text now
+    // deterministically, never a raw ISO buried in raw_text for the model to misread. raw_text now
     // carries only the human detail (location); all-day-ness is flagged so display drops the time.
     const fields = {
       title: ev.summary,

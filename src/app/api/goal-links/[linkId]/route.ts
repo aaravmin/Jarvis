@@ -4,7 +4,7 @@ import { unlinkById, setLinkReview } from "@/lib/goals/links";
 
 export const dynamic = "force-dynamic";
 
-/** PATCH /api/goal-links/[linkId] — accept/dismiss an AI-suggested link. Body: { action }. */
+/** PATCH /api/goal-links/[linkId], accept/dismiss an AI-suggested link. Body: { action }. */
 export async function PATCH(request: Request, { params }: { params: Promise<{ linkId: string }> }) {
   const { linkId } = await params;
   const supabase = await createClient();
@@ -27,7 +27,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ li
   return NextResponse.json({ ok: true });
 }
 
-/** DELETE /api/goal-links/[linkId] — unlink. */
+/** DELETE /api/goal-links/[linkId], unlink. */
 export async function DELETE(_request: Request, { params }: { params: Promise<{ linkId: string }> }) {
   const { linkId } = await params;
   const supabase = await createClient();

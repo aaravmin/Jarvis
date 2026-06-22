@@ -6,7 +6,7 @@ export type CardProps = {
   /**
    * REQUIRED. Every card must prove where it came from.
    * A card with no source (or no source quote) throws in development and renders nothing in
-   * production — enforcing the hard rule: "no UI card renders without a working source chip."
+   * production, enforcing the hard rule: "no UI card renders without a working source chip."
    */
   source: CardSource;
   /** Optional body content (description, sub-items, etc.). */

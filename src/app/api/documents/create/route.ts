@@ -11,7 +11,7 @@ export const maxDuration = 60;
 const MAX_TEXT = 200_000; // generous for a resume/grant narrative; guards against a runaway paste
 
 /**
- * POST /api/documents/create — record an uploaded/pasted document's metadata.
+ * POST /api/documents/create, record an uploaded/pasted document's metadata.
  * The client uploads the binary straight to the private 'documents' Storage bucket (RLS-scoped to the
  * user's own folder) and sends us the resulting { storagePath, ... } plus the extracted text. A
  * text-only document (no file) is allowed too. Supabase is the system of record (hard rule #1).
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid storage path." }, { status: 400 });
   }
 
-  // Server-side extraction: when the client couldn't read the file (a PDF/DOCX resume — the common
+  // Server-side extraction: when the client couldn't read the file (a PDF/DOCX resume, the common
   // case), pull the text from the uploaded binary so the agent has a corpus to ground fills in
   // (hard rule #3). Best-effort: a failure leaves `text` as-is and the upload still succeeds.
   let resolvedText = text;

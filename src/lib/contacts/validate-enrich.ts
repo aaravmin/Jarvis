@@ -4,19 +4,19 @@ import { apolloEnabled, apolloMatchPerson, type ApolloPerson } from "@/lib/apoll
 
 /**
  * validate-enrich: take contacts that came from a Google Sheet (or any review run) and, for each one,
- *   (a) VALIDATE the contact info already in the row — is the email a real address, and does it match
+ *   (a) VALIDATE the contact info already in the row, is the email a real address, and does it match
  *       what an authoritative source (Apollo.io) has on file for that person? and
- *   (b) ENRICH the missing pieces — fill an absent email / company / title / LinkedIn from Apollo.
+ *   (b) ENRICH the missing pieces, fill an absent email / company / title / LinkedIn from Apollo.
  *
  * This is the "fill in the missing pieces and validate that the spreadsheet contact info is correct"
  * half of the importer. It runs as a second pass over already-imported rows so import stays fast and
  * deterministic, and so validation can run again on demand (a button) or after a re-import.
  *
  * Two tiers, and it degrades gracefully:
- *   • Tier 1 (always, no API key): deterministic FORMAT checks — a malformed email/LinkedIn is flagged
+ *   • Tier 1 (always, no API key): deterministic FORMAT checks, a malformed email/LinkedIn is flagged
  *     "invalid" purely from its shape. Never guesses.
  *   • Tier 2 (only when APOLLO_API_KEY is set): cross-check the existing email against Apollo's record
- *     and fill blanks. With no key, Tier 2 is skipped and we report apolloUsed:false — the feature
+ *     and fill blanks. With no key, Tier 2 is skipped and we report apolloUsed:false, the feature
  *     still validates formats, it just can't confirm against a third party.
  *
  * Provenance (hard rule #3): every verdict and every filled value is written into the contact's
@@ -50,16 +50,16 @@ export type ValidateEnrichOpts = {
   contactIds?: string[]; // validate exactly these
   researchRunId?: string; // …or every contact from this run
   scope?: "review" | "accepted"; // …or all of the user's contacts in this lifecycle state
-  limit?: number; // hard cap on rows touched per call (default 25) — keeps us under maxDuration
+  limit?: number; // hard cap on rows touched per call (default 25), keeps us under maxDuration
 };
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 60;
-const POOL = 5; // concurrent Apollo lookups — bounded so a batch returns well under the route timeout
+const POOL = 5; // concurrent Apollo lookups, bounded so a batch returns well under the route timeout
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** A syntactically plausible email — Tier-1 format gate (NOT deliverability). */
+/** A syntactically plausible email, Tier-1 format gate (NOT deliverability). */
 function isLikelyEmail(v: string): boolean {
   return EMAIL_RE.test(v.trim());
 }
@@ -69,7 +69,7 @@ function isLikelyLinkedIn(v: string): boolean {
   const s = v.trim();
   if (!s) return false;
   if (/linkedin\.com\/(in|pub|company)\//i.test(s)) return true;
-  // A bare handle a sheet might store ("jane-doe-1234") — letters/digits/hyphens, no spaces or '@'.
+  // A bare handle a sheet might store ("jane-doe-1234"), letters/digits/hyphens, no spaces or '@'.
   return /^[a-z0-9](?:[a-z0-9-]{1,98}[a-z0-9])$/i.test(s) && !s.includes("@");
 }
 
@@ -123,13 +123,13 @@ async function loadTargets(
  *
  * `contact_channels` has no UNIQUE(contact_id, kind, value) constraint, so two near-simultaneous
  * validate runs (e.g. a double-click, or import-auto-run racing a manual click) could each see "no
- * email yet" and both insert — leaving duplicate rows. We guard in three layers: (1) a fresh existence
+ * email yet" and both insert, leaving duplicate rows. We guard in three layers: (1) a fresh existence
  * re-check right before inserting (the snapshot in processOne can be stale), (2) the insert, then
  * (3) a prune that, if a concurrent insert still slipped a duplicate of this exact value in, keeps a
  * single deterministic row (lowest id) and deletes the rest. Both racing callers compute the same
  * "keep lowest id", so they converge to one row. Returns true only when THIS call added the channel.
  *
- * (A UNIQUE(contact_id, kind, value) constraint would be the airtight fix — noted for Aarav as a
+ * (A UNIQUE(contact_id, kind, value) constraint would be the airtight fix, noted for Aarav as a
  * follow-up migration; we never apply migrations to the live DB ourselves.)
  */
 async function fillChannel(
@@ -146,7 +146,7 @@ async function fillChannel(
     .eq("kind", kind)
     .eq("value", value)
     .limit(1);
-  if (pre && pre.length) return false; // already present — nothing to fill
+  if (pre && pre.length) return false; // already present, nothing to fill
 
   const { error } = await supabase
     .from("contact_channels")
@@ -215,9 +215,9 @@ async function processOne(
     const apolloEmail = match.email; // realEmail()-filtered upstream (undefined for locked rows)
 
     if (emailCh && emailCheck !== "invalid" && apolloEmail) {
-      // The row HAS an email and Apollo has one too — do they agree?
+      // The row HAS an email and Apollo has one too, do they agree?
       // Note: no `url` on these verdicts. The email VALUE came from the sheet (the contact's primary
-      // source), not from Apollo — Apollo only vouches for it. Setting url: apollo.io here would make
+      // source), not from Apollo, Apollo only vouches for it. Setting url: apollo.io here would make
       // rowsToPerson pick Apollo as the card's primary permalink, mis-attributing the cohort source.
       // The quote names Apollo, so the verifier is still identifiable.
       if (normEmail(emailCh.value) === normEmail(apolloEmail)) {
@@ -230,13 +230,13 @@ async function processOne(
       } else {
         emailCheck = "mismatch";
         fieldSources.email = {
-          quote: `Sheet has "${emailCh.value}", but Apollo.io lists "${apolloEmail}" for this person — verify before using.`,
+          quote: `Sheet has "${emailCh.value}", but Apollo.io lists "${apolloEmail}" for this person, verify before using.`,
           confidence: 0.35,
           status: "mismatch",
         };
       }
     } else if (!emailCh && apolloEmail) {
-      // The row was MISSING an email — fill it from Apollo (dedup-safe under concurrent calls).
+      // The row was MISSING an email, fill it from Apollo (dedup-safe under concurrent calls).
       const did = await fillChannel(supabase, contact.id, "email", apolloEmail, !linkedinCh);
       if (did) {
         emailCheck = match.emailStatus === "verified" ? "verified" : "unconfirmed";
@@ -293,10 +293,10 @@ async function processOne(
     fieldSources.email = {
       quote:
         emailCheck === "invalid"
-          ? `"${emailCh.value}" isn't a valid email address — fix it before reaching out.`
+          ? `"${emailCh.value}" isn't a valid email address, fix it before reaching out.`
           : useApollo
             ? `Format looks valid; Apollo.io had no record to confirm it against.`
-            : `Format looks valid (not cross-checked — Apollo.io isn't configured).`,
+            : `Format looks valid (not cross-checked, Apollo.io isn't configured).`,
       confidence: emailCheck === "invalid" ? 0.1 : 0.5,
       status: emailCheck,
     };

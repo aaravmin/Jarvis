@@ -5,7 +5,7 @@ import type { GoalEntityType } from "@/lib/goals/types";
 /**
  * Goal-link mutations + deterministic intersection maintenance. A link anchors any entity to a goal.
  * Whenever an entity's ACCEPTED links change, we recompute its intersection record (entity serving 2+
- * goals) in pure SQL — the LLM never decides WHETHER an intersection exists, only fills the combined-ask.
+ * goals) in pure SQL, the LLM never decides WHETHER an intersection exists, only fills the combined-ask.
  */
 
 /** Recompute the goal_intersections row for one entity from its accepted goal_links. */
@@ -88,7 +88,7 @@ export async function setLinkReview(
     .select("entity_type, entity_id")
     .eq("id", linkId)
     .maybeSingle();
-  if (!link) return { ok: false, error: "Link not found." }; // RLS-filtered or missing — don't fake success
+  if (!link) return { ok: false, error: "Link not found." }; // RLS-filtered or missing, don't fake success
   const { error } = await supabase.from("goal_links").update({ review_status: status }).eq("id", linkId);
   if (error) return { ok: false, error: error.message };
   await refreshIntersection(supabase, userId, link.entity_type as GoalEntityType, link.entity_id as string);

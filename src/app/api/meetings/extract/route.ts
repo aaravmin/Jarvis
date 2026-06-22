@@ -8,7 +8,7 @@ export const maxDuration = 60; // a transcript extraction is one LLM call
 const MAX_TRANSCRIPT = 30_000;
 
 /**
- * POST /api/meetings/extract — paste a meeting transcript, store it as a `meeting` source, and mine it
+ * POST /api/meetings/extract, paste a meeting transcript, store it as a `meeting` source, and mine it
  * for action items (reusing the email→items engine). Items land at status='review' (L0 suggest-only),
  * each carrying source_id + a verbatim source_quote + confidence (hard rules #3/#5). Dates in the
  * transcript are resolved by chrono against the meeting time, never by the model (hard rule #2).
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Paste a longer transcript so Jarvis has something to read." }, { status: 400 });
   }
   if (transcript.length > MAX_TRANSCRIPT) {
-    return NextResponse.json({ error: "That transcript is too long — trim it under 30k characters." }, { status: 400 });
+    return NextResponse.json({ error: "That transcript is too long, trim it under 30k characters." }, { status: 400 });
   }
   const title = (body.title ?? "").trim() || "Meeting";
   const occurredAt = new Date().toISOString();

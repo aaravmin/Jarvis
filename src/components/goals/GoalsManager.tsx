@@ -175,7 +175,7 @@ function AddGoal({ onChanged }: { onChanged: () => void }) {
             onChange={(e) => setContext(e.target.value)}
             disabled={busy}
             rows={3}
-            placeholder="Brain-dump what you're working toward — Jarvis turns it into goals. e.g. 'I'm a freshman who wants to build a startup, break into tech, and land a summer internship.'"
+            placeholder="Brain-dump what you're working toward, Jarvis turns it into goals. e.g. 'I'm a freshman who wants to build a startup, break into tech, and land a summer internship.'"
             className="w-full resize-y rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
           />
           <button

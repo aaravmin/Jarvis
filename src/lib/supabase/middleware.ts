@@ -41,13 +41,13 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // IMPORTANT: do not run code between createServerClient and getUser() — it must be the gate.
+  // IMPORTANT: do not run code between createServerClient and getUser(), it must be the gate.
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
-  // API routes self-enforce auth and return JSON (401), so never redirect them to /login — that
+  // API routes self-enforce auth and return JSON (401), so never redirect them to /login, that
   // would hand a fetch() an HTML login page. The session cookie is still refreshed above.
   const isApi = pathname.startsWith("/api");
 

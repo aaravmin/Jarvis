@@ -16,7 +16,7 @@ export type CalEvent = {
 
 /**
  * An all-day date (YYYY-MM-DD) anchored at LOCAL noon, ±dayOffset days. Noon-local is DST-safe and,
- * unlike UTC-midnight, never skews to the previous day when rendered in a negative-offset zone — so an
+ * unlike UTC-midnight, never skews to the previous day when rendered in a negative-offset zone, so an
  * all-day event keeps its real date everywhere (hard rule #7). Used to store all-day starts/ends.
  */
 function allDayNoonISO(ymd: string, dayOffset = 0): string {
@@ -53,7 +53,7 @@ export async function listEvents(token: string, timeMinISO: string, max = 50): P
       let endISO: string | undefined;
       if (allDay) {
         startISO = allDayNoonISO(e.start!.date!);
-        // Google's all-day end.date is EXCLUSIVE (the morning after) — step back to the last
+        // Google's all-day end.date is EXCLUSIVE (the morning after), step back to the last
         // included day so a one-day event reads as a single date, not a two-day span.
         endISO = e.end?.date ? allDayNoonISO(e.end.date, -1) : undefined;
       } else {
@@ -87,7 +87,7 @@ export type NewEvent = {
 
 /**
  * Create a real event on the user's primary calendar. Requires the calendar.events scope. We never let
- * the LLM compute the times — callers pass already-resolved ISO strings (hard rule #2). The only date
+ * the LLM compute the times, callers pass already-resolved ISO strings (hard rule #2). The only date
  * math here is the deterministic +60min / +1day default, done in code, never by the model.
  */
 export async function createEvent(token: string, ev: NewEvent): Promise<CalEvent> {

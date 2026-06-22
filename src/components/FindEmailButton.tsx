@@ -6,9 +6,9 @@ import { Mail, Loader2 } from "lucide-react";
 
 /**
  * "Find email" via Apollo.io. Two modes:
- *   • Enrich an existing contact — pass contactId; the found address is saved server-side (with Apollo
+ *   • Enrich an existing contact, pass contactId; the found address is saved server-side (with Apollo
  *     recorded as the source) and the page refreshes.
- *   • Prefill a form — pass onFound; the address is handed back, nothing is persisted yet.
+ *   • Prefill a form, pass onFound; the address is handed back, nothing is persisted yet.
  * Only rendered when Apollo is configured (the People page gates on apolloEnabled()).
  */
 export function FindEmailButton({

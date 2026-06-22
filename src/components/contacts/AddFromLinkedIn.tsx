@@ -8,7 +8,7 @@ import { Loader2, Link2 } from "lucide-react";
  * Paste one LinkedIn profile URL → Jarvis reads the page (role, company, bio) and, when Apollo is
  * configured, their work email, then drops the person straight into the Contacts tab. POSTs to
  * /api/contacts/import-linkedin; on success it refreshes so the new card appears. A needsLogin result
- * (LinkedIn auth wall) is shown as a warning — a window was opened for the user to sign into.
+ * (LinkedIn auth wall) is shown as a warning, a window was opened for the user to sign into.
  */
 export function AddFromLinkedIn({ apolloEnabled = false }: { apolloEnabled?: boolean }) {
   const router = useRouter();

@@ -4,7 +4,7 @@ import { deleteConnectionType } from "@/lib/templates/store";
 
 export const dynamic = "force-dynamic";
 
-/** DELETE /api/connection-types/:id — remove a connection type. Linked templates keep working; their
+/** DELETE /api/connection-types/:id, remove a connection type. Linked templates keep working; their
  * connection_type_id is set null by the FK's ON DELETE SET NULL. */
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();

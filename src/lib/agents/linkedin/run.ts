@@ -4,12 +4,12 @@ import { searchLinkedInPeople } from "./search";
 import type { LinkedInScrapeInput, LinkedInScrapeResult } from "./types";
 
 /**
- * LinkedIn contact-sourcing — the orchestrator.
+ * LinkedIn contact-sourcing, the orchestrator.
  *
  * Resolves WHO to search for (from a linked application run, an opportunity, or a raw org+role), drives
  * the search (./search.ts), and lands the results in the Review queue as suggested contacts. We reuse
  * the existing `research_runs → contacts → Review → People` pipeline (exactly like the Google Sheets
- * importer), so discovered people show up in Review and — once accepted — get the existing Outreach
+ * importer), so discovered people show up in Review and, once accepted, get the existing Outreach
  * "draft an email" button for free. Provenance per hard rule #3: every jarvis-created contact carries
  * source_id + a non-empty source_quote (here, the LinkedIn profile URL + the on-page headline).
  */
@@ -167,7 +167,7 @@ export async function runLinkedInScrape(
     .single();
   const sourceId = (source?.id as string | undefined) ?? null;
   // Provenance is mandatory (hard rule #3): every jarvis contact needs source_id + source_quote, and the
-  // DB enforces it. Without a source row the contact inserts would all fail and be silently skipped — so
+  // DB enforces it. Without a source row the contact inserts would all fail and be silently skipped, so
   // bail honestly rather than report "all already saved".
   if (!sourceId) {
     await supabase.from("research_runs").update({ status: "error" }).eq("id", runId);
@@ -225,7 +225,7 @@ export async function runLinkedInScrape(
   const skipNote = skipped > 0 ? ` (${skipped} already saved)` : "";
   const message =
     inserted > 0
-      ? `Found ${search.people.length} on LinkedIn for "${query}" — added ${inserted} to your Review queue${skipNote}. Accept the ones worth reaching out to, then draft an email from People.`
+      ? `Found ${search.people.length} on LinkedIn for "${query}", added ${inserted} to your Review queue${skipNote}. Accept the ones worth reaching out to, then draft an email from People.`
       : `Found ${search.people.length} on LinkedIn for "${query}", but all were already in your contacts${skipNote}.`;
 
   return { ok: true, needsLogin: false, found: search.people.length, inserted, skipped, query, researchRunId: runId, message };

@@ -37,7 +37,7 @@ export default async function TemplatesPage() {
         </h1>
         <p className="mt-1 text-sm text-muted">
           Reusable templates and the connection types they fit. Jarvis adapts a template to a contact you
-          have a personal connection to, then saves a generalized version for next time — never the
+          have a personal connection to, then saves a generalized version for next time, never the
           personal details.
         </p>
         {!connection && (

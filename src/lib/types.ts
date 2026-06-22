@@ -14,7 +14,7 @@ export type SourceType = "email" | "meeting" | "calendar" | "manual" | "research
  */
 export type CardSource = {
   type: SourceType;
-  /** The EXACT extracted line that justified the item. Required — this is the whole point. */
+  /** The EXACT extracted line that justified the item. Required, this is the whole point. */
   quote: string;
   /** e.g. email subject / meeting name. */
   title?: string;

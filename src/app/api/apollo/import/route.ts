@@ -7,13 +7,13 @@ export const dynamic = "force-dynamic";
 type ImportPerson = { id?: string; fullName?: string; company?: string; roleTitle?: string; email?: string; linkedin?: string };
 
 /**
- * POST /api/apollo/import — add Apollo-discovered people as contacts. Body: { people: ImportPerson[] }.
+ * POST /api/apollo/import, add Apollo-discovered people as contacts. Body: { people: ImportPerson[] }.
  * User-initiated, so created_by 'user' + review_status 'accepted' (no jarvis provenance gate). Apollo
  * is still recorded as the email's source in field_sources for transparency (hard rule #3). RLS scopes
  * every insert to the caller's own rows.
  *
  * Apollo's people SEARCH never returns emails, so for each selected person we ENRICH (match by Apollo
- * id) at import time to reveal their work email — that's what makes "import a discovered person" yield
+ * id) at import time to reveal their work email, that's what makes "import a discovered person" yield
  * an actual address rather than a name with no contact info.
  */
 export async function POST(request: Request) {
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   let imported = 0;
   for (const p of people) {
     const linkedin = p.linkedin?.trim();
-    // Search gives us no email — enrich now (precise match by Apollo id, name/company/LinkedIn as
+    // Search gives us no email, enrich now (precise match by Apollo id, name/company/LinkedIn as
     // fallback) to reveal one. emailStatus drives the confidence we record.
     let email = p.email?.trim() || undefined;
     let emailStatus: string | undefined;

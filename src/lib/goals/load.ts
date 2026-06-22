@@ -119,7 +119,7 @@ export async function loadGoals(supabase: SupabaseClient): Promise<GoalSummary[]
   });
 }
 
-/** A goal's accepted entity_ids of one type — the per-tab filter primitive. */
+/** A goal's accepted entity_ids of one type, the per-tab filter primitive. */
 export async function entityIdsForGoal(
   supabase: SupabaseClient,
   goalId: string,
@@ -134,7 +134,7 @@ export async function entityIdsForGoal(
   return (data ?? []).map((r) => r.entity_id as string);
 }
 
-/** Which goals each given entity serves (accepted links) — for "serves N goals" badges. */
+/** Which goals each given entity serves (accepted links), for "serves N goals" badges. */
 export async function goalsForEntities(
   supabase: SupabaseClient,
   entityType: GoalEntityType,

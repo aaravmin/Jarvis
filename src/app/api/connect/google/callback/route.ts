@@ -6,7 +6,7 @@ import { saveConnection } from "@/lib/google/store";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/connect/google/callback — OAuth redirect target. Verifies the CSRF state cookie, exchanges
+ * GET /api/connect/google/callback, OAuth redirect target. Verifies the CSRF state cookie, exchanges
  * the code for tokens, looks up the account identity, and stores the tokens server-side (RLS-scoped).
  * Always lands the user back on /connections with a status query param.
  */

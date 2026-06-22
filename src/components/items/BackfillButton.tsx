@@ -27,9 +27,9 @@ export function BackfillButton() {
       const inserted = Number(data?.inserted ?? 0);
       const remaining = Number(data?.remaining ?? 0);
       if (inserted > 0) {
-        setMsg(`Found ${inserted} action item${inserted === 1 ? "" : "s"} in ${scanned} message${scanned === 1 ? "" : "s"}.${remaining ? ` ${remaining} more to scan — click again.` : ""}`);
+        setMsg(`Found ${inserted} action item${inserted === 1 ? "" : "s"} in ${scanned} message${scanned === 1 ? "" : "s"}.${remaining ? ` ${remaining} more to scan, click again.` : ""}`);
       } else if (scanned > 0) {
-        setMsg(`Scanned ${scanned} message${scanned === 1 ? "" : "s"} — nothing actionable.${remaining ? ` ${remaining} more to scan — click again.` : ""}`);
+        setMsg(`Scanned ${scanned} message${scanned === 1 ? "" : "s"}, nothing actionable.${remaining ? ` ${remaining} more to scan, click again.` : ""}`);
       } else {
         setMsg("No un-scanned messages left. Sync new email to find more.");
       }

@@ -2,7 +2,7 @@ import { createBrowserClient } from "@supabase/ssr";
 
 /**
  * Supabase client for use in the browser (Client Components).
- * Uses the public anon key — all access is constrained by Row-Level Security.
+ * Uses the public anon key, all access is constrained by Row-Level Security.
  * Never reference service-role keys or the Anthropic key here; this code ships to the browser.
  */
 export function createClient() {

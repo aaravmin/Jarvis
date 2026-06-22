@@ -89,7 +89,7 @@ export async function writeValues(
 /**
  * Apply finishing touches via batchUpdate: bold + frozen header, auto-sized columns, and a dropdown
  * (data validation) on the status column so the *sheet itself* carries the status toggle the user
- * asked for — editable in Google Sheets directly.
+ * asked for, editable in Google Sheets directly.
  */
 export async function formatExportSheet(
   accessToken: string,

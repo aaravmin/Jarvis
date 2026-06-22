@@ -8,9 +8,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 /**
- * POST /api/google/calendar/create-event — { summary, startISO?|startDate?, endISO?, endDate?,
+ * POST /api/google/calendar/create-event, { summary, startISO?|startDate?, endISO?, endDate?,
  * description?, location? }. Creates a real event on the primary calendar. Times must be already
- * resolved by the caller (hard rule #2 — the LLM never computes them). Requires calendar.events.
+ * resolved by the caller (hard rule #2, the LLM never computes them). Requires calendar.events.
  */
 export async function POST(request: Request) {
   const supabase = await createClient();

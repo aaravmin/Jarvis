@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 /**
  * Supabase client for Server Components, Route Handlers, and Server Actions.
  * Reads/writes the auth session via cookies. The anon key is public; tokens live in httpOnly
- * cookies managed by @supabase/ssr — never in the browser's JS. RLS scopes every row to the user.
+ * cookies managed by @supabase/ssr, never in the browser's JS. RLS scopes every row to the user.
  */
 export async function createClient() {
   const cookieStore = await cookies();

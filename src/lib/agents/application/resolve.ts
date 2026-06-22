@@ -67,10 +67,10 @@ const SYSTEM = `You prepare a job/grant application by mapping the form's fields
 
 HARD RULES:
 - Fill a field ONLY from the MATERIALS. Copy a verbatim snippet into source_quote that supports the value. If nothing in the MATERIALS supports it, set value="" , filled=false, source="user".
-- NEVER invent or compute facts — no made-up dates, employers, GPAs, addresses, or phone numbers. Do NOT compute a date from "today"; only use a date if it appears verbatim in the MATERIALS.
+- NEVER invent or compute facts, no made-up dates, employers, GPAs, addresses, or phone numbers. Do NOT compute a date from "today"; only use a date if it appears verbatim in the MATERIALS.
 - Never fill a password or a file-upload field (the user attaches files themselves): value="", filled=false, source="user".
 - For a long free-text field (cover letter, "why you", essay), you MAY compose prose, but every factual claim in it must be supported by a MATERIALS snippet you put in source_quote; keep confidence modest.
-- Choose source from: resume, profile, document, opportunity, inferred, user. Use "inferred" only for a reasonable guess you cannot quote — and then filled must be false.
+- Choose source from: resume, profile, document, opportunity, inferred, user. Use "inferred" only for a reasonable guess you cannot quote, and then filled must be false.
 - confidence is 0..1: how sure you are the value is correct AND grounded.
 - Return exactly one entry per form field, echoing its label.`;
 
@@ -110,7 +110,7 @@ export async function resolveFields(
 
   const corpus = materialsText(materials).slice(0, GROUNDABLE_LIMIT);
   if (!corpus.trim()) {
-    // No materials at all — nothing can be grounded. Return an all-unfilled plan honestly.
+    // No materials at all, nothing can be grounded. Return an all-unfilled plan honestly.
     const plan = fields.map<FieldPlanItem>((f) => ({
       label: f.label,
       value: "",

@@ -7,7 +7,7 @@ export type OutreachSyncResult = { updated: number; scanned: number };
 /**
  * Deterministically advance contact outreach status from ingested inbound email. If a contact's email
  * address appears as the sender of any ingested email source, there is a real correspondence thread
- * with them, so we move them forward to "spoke" — but only from not_emailed/emailed, never overwriting
+ * with them, so we move them forward to "spoke", but only from not_emailed/emailed, never overwriting
  * a more-advanced manual value (spoke/follow_up). No LLM involved; this is pure string matching, so it
  * honors HARD RULE #7 (don't trust the model with "did I reply?" facts) and "manual wins".
  */

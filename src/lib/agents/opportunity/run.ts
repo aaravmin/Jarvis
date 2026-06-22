@@ -85,7 +85,7 @@ export async function runOpportunitySearch(
   const runId = run.id as string;
 
   // The reference instant for ALL date resolution in this run. Captured once so chrono resolves every
-  // raw_deadline against the same "now" — deterministic, and never touched by the model.
+  // raw_deadline against the same "now", deterministic, and never touched by the model.
   const nowISO = new Date().toISOString();
 
   const { data: source } = await supabase
@@ -116,7 +116,7 @@ export async function runOpportunitySearch(
 
     const opportunities: DiscoveredOpportunity[] = [];
     for (const v of outcome.opportunities) {
-      // Resolve dates HERE, deterministically — the model only ever handed us raw strings.
+      // Resolve dates HERE, deterministically, the model only ever handed us raw strings.
       const deadlineAt = resolveDeadline(v.rawDeadline, nowISO);
       const { startsAt, endsAt } = resolveDateRange(v.rawEventDates, nowISO);
 

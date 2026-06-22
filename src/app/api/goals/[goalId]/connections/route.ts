@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 90;
 
 /**
- * POST /api/goals/[goalId]/connections — find other goals that SHARE an accepted entity with this
+ * POST /api/goals/[goalId]/connections, find other goals that SHARE an accepted entity with this
  * goal, and for each, generate "how to intersect them" guidance. Connections are factual (shared
  * overlap) so they're stored accepted; the rationale is the AI enrichment.
  */
@@ -19,7 +19,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ go
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
-  // All accepted links (RLS-scoped to this user). Small for a personal app — compute overlaps in JS.
+  // All accepted links (RLS-scoped to this user). Small for a personal app, compute overlaps in JS.
   const { data: links } = await supabase
     .from("goal_links")
     .select("goal_id, entity_type, entity_id")

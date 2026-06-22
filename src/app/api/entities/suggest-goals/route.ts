@@ -11,7 +11,7 @@ export const maxDuration = 60;
 const TYPES: GoalEntityType[] = ["contact", "opportunity", "item", "source"];
 
 /**
- * POST /api/entities/suggest-goals — { entityType, entityId }. Claude proposes which of the user's
+ * POST /api/entities/suggest-goals, { entityType, entityId }. Claude proposes which of the user's
  * goals this entity advances; each proposal lands as a review_status='review' goal link (L0).
  */
 export async function POST(request: Request) {
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
   const goals = await loadGoalDigests(supabase);
   if (!goals.length) {
-    return NextResponse.json({ created: 0, message: "No goals yet — create some first." });
+    return NextResponse.json({ created: 0, message: "No goals yet, create some first." });
   }
 
   const proposals = await proposeGoalLinks(facts.facts, goals);
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       rationale: p.rationale,
       confidence: p.confidence,
       createdBy: "jarvis",
-      reviewStatus: "review", // L0 — user approves on the goal page / Review
+      reviewStatus: "review", // L0, user approves on the goal page / Review
     });
     if (res.ok) created++;
   }

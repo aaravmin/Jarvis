@@ -115,7 +115,7 @@ export function OpportunityCard({
     fields: fields.length ? fields : undefined,
   };
 
-  const reasoning = [o.description, o.notes].filter(Boolean).join(" — ") || undefined;
+  const reasoning = [o.description, o.notes].filter(Boolean).join(", ") || undefined;
 
   const meta = (
     <div className="flex flex-col items-end gap-0.5">
@@ -183,7 +183,7 @@ export function OpportunityCard({
           )}
         </div>
 
-        {/* Key facts — one labeled row per fact so each opportunity stays scannable and the details
+        {/* Key facts, one labeled row per fact so each opportunity stays scannable and the details
             never clump together into a wall of text. */}
         <dl className="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-2 border-t border-border pt-3 text-sm">
           {(o.location || o.isRemote) && (
@@ -205,7 +205,7 @@ export function OpportunityCard({
                 Deadline
               </dt>
               <dd className="text-foreground">
-                {o.rawDeadline || "—"}
+                {o.rawDeadline || "-"}
                 {o.deadlineAt && <span className="ml-1.5 text-xs text-muted">({formatDate(o.deadlineAt)})</span>}
               </dd>
             </>
@@ -254,7 +254,7 @@ export function OpportunityCard({
               <a
                 href={applyHref}
                 className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-accent/40 bg-accent-soft/30 px-3 py-2 text-xs font-semibold text-accent transition-colors hover:bg-accent-soft/50"
-                title="Jarvis reads the form and fills it from your documents — you review and submit"
+                title="Jarvis reads the form and fills it from your documents, you review and submit"
               >
                 <Wand2 className="h-3.5 w-3.5" />
                 Prepare with Jarvis

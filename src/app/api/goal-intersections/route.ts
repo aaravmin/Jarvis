@@ -10,7 +10,7 @@ export const maxDuration = 60;
 const TYPES: GoalEntityType[] = ["contact", "opportunity", "item", "source"];
 
 /**
- * POST /api/goal-intersections — { entityType, entityId }. For an entity that already serves 2+ goals
+ * POST /api/goal-intersections, { entityType, entityId }. For an entity that already serves 2+ goals
  * (detected deterministically), Claude writes ONE combined-ask covering all of them, stored as the
  * intersection's suggestion.
  */
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
   }
 }
 
-/** DELETE /api/goal-intersections — { entityType, entityId }. Dismiss (clear) an intersection. */
+/** DELETE /api/goal-intersections, { entityType, entityId }. Dismiss (clear) an intersection. */
 export async function DELETE(request: Request) {
   const supabase = await createClient();
   const {

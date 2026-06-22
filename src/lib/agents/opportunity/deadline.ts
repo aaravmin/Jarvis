@@ -2,15 +2,15 @@ import "server-only";
 import * as chrono from "chrono-node";
 
 /**
- * Deterministic date resolution — the hard-rule-#2 boundary.
+ * Deterministic date resolution, the hard-rule-#2 boundary.
  *
  * The LLM is forbidden from computing or emitting any resolved date; it returns only the VERBATIM
- * string it found ("Applications due March 15, 2026", "Feb 7–9", "rolling"). These functions turn
+ * string it found ("Applications due March 15, 2026", "Feb 7-9", "rolling"). These functions turn
  * those strings into timestamps using chrono-node, anchored to the run's reference time, resolving
  * ambiguous dates FORWARD (a deadline with no year is the next occurrence, not a past one).
  *
  * If chrono can't parse it (e.g. "rolling", "ongoing"), we return undefined and the UI falls back to
- * showing the raw string — which is always the source of truth. We never invent a date.
+ * showing the raw string, which is always the source of truth. We never invent a date.
  *
  * Timezone note: when the source text names a zone ("11:59pm ET") chrono honors it; otherwise the
  * value is interpreted in the server's local zone. The raw string is displayed as the authority, so
@@ -40,7 +40,7 @@ export function resolveDeadline(raw: string | undefined | null, refISO?: string)
 }
 
 /**
- * An event date phrase → {startsAt, endsAt}. Handles ranges ("Feb 7–9, 2026" → start+end) and single
+ * An event date phrase → {startsAt, endsAt}. Handles ranges ("Feb 7-9, 2026" → start+end) and single
  * dates ("Demo day April 3" → start only). Either field is undefined when not resolvable.
  */
 export function resolveDateRange(

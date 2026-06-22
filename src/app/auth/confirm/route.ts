@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  // Only allow same-origin, root-relative redirects — block off-origin "//evil.com" and "/\evil.com".
+  // Only allow same-origin, root-relative redirects, block off-origin "//evil.com" and "/\evil.com".
   const rawNext = searchParams.get("next") ?? "/jarvis";
   const next =
     rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.startsWith("/\\")

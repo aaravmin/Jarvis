@@ -45,7 +45,7 @@ export function GoalDetailView({ detail }: { detail: GoalDetail }) {
         {goal.description && <p className="mt-1 text-sm text-muted">{goal.description}</p>}
       </div>
 
-      {/* Intersections — entities serving this goal AND others */}
+      {/* Intersections, entities serving this goal AND others */}
       {intersections.length > 0 && (
         <section>
           <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground">
@@ -130,7 +130,7 @@ export function GoalDetailView({ detail }: { detail: GoalDetail }) {
           </button>
         </div>
         {connections.length === 0 ? (
-          <p className="text-xs text-muted">No connections yet — “Find connections” looks for goals that share an entity with this one.</p>
+          <p className="text-xs text-muted">No connections yet, “Find connections” looks for goals that share an entity with this one.</p>
         ) : (
           <div className="space-y-2">
             {connections.map((c) => (

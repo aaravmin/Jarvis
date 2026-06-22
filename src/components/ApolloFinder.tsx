@@ -149,7 +149,7 @@ export function ApolloFinder() {
               <li key={`${c.id ?? c.name}-${i}`} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-foreground">{c.name}</p>
-                  <p className="truncate text-xs text-muted">{[c.title, c.organization].filter(Boolean).join(" @ ") || "—"}</p>
+                  <p className="truncate text-xs text-muted">{[c.title, c.organization].filter(Boolean).join(" @ ") || "-"}</p>
                 </div>
                 <button
                   type="button"

@@ -61,10 +61,10 @@ export function ProfileForm() {
         <UserCog className="h-4 w-4 text-accent" /> About you
       </p>
       <div className="grid gap-2 sm:grid-cols-2">
-        <input className={`${input} sm:col-span-2`} placeholder="Headline — e.g. CS freshman at Brown, into tech" value={f.headline} onChange={set("headline")} />
+        <input className={`${input} sm:col-span-2`} placeholder="Headline, e.g. CS freshman at Brown, into tech" value={f.headline} onChange={set("headline")} />
         <input className={input} placeholder="Age" value={f.age} onChange={set("age")} inputMode="numeric" />
-        <input className={input} placeholder="Level — e.g. freshman / undergrad" value={f.level} onChange={set("level")} />
-        <input className={`${input} sm:col-span-2`} placeholder="Looking for — e.g. summer internships, startups hiring interns, programs open to undergrads" value={f.lookingFor} onChange={set("lookingFor")} />
+        <input className={input} placeholder="Level, e.g. freshman / undergrad" value={f.level} onChange={set("level")} />
+        <input className={`${input} sm:col-span-2`} placeholder="Looking for, e.g. summer internships, startups hiring interns, programs open to undergrads" value={f.lookingFor} onChange={set("lookingFor")} />
       </div>
       <div className="mt-3 flex items-center gap-2">
         <button

@@ -4,7 +4,7 @@ import { audienceGuidance, type Audience } from "./types";
 
 /**
  * The Outreach composer (Grok). Writes a tailored email to one contact, branching tone on the audience.
- * It grounds the email in what we KNOW about the recipient — especially their current_work (Axis B) —
+ * It grounds the email in what we KNOW about the recipient, especially their current_work (Axis B) -
  * and in the user's own profile/materials. It does not invent facts about the recipient.
  *
  * Draft only: this returns {subject, body}; saving to Gmail is a separate, user-initiated step.
@@ -15,7 +15,7 @@ export type OutreachContact = {
   email?: string;
   roleTitle?: string;
   company?: string;
-  /** What the person is actively working on right now — the strongest hook for a relevant email. */
+  /** What the person is actively working on right now, the strongest hook for a relevant email. */
   currentWork?: string;
   /** Why they matter to the user (contacts.relevance) and any background we have. */
   relevance?: string;
@@ -49,7 +49,7 @@ const SYSTEM = `You write a single, genuine outreach email from the USER to a sp
 
 Rules:
 - Tailor tone and the ask to the AUDIENCE guidance you're given.
-- Ground the email in what's actually provided about the contact — especially what they're currently working on. Reference it specifically; that's what makes outreach land.
+- Ground the email in what's actually provided about the contact, especially what they're currently working on. Reference it specifically; that's what makes outreach land.
 - NEVER invent facts about the contact (titles, achievements, mutual friends) that aren't in the context. If you have little to go on, keep it short and honest rather than padding with made-up specifics.
 - Speak in the user's voice using their profile/materials. Don't claim accomplishments the user doesn't have.
 - Keep it concise and skimmable. One clear ask. No corporate filler, no over-flattery.

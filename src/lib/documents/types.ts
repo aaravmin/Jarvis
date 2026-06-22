@@ -1,5 +1,5 @@
 /**
- * Documents — the user's application materials (resumes, grant narratives, bios, writing samples).
+ * Documents, the user's application materials (resumes, grant narratives, bios, writing samples).
  * These are the Application & Outreach Agent's MEMORY: what it fills forms and tailors outreach FROM.
  * The binary lives in the private 'documents' Storage bucket; `extractedText` is the readable body the
  * model actually consumes (a document with no file but pasted text is valid, and vice-versa).

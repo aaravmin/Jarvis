@@ -53,7 +53,7 @@ export function ConnectionsPanel({
       <header>
         <h1 className="text-lg font-semibold text-foreground">Connections</h1>
         <p className="mt-1 text-sm text-muted">
-          Connect Google so Jarvis can read your Gmail, Calendar, Drive &amp; Sheets — and now save
+          Connect Google so Jarvis can read your Gmail, Calendar, Drive &amp; Sheets, and now save
           email drafts and export your contacts. After an update, click Reconnect to grant the new
           permissions.
         </p>
@@ -175,7 +175,7 @@ function ImportContactsTool() {
             const vd = await vr.json().catch(() => null);
             setMsg(`Imported ${n} from “${data.sheetTitle}”. ${vd?.message ?? ""} Review them now.`.replace(/\s+/g, " ").trim());
           } catch {
-            setMsg(`Imported ${n} contact${n === 1 ? "" : "s"} from “${data.sheetTitle}” — review them now.`);
+            setMsg(`Imported ${n} contact${n === 1 ? "" : "s"} from “${data.sheetTitle}”, review them now.`);
           }
         }
         setTimeout(() => router.push("/review"), 1100);
@@ -292,21 +292,21 @@ function DraftEmailTool() {
       </div>
       <p className="mb-3 text-xs text-muted">
         Name a Google Doc template (or paste its link). Jarvis fills its placeholders from your context
-        and drafts the email — draft only, nothing is sent.
+        and drafts the email, draft only, nothing is sent.
       </p>
       <div className="space-y-2">
         <input
           value={template}
           onChange={(e) => setTemplate(e.target.value)}
           disabled={busy}
-          placeholder="Template name or Drive link — e.g. “Outreach template”"
+          placeholder="Template name or Drive link, e.g. “Outreach template”"
           className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
         />
         <input
           value={to}
           onChange={(e) => setTo(e.target.value)}
           disabled={busy}
-          placeholder="Recipient (optional) — e.g. “Dr. Jane Smith, Brown alum at Acme”"
+          placeholder="Recipient (optional), e.g. “Dr. Jane Smith, Brown alum at Acme”"
           className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
         />
         <textarea
@@ -314,7 +314,7 @@ function DraftEmailTool() {
           onChange={(e) => setContext(e.target.value)}
           disabled={busy}
           rows={3}
-          placeholder="Context to fill the template (optional) — what to mention, why you're reaching out…"
+          placeholder="Context to fill the template (optional), what to mention, why you're reaching out…"
           className="w-full resize-y rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted"
         />
         <button
@@ -359,7 +359,7 @@ function DraftEmailTool() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-lg bg-success/15 px-3 py-1.5 text-xs font-medium text-success hover:bg-success/25"
               >
-                <Check className="h-3.5 w-3.5" /> Saved to Gmail — open Drafts
+                <Check className="h-3.5 w-3.5" /> Saved to Gmail, open Drafts
               </a>
             ) : (
               <button

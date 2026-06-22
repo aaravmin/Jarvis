@@ -43,7 +43,7 @@ export default async function ApplyPage({
           <a href="/documents" className="text-accent hover:underline">
             documents
           </a>
-          . It never submits — you review the field plan and submit yourself.
+          . It never submits, you review the field plan and submit yourself.
         </p>
       </header>
 

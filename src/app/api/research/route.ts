@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 /**
- * POST /api/research — start (and, in v1, run to completion) a cohort research run.
+ * POST /api/research, start (and, in v1, run to completion) a cohort research run.
  * Body: { target: 'people', query: string }. Returns the finished ResearchRunView.
  *
  * The run-and-persist logic lives in @/lib/research/run (runPeopleSearch) so the multi-agent router

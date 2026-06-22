@@ -52,7 +52,7 @@ function valueForField(person: DiscoveredPerson, key: string): string {
 /**
  * At-a-glance verdicts from the validate/enrich pass (stored in field_sources[*].status). The full
  * "why" rides in each field's source chip; these coloured pills surface the headline so the user can
- * spot a bad/mismatched email — or newly-filled info — without clicking into the provenance.
+ * spot a bad/mismatched email, or newly-filled info, without clicking into the provenance.
  */
 function ValidationBadges({ person }: { person: DiscoveredPerson }) {
   const emailStatus = person.fieldSources.email?.status;
@@ -128,7 +128,7 @@ export function PersonCard({
   }
   for (const [key, fs] of Object.entries(person.fieldSources)) {
     const value = valueForField(person, key);
-    if (!value && !fs.quote) continue; // nothing to show — skip rather than render a stray "—" row
+    if (!value && !fs.quote) continue; // nothing to show, skip rather than render a stray "-" row
     fields.push({
       label: humanize(key),
       value: value || humanize(key), // when only a quote exists, label the row instead of leaving it blank
@@ -150,7 +150,7 @@ export function PersonCard({
     fields: fields.length ? fields : undefined,
   };
 
-  const reasoning = [person.relevance, person.notes].filter(Boolean).join(" — ") || undefined;
+  const reasoning = [person.relevance, person.notes].filter(Boolean).join(", ") || undefined;
 
   const meta =
     typeof person.confidence === "number" ? (
@@ -162,7 +162,7 @@ export function PersonCard({
   const emailChannel = person.channels.find((c) => c.kind === "email")?.value;
   const linkedinChannel = person.channels.find((c) => c.kind === "linkedin")?.value;
   // A manually-added contact carries no source quote. It legitimately has no provenance, so it must
-  // NOT render through <Card> (which throws without a source chip — hard rule #4). It gets its own
+  // NOT render through <Card> (which throws without a source chip, hard rule #4). It gets its own
   // tile below with an "Added by you" badge instead of a source chip.
   const isManual = !person.sourceQuote.trim();
   const actions = !showActions ? (

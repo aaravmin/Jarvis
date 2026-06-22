@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120; // bounded Apollo lookups (pooled), but allow headroom for a full batch
 
 /**
- * POST /api/contacts/validate — validate + enrich a set of contacts.
+ * POST /api/contacts/validate, validate + enrich a set of contacts.
  * Body (pick one targeting mode): { researchRunId } | { contactIds: string[] } | { scope?: "review"|"accepted" }.
  *   • Validates each contact's existing email/LinkedIn (format, plus an Apollo.io cross-check when a
  *     key is set) and fills missing email/company/title/LinkedIn from Apollo.
@@ -50,6 +50,6 @@ function buildMessage(r: {
   if (r.enrichedCount > 0) bits.push(`filled missing info on ${r.enrichedCount}`);
   if (r.flaggedCount > 0) bits.push(`flagged ${r.flaggedCount} for a closer look`);
   let msg = bits.join(", ") + ".";
-  if (!r.apolloUsed) msg += " (Format-checked only — set APOLLO_API_KEY to cross-check and fill emails.)";
+  if (!r.apolloUsed) msg += " (Format-checked only, set APOLLO_API_KEY to cross-check and fill emails.)";
   return msg;
 }

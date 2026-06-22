@@ -128,7 +128,7 @@ export function DayPlanView() {
       </ol>
 
       <p className="pt-1 text-center text-xs text-muted">
-        Jarvis ordered these — it never invents times. Fixed events keep their real calendar time; tasks are sequenced
+        Jarvis ordered these, it never invents times. Fixed events keep their real calendar time; tasks are sequenced
         around them.
       </p>
     </div>

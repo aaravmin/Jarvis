@@ -5,7 +5,7 @@ import { ingestGmail } from "@/lib/google/ingest";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
-/** POST /api/google/sync-email — pull recent Gmail, triage, store important + add senders to Contacts. */
+/** POST /api/google/sync-email, pull recent Gmail, triage, store important + add senders to Contacts. */
 export async function POST() {
   const supabase = await createClient();
   const {

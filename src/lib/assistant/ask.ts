@@ -1,12 +1,13 @@
 import "server-only";
 import { geminiToolLoop, type GeminiContent } from "@/lib/llm/gemini";
 import { webSearch, tavilyEnabled } from "@/lib/search/tavily";
+import { stripDashes } from "@/lib/text";
 import { listDir, readFile, allowedRootsLabel } from "@/lib/assistant/fs-tools";
 import type { AskCitation, AskFileRef, AskActionRef, AskResponse } from "@/lib/assistant/types";
 import type { AskDataContext } from "@/lib/assistant/data-tools";
 
 /**
- * The Jarvis "brain": an agentic loop over Gemini (function-calling) with four tools —
+ * The Jarvis "brain": an agentic loop over Gemini (function-calling) with four tools -
  *  - web_search      (Tavily-backed; "search up X", current facts) → real citations
  *  - search_my_data  (the user's OWN Gmail/Calendar/meetings/tasks/contacts/opportunities) → answers
  *                     questions about their connected data; only present when a data context is passed
@@ -23,7 +24,7 @@ import type { AskDataContext } from "@/lib/assistant/data-tools";
 const WEB_SEARCH_FN = {
   name: "web_search",
   description:
-    "Search the public web for anything current, changing, or outside your knowledge (news, prices, facts about specific people/companies). Returns real result pages — ground your answer in them and cite their URLs. Never invent a source.",
+    "Search the public web for anything current, changing, or outside your knowledge (news, prices, facts about specific people/companies). Returns real result pages, ground your answer in them and cite their URLs. Never invent a source.",
   parameters: {
     type: "object" as const,
     properties: { query: { type: "string", description: "The search query." } },
@@ -56,11 +57,11 @@ const READ_FILE_FN = {
 const SEARCH_MY_DATA_FN = {
   name: "search_my_data",
   description:
-    "Search the user's OWN connected data — their Gmail, Google Calendar events, meeting notes, tasks, contacts, and opportunities — to answer questions about their inbox, schedule, meetings, to-dos, people, or applications. Read-only. Use this whenever the question is about the user's own world (e.g. 'what's on my calendar this week', 'did anyone email me about the internship', 'what do I owe a reply to', 'who am I tracking at OpenAI'). Returns real rows with dates and links — never invent any.",
+    "Search the user's OWN connected data, their Gmail, Google Calendar events, meeting notes, tasks, contacts, and opportunities, to answer questions about their inbox, schedule, meetings, to-dos, people, or applications. Read-only. Use this whenever the question is about the user's own world (e.g. 'what's on my calendar this week', 'did anyone email me about the internship', 'what do I owe a reply to', 'who am I tracking at OpenAI'). Returns real rows with dates and links, never invent any.",
   parameters: {
     type: "object" as const,
     properties: {
-      keywords: { type: "string", description: "Words to match — a sender, subject, person, org, or topic. Optional; omit to list recent items." },
+      keywords: { type: "string", description: "Words to match, a sender, subject, person, org, or topic. Optional; omit to list recent items." },
       kinds: {
         type: "array",
         items: { type: "string", enum: ["email", "calendar", "meeting", "task", "contact", "opportunity"] },
@@ -77,12 +78,12 @@ const SEARCH_MY_DATA_FN = {
 const CREATE_EVENT_FN = {
   name: "create_calendar_event",
   description:
-    "Create a real event on the user's Google Calendar when they ask to schedule/add/book something. IMPORTANT: do NOT compute or convert the date yourself — pass the user's own words for the time verbatim in `when` (e.g. 'tomorrow at 3pm', 'next Friday 2-3pm', 'June 20'); the system resolves it. Confirm what you created afterward.",
+    "Create a real event on the user's Google Calendar when they ask to schedule/add/book something. IMPORTANT: do NOT compute or convert the date yourself, pass the user's own words for the time verbatim in `when` (e.g. 'tomorrow at 3pm', 'next Friday 2-3pm', 'June 20'); the system resolves it. Confirm what you created afterward.",
   parameters: {
     type: "object" as const,
     properties: {
       summary: { type: "string", description: "The event title." },
-      when: { type: "string", description: "The user's verbatim date/time phrase — never a date you computed. Day-only phrases create an all-day event." },
+      when: { type: "string", description: "The user's verbatim date/time phrase, never a date you computed. Day-only phrases create an all-day event." },
       location: { type: "string", description: "Optional location." },
       description: { type: "string", description: "Optional notes/agenda for the event." },
     },
@@ -93,7 +94,7 @@ const CREATE_EVENT_FN = {
 const DRAFT_EMAIL_FN = {
   name: "draft_email",
   description:
-    "Write an email and save it as a DRAFT in the user's Gmail. It is NEVER sent — it lands in their Drafts for them to review and send. Use when the user asks you to draft/write/compose an email. Write the full body yourself from their intent.",
+    "Write an email and save it as a DRAFT in the user's Gmail. It is NEVER sent, it lands in their Drafts for them to review and send. Use when the user asks you to draft/write/compose an email. Write the full body yourself from their intent.",
   parameters: {
     type: "object" as const,
     properties: {
@@ -112,7 +113,7 @@ const SAVE_TEMPLATE_FN = {
   parameters: {
     type: "object" as const,
     properties: {
-      document: { type: "string", description: "The Google Doc to save — its name (as the user said it) or a Drive/Docs URL." },
+      document: { type: "string", description: "The Google Doc to save, its name (as the user said it) or a Drive/Docs URL." },
       name: { type: "string", description: "Optional name for the saved template; defaults to the document's title." },
     },
     required: ["document"],
@@ -122,20 +123,20 @@ const SAVE_TEMPLATE_FN = {
 const LIST_TEMPLATES_FN = {
   name: "list_templates",
   description:
-    "List the user's saved email templates — each with its name, subject, and FULL body. Call this whenever the user asks to draft using one of their templates, or to adapt/edit/rewrite a saved template. Then take the relevant template and genuinely rewrite it to match exactly what they asked (fill placeholders with their specifics, adjust tone/length/content), and call draft_email with your edited subject and body. Don't reproduce a template verbatim when the user asked for changes.",
+    "List the user's saved email templates, each with its name, subject, and FULL body. Call this whenever the user asks to draft using one of their templates, or to adapt/edit/rewrite a saved template. Then take the relevant template and genuinely rewrite it to match exactly what they asked (fill placeholders with their specifics, adjust tone/length/content), and call draft_email with your edited subject and body. Don't reproduce a template verbatim when the user asked for changes.",
   parameters: { type: "object" as const, properties: {}, required: [] },
 };
 
 const ADD_CONTACT_FN = {
   name: "add_contact",
   description:
-    "Find a real person online and save them to the user's Contacts. Jarvis opens the user's own logged-in LinkedIn in a real browser, reads the person's profile (role, company, bio), and — when configured — looks up their work email, then creates the contact card. Use this whenever the user asks to add/create/save a contact, 'make a contact card for X', or to look someone up and keep them. Pass `linkedin_url` when the user gives a LinkedIn link (most reliable); otherwise pass `name` (and `company`/org if known) and Jarvis will search for them. If it reports the user must log in, tell them to sign into the window that opened and try again. Confirm who you saved and what details you got — never invent a person or their details.",
+    "Find a real person online and save them to the user's Contacts. Jarvis opens the user's own logged-in LinkedIn in a real browser, reads the person's profile (role, company, bio), and, when configured, looks up their work email, then creates the contact card. Use this whenever the user asks to add/create/save a contact, 'make a contact card for X', or to look someone up and keep them. Pass `linkedin_url` when the user gives a LinkedIn link (most reliable); otherwise pass `name` (and `company`/org if known) and Jarvis will search for them. If it reports the user must log in, tell them to sign into the window that opened and try again. Confirm who you saved and what details you got, never invent a person or their details.",
   parameters: {
     type: "object" as const,
     properties: {
       name: { type: "string", description: "The person's full name, if known." },
-      linkedin_url: { type: "string", description: "Their LinkedIn profile URL (linkedin.com/in/…), if the user gave one — the most reliable input." },
-      company: { type: "string", description: "Their company, organization, or school — helps disambiguate a name search. Optional." },
+      linkedin_url: { type: "string", description: "Their LinkedIn profile URL (linkedin.com/in/…), if the user gave one, the most reliable input." },
+      company: { type: "string", description: "Their company, organization, or school, helps disambiguate a name search. Optional." },
       context: { type: "string", description: "A short note on who they are or why the user wants them saved (e.g. 'CS101 professor', 'recruiter at Acme'). Optional; saved to the contact's notes." },
     },
     required: [],
@@ -147,35 +148,36 @@ const MAX_TOKENS = 8000;
 
 function systemPrompt(todayISO: string, dataDigest?: string, canAct?: boolean): string {
   const dataCap = dataDigest
-    ? `\n- search_my_data: read the user's OWN connected data — their Gmail, Google Calendar, meetings, tasks, contacts, and opportunities. Use it for any question about their inbox, schedule, meetings, to-dos, people, or applications. Only state what the data shows; if something isn't there, say you don't see it rather than guessing. Refer to items by their subject/title and date, and include their link when you have one.`
+    ? `\n- search_my_data: read the user's OWN connected data, their Gmail, Google Calendar, meetings, tasks, contacts, and opportunities. Use it for any question about their inbox, schedule, meetings, to-dos, people, or applications. Only state what the data shows; if something isn't there, say you don't see it rather than guessing. Refer to items by their subject/title and date, and include their link when you have one.`
     : "";
   const actCap = canAct
-    ? `\n- create_calendar_event: add a real event to the user's Google Calendar. Pass their EXACT words for the time in \`when\` — never a date you worked out yourself; the system resolves it deterministically.
-- draft_email: compose an email and save it as a DRAFT in Gmail (it is never sent — the user reviews and sends it). Write the full body from their intent.
+    ? `\n- create_calendar_event: add a real event to the user's Google Calendar. Pass their EXACT words for the time in \`when\`, never a date you worked out yourself; the system resolves it deterministically.
+- draft_email: compose an email and save it as a DRAFT in Gmail (it is never sent, the user reviews and sends it). Write the full body from their intent.
 - save_drive_template: save a Google Doc the user names as a reusable template.
 - list_templates: read the user's saved templates (name, subject, full body). Use it when they ask to draft from a template or to adapt one.
-- add_contact: find a person online and save them to Contacts — Jarvis reads their LinkedIn in a real logged-in browser (role, company, bio) and their work email when available. Give a LinkedIn URL when the user has one, otherwise their name (plus company/org to disambiguate).`
+- add_contact: find a person online and save them to Contacts, Jarvis reads their LinkedIn in a real logged-in browser (role, company, bio) and their work email when available. Give a LinkedIn URL when the user has one, otherwise their name (plus company/org to disambiguate).`
     : "";
   const actRules = canAct
-    ? `\n- Taking actions: when the user asks you to schedule something, draft an email, or save a template, actually call the matching tool — don't just describe what you would do. Confirm concretely afterward (what you created and when).
-- You only ever create a DRAFT email — you cannot and must not send mail. Always say the draft is waiting in their Gmail for them to send.
+    ? `\n- Taking actions: when the user asks you to schedule something, draft an email, or save a template, actually call the matching tool, don't just describe what you would do. Confirm concretely afterward (what you created and when).
+- You only ever create a DRAFT email, you cannot and must not send mail. Always say the draft is waiting in their Gmail for them to send.
 - For event times, pass the user's words verbatim to create_calendar_event; if their phrasing has no clear date/time, ask them for one rather than guessing.
-- Templates: when the user references one of their saved templates ("use my outreach template", "draft from my X template"), call list_templates, pick the one they mean, and MEANINGFULLY adapt it to their request — fill in the {{placeholders}} with the specifics they gave, and change tone, length, or content as asked — then call draft_email with your edited subject and body. Don't just echo the template back unchanged.
-- Adding contacts: when the user asks you to add/create/save a contact, "make a contact card" for someone, or look a person up to keep, call add_contact — pass linkedin_url if they gave a link, otherwise the name (and company/org if they mentioned one). Don't refuse before trying: you look people up by reading LinkedIn in a real logged-in browser, so call the tool rather than assuming you can't. Then RELAY exactly what add_contact returns — if it says the user must log into LinkedIn, tell them to sign into the window that opened and ask again; if it says it needs a LinkedIn URL or a backend that isn't configured, pass that along honestly instead of pretending you saved someone. Afterward, state plainly who you saved and which details you found (role, company, email), and name any detail that wasn't available rather than inventing it.`
+- Templates: when the user references one of their saved templates ("use my outreach template", "draft from my X template"), call list_templates, pick the one they mean, and MEANINGFULLY adapt it to their request, fill in the {{placeholders}} with the specifics they gave, and change tone, length, or content as asked, then call draft_email with your edited subject and body. Don't just echo the template back unchanged.
+- Adding contacts: when the user asks you to add/create/save a contact, "make a contact card" for someone, or look a person up to keep, call add_contact, pass linkedin_url if they gave a link, otherwise the name (and company/org if they mentioned one). Don't refuse before trying: you look people up by reading LinkedIn in a real logged-in browser, so call the tool rather than assuming you can't. Then RELAY exactly what add_contact returns, if it says the user must log into LinkedIn, tell them to sign into the window that opened and ask again; if it says it needs a LinkedIn URL or a backend that isn't configured, pass that along honestly instead of pretending you saved someone. Afterward, state plainly who you saved and which details you found (role, company, email), and name any detail that wasn't available rather than inventing it.`
     : "";
   const dataBlock = dataDigest
-    ? `\n\nThe user's connected data (your working memory — use it directly for quick questions, and search_my_data for anything more specific):\n${dataDigest}`
+    ? `\n\nThe user's connected data (your working memory, use it directly for quick questions, and search_my_data for anything more specific):\n${dataDigest}`
     : "";
   return `You are Jarvis, a personal command-center assistant. You are concise, direct, and never fabricate.
 
 Capabilities:
 - web_search: use it for anything current, changing, or outside your knowledge ("search up X", news, prices, facts about specific people/companies). Always ground such answers in the sources you searched.${dataCap}${actCap}
-- list_dir / read_file: read the user's LOCAL files, but ONLY within these allowed folders: ${allowedRootsLabel()}. You are strictly read-only — you cannot create, edit, move, or delete anything. When the user points you at a file or folder ("my fineprint folder", "this file"), use list_dir to find it, then read_file to read it, then answer about its actual contents. Never guess a file's contents.
+- list_dir / read_file: read the user's LOCAL files, but ONLY within these allowed folders: ${allowedRootsLabel()}. You are strictly read-only, you cannot create, edit, move, or delete anything. When the user points you at a file or folder ("my fineprint folder", "this file"), use list_dir to find it, then read_file to read it, then answer about its actual contents. Never guess a file's contents.
 
 Rules:
-- Your answers are often read ALOUD, so write in a natural spoken style: open with a short first-person line about what you just did ("I checked your inbox — …", "I searched the web and found …", "I read that file — …"), then give the answer plainly. Keep it tight; no markdown, bullet characters, or URLs in the spoken prose (sources are shown separately).
+- Your answers are often read ALOUD, so write in a natural spoken style: open with a short first-person line about what you just did ("I checked your inbox, …", "I searched the web and found …", "I read that file, …"), then give the answer plainly. Keep it tight; no markdown, bullet characters, or URLs in the spoken prose (sources are shown separately).
 - Cite web sources you used. When you read a local file, refer to it by name/path. When you use the user's own data, name the specific email/event/task you're drawing from.
 - If a folder or file isn't in the allowed list, say so plainly rather than guessing.
+- Never use em-dashes or en-dashes. Use commas, periods, or parentheses instead. Keep sentences short and direct.
 - Never compute or assert exact dates from reasoning; rely on the dates in the data or sources. Today is ${todayISO}.${actRules}${dataBlock}`;
 }
 
@@ -197,7 +199,7 @@ export async function ask(message: string, ctx?: AskDataContext): Promise<AskRes
 
   // Each tool runs server-side; its return value is fed back to the model as a functionResponse.
   // We harvest provenance as a side effect: web_search results become citations, read_file paths
-  // become file refs. The model only ever sees what these return — it can't cite a source we didn't
+  // become file refs. The model only ever sees what these return, it can't cite a source we didn't
   // fetch, which keeps every claim traceable (hard rule #3).
   async function execute(name: string, args: Record<string, unknown>): Promise<Record<string, unknown>> {
     if (name === "web_search") {
@@ -209,14 +211,14 @@ export async function ask(message: string, ctx?: AskDataContext): Promise<AskRes
         return {
           results: [],
           error:
-            "Web search is not configured on this server (no TAVILY_API_KEY). Tell the user you can't search the web right now — do not answer current-events or live questions from memory.",
+            "Web search is not configured on this server (no TAVILY_API_KEY). Tell the user you can't search the web right now, do not answer current-events or live questions from memory.",
         };
       }
       const hits = await webSearch(query, { deep: true, maxResults: 6 });
       for (const h of hits) {
         if (h.url && !seenUrls.has(h.url)) {
           seenUrls.add(h.url);
-          citations.push({ url: h.url, title: h.title, quote: h.content.slice(0, 280) });
+          citations.push({ url: h.url, title: h.title, quote: stripDashes(h.content.slice(0, 280)) });
         }
       }
       return { results: hits.map((h) => ({ title: h.title, url: h.url, content: h.content })) };
@@ -252,7 +254,7 @@ export async function ask(message: string, ctx?: AskDataContext): Promise<AskRes
       return { ok: out.ok, result: out.message };
     }
     if (name === "list_templates" && ctx?.actions) {
-      const out = await ctx.actions.listTemplates(); // read-only — no action ref to surface
+      const out = await ctx.actions.listTemplates(); // read-only, no action ref to surface
       return { ok: out.ok, content: out.message };
     }
     if (name === "add_contact" && ctx?.actions) {
@@ -280,8 +282,8 @@ export async function ask(message: string, ctx?: AskDataContext): Promise<AskRes
       // If an action ran before the loop errored, say so rather than implying nothing happened.
       answer:
         actions.length > 0
-          ? "Done — though I had trouble composing a full reply. Check the action below."
-          : "I couldn't reach the assistant just now — please try again in a moment.",
+          ? "Done, though I had trouble composing a full reply. Check the action below."
+          : "I couldn't reach the assistant just now, please try again in a moment.",
       citations,
       files: dedupeFiles(files),
       actions,
@@ -292,14 +294,14 @@ export async function ask(message: string, ctx?: AskDataContext): Promise<AskRes
   if (!answer) {
     const reason =
       result.finishReason === "max_turns"
-        ? "I wasn't able to finish that — it took too many steps. Try narrowing the question."
+        ? "I wasn't able to finish that, it took too many steps. Try narrowing the question."
         : actions.length > 0
-          ? "Done — see the action below."
+          ? "Done, see the action below."
           : "(no answer)";
     return { answer: reason, citations, files: dedupeFiles(files), actions };
   }
   const truncated = result.finishReason === "MAX_TOKENS" ? " …(response was cut off)" : "";
-  return { answer: answer + truncated, citations, files: dedupeFiles(files), actions };
+  return { answer: stripDashes(answer) + truncated, citations, files: dedupeFiles(files), actions };
 }
 
 function dedupeFiles(files: AskFileRef[]): AskFileRef[] {

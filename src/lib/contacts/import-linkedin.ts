@@ -17,9 +17,9 @@ import type { LinkedInProfile } from "@/lib/agents/linkedin/types";
  * instead of silently saving a bare link.
  *
  * This is an explicit, single-person user action (the user chose THIS person), so the contact lands
- * `created_by='user'`, `review_status='accepted'` — straight into the People tab, exactly like the
+ * `created_by='user'`, `review_status='accepted'`, straight into the People tab, exactly like the
  * manual "Add a contact" form and the Apollo "Find email" flow. It is NOT autonomous discovery (that
- * path — cohort search, LinkedIn people-search — still goes to Review per hard rule #5).
+ * path, cohort search, LinkedIn people-search, still goes to Review per hard rule #5).
  *
  * Provenance (hard rule #3): every filled field records its origin in `field_sources` (the LinkedIn
  * profile URL for page-read fields, apollo.io for Apollo-supplied ones), and `source_quote` carries
@@ -32,9 +32,9 @@ export type ImportLinkedInResult = {
   ok: boolean;
   contactId: string | null;
   fullName: string | null;
-  /** True when this profile was already saved — we returned the existing contact, no duplicate made. */
+  /** True when this profile was already saved, we returned the existing contact, no duplicate made. */
   alreadyExisted: boolean;
-  /** True when LinkedIn showed an auth wall and we had no other way in — log in and retry. */
+  /** True when LinkedIn showed an auth wall and we had no other way in, log in and retry. */
   needsLogin: boolean;
   email: string | null;
   company: string | null;
@@ -99,7 +99,7 @@ export async function importContactFromLinkedIn(
     }
   }
 
-  // Tier A — read the page (best-effort; returns unavailable when the browser backend is off).
+  // Tier A, read the page (best-effort; returns unavailable when the browser backend is off).
   let profile: LinkedInProfile | null = null;
   let needsLogin = false;
   let usedBrowser = false;
@@ -111,7 +111,7 @@ export async function importContactFromLinkedIn(
     needsLogin = true;
   }
 
-  // Tier B — Apollo by LinkedIn URL (the only reliable source of a work email; needs no browser).
+  // Tier B, Apollo by LinkedIn URL (the only reliable source of a work email; needs no browser).
   let apollo: ApolloPerson | null = null;
   let usedApollo = false;
   if (apolloEnabled()) {
@@ -130,7 +130,7 @@ export async function importContactFromLinkedIn(
           "To read a profile from just its URL I need either the browser backend (set JARVIS_BROWSER=playwright and log into LinkedIn once) or APOLLO_API_KEY.",
       });
     }
-    return base({ message: "Couldn't identify anyone from that profile — it may be private, or the read was blocked. Try again, or add them manually." });
+    return base({ message: "Couldn't identify anyone from that profile, it may be private, or the read was blocked. Try again, or add them manually." });
   }
 
   // ── Merge. Prefer the page for the role/company VALUE (it's what's visibly on their profile, and it
@@ -229,17 +229,17 @@ export async function importContactFromLinkedIn(
   ];
   if (email) channels.push({ contact_id: contactId, kind: "email", value: email, is_primary: true });
   // The contact row already exists (and renders via source_quote/field_sources), so a channels
-  // failure isn't fatal — but it leaves the contact without its link/email, so surface it plainly
+  // failure isn't fatal, but it leaves the contact without its link/email, so surface it plainly
   // rather than silently claiming we saved everything.
   const { error: channelsError } = await supabase.from("contact_channels").insert(channels);
   if (channelsError) console.warn(`[import-linkedin] channel insert failed for ${contactId}: ${channelsError.message}`);
-  const channelNote = channelsError ? " (couldn't save their link/email — open the contact to add it)" : "";
+  const channelNote = channelsError ? " (couldn't save their link/email, open the contact to add it)" : "";
 
   const got = [email && "email", roleTitle && "role", company && "company", background && "bio"].filter(Boolean) as string[];
   const gotStr = got.length ? ` (${got.join(", ")})` : "";
   const tail =
     !usedBrowser && !usedApollo
-      ? " I could only save the link — set JARVIS_BROWSER=playwright or APOLLO_API_KEY to auto-fill their details."
+      ? " I could only save the link, set JARVIS_BROWSER=playwright or APOLLO_API_KEY to auto-fill their details."
       : !email && apolloEnabled()
         ? " No work email was available."
         : !apolloEnabled()

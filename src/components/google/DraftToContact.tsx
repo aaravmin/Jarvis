@@ -140,7 +140,7 @@ export function DraftToContact({ name, email }: { name: string; email?: string }
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 rounded-lg bg-success/15 px-2.5 py-1 text-xs font-medium text-success hover:bg-success/25"
                   >
-                    <Check className="h-3.5 w-3.5" /> Saved — open Drafts
+                    <Check className="h-3.5 w-3.5" /> Saved, open Drafts
                   </a>
                 ) : (
                   <button

@@ -35,7 +35,7 @@ export default async function ReviewPage() {
             <Inbox className="h-5 w-5 text-accent" /> Review
           </h1>
           <p className="mt-1 text-sm text-muted">
-            Action items Jarvis found in your email and meetings — approve or dismiss each. Nothing is
+            Action items Jarvis found in your email and meetings, approve or dismiss each. Nothing is
             auto-accepted.
           </p>
         </div>

@@ -4,7 +4,7 @@ import type { Goal } from "@/lib/goals/types";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/goals — list the signed-in user's goals (newest first). */
+/** GET /api/goals, list the signed-in user's goals (newest first). */
 export async function GET() {
   const supabase = await createClient();
   const {
@@ -25,7 +25,7 @@ export async function GET() {
   return NextResponse.json({ goals });
 }
 
-/** POST /api/goals — create a goal manually. Body: { title, description? }. */
+/** POST /api/goals, create a goal manually. Body: { title, description? }. */
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {

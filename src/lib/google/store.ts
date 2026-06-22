@@ -5,7 +5,7 @@ import { refreshAccessToken, type GoogleTokens } from "@/lib/google/oauth";
 /**
  * Server-side store for the connected Google account's tokens (hard rule #6). RLS scopes every row to
  * the signed-in user, so the user-scoped Supabase client can only ever touch its own row. The browser
- * never receives these tokens — only server routes/agents call in here.
+ * never receives these tokens, only server routes/agents call in here.
  */
 
 const TABLE = "connected_accounts";
@@ -117,7 +117,7 @@ export async function getTokenWithScope(
   const scopes = await getGrantedScopes(supabase, userId);
   if (!scopes.includes(scope)) {
     throw new Error(
-      `Reconnect Google to enable ${featureLabel}. The required permission isn't granted yet — open Connections and click Reconnect.`,
+      `Reconnect Google to enable ${featureLabel}. The required permission isn't granted yet, open Connections and click Reconnect.`,
     );
   }
   return getValidAccessToken(supabase, userId);

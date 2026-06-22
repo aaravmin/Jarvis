@@ -10,9 +10,9 @@ export const maxDuration = 60;
 const VALID = AUDIENCES.map((a) => a.value) as string[];
 
 /**
- * POST /api/outreach/draft — draft a tailored outreach email to a contact.
+ * POST /api/outreach/draft, draft a tailored outreach email to a contact.
  * Body: { contactId, audience, goal?, templateId? }. Returns the OutreachRunView (status 'drafted').
- * Draft only — nothing is sent; saving into Gmail is a separate step.
+ * Draft only, nothing is sent; saving into Gmail is a separate step.
  */
 export async function POST(request: Request) {
   const supabase = await createClient();

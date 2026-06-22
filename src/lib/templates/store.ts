@@ -4,7 +4,7 @@ import type { ConnectionType, EmailTemplate, GeneralizedTemplate, ProposedConnec
 
 /**
  * CRUD for connection types + email templates. Supabase is the system of record (hard rule #1); RLS
- * scopes every row to the signed-in user. We never write the personal connection detail here — only
+ * scopes every row to the signed-in user. We never write the personal connection detail here, only
  * generalized templates and types reach this layer.
  */
 
@@ -146,7 +146,7 @@ async function upsertConnectionType(
 
 /**
  * Persist a generalized template + its connection type. The personal detail never reaches this
- * function — callers pass only the scrubbed, reusable artifact (autonomy L0: the user approves first).
+ * function, callers pass only the scrubbed, reusable artifact (autonomy L0: the user approves first).
  */
 export async function saveGeneralizedTemplate(
   supabase: SupabaseClient,
@@ -194,14 +194,14 @@ function extractPlaceholders(body: string): string[] {
   const found = new Set<string>();
   for (const m of body.matchAll(/\{\{\s*([\w .\-/]+?)\s*\}\}/g)) {
     const key = m[1].trim();
-    if (key) found.add(key); // skip stray "{{   }}" — a whitespace-only token isn't a placeholder
+    if (key) found.add(key); // skip stray "{{   }}", a whitespace-only token isn't a placeholder
   }
   return [...found];
 }
 
 /**
  * Save a Google Drive document's text as a reusable template (source = "drive"). Unlike
- * saveGeneralizedTemplate, this has no connection type and applies NO scrubbing — the privacy contract
+ * saveGeneralizedTemplate, this has no connection type and applies NO scrubbing, the privacy contract
  * only governs Jarvis-GENERATED templates; a document the user authored and explicitly chose to keep is
  * stored verbatim. drive_file_id records where it came from so we can re-sync or link back later.
  */
@@ -211,7 +211,7 @@ export async function saveDriveTemplate(
   args: { name: string; subject?: string; body: string; driveFileId?: string },
 ): Promise<{ templateId: string; name: string }> {
   const body = args.body.trim();
-  if (!body) throw new Error("That document is empty — there's nothing to save as a template.");
+  if (!body) throw new Error("That document is empty, there's nothing to save as a template.");
   const name = args.name.trim() || "Untitled template";
   const { data, error } = await supabase
     .from("email_templates")
@@ -232,7 +232,7 @@ export async function saveDriveTemplate(
 
 /**
  * Save a template the user typed or uploaded themselves (source = "user"). Like saveDriveTemplate it
- * applies NO scrubbing — the privacy contract only governs Jarvis-GENERATED templates; a template the
+ * applies NO scrubbing, the privacy contract only governs Jarvis-GENERATED templates; a template the
  * user authored is stored verbatim. Placeholders are derived from subject + body.
  */
 export async function saveUserTemplate(

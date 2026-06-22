@@ -8,7 +8,7 @@ import { CONTACT_OUTREACH_STATUSES, type DiscoveredPerson } from "@/lib/research
 
 /**
  * Export the user's full contact list to a brand-new Google Sheet: name, info, relevance, where to
- * reach them, and the outreach status — with the status column wired as an editable dropdown so the
+ * reach them, and the outreach status, with the status column wired as an editable dropdown so the
  * toggle lives in the sheet too (Supabase stays the system of record; this is a one-way snapshot).
  */
 
@@ -43,7 +43,7 @@ function buildRows(people: DiscoveredPerson[]): string[][] {
   ]);
 }
 
-/** Column letter for a 0-based index (A, B, … — the export stays well under 26 columns). */
+/** Column letter for a 0-based index (A, B, …, the export stays well under 26 columns). */
 function colLetter(index: number): string {
   return String.fromCharCode(65 + index);
 }
@@ -58,7 +58,7 @@ export async function exportContactsToSheet(
   const token = await getTokenWithScope(supabase, userId, SCOPE_SPREADSHEETS, "exporting contacts to Google Sheets");
 
   const dateLabel = new Date().toISOString().slice(0, 10);
-  const sheet = await createSpreadsheet(token, `Jarvis Contacts — ${dateLabel}`, "Contacts");
+  const sheet = await createSpreadsheet(token, `Jarvis Contacts, ${dateLabel}`, "Contacts");
 
   const rows = buildRows(people);
   const values: string[][] = [HEADER, ...rows];

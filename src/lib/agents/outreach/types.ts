@@ -1,13 +1,13 @@
 /**
- * Types for the Outreach agent — drafts a tailored email to a contact. The audience BRANCH shapes the
+ * Types for the Outreach agent, drafts a tailored email to a contact. The audience BRANCH shapes the
  * tone: an investor cold email reads nothing like a note to a peer. Output is always a Gmail DRAFT for
  * the user to review and send (hard rule #5, never auto-sends).
  */
 
-/** Outreach audience — mirrors outreach_runs.audience. The branch that sets tone + the kind of ask. */
+/** Outreach audience, mirrors outreach_runs.audience. The branch that sets tone + the kind of ask. */
 export type Audience = "investor" | "recruiter" | "professor" | "peer" | "founder" | "other";
 
-/** Lifecycle of an outreach draft — mirrors outreach_runs.status. */
+/** Lifecycle of an outreach draft, mirrors outreach_runs.status. */
 export type OutreachRunStatus = "running" | "drafted" | "saved" | "error";
 
 /** Per-audience tone + ask guidance the composer branches on. Single source of truth for the UI + model. */
@@ -16,7 +16,7 @@ export const AUDIENCES: { value: Audience; label: string; guidance: string }[] =
     value: "investor",
     label: "Investor",
     guidance:
-      "Concise and credible. Lead with the single most compelling fact (traction, insight, or team). No hype or filler. Make a clear, low-friction ask (a short call or a warm intro). Respect their time — short.",
+      "Concise and credible. Lead with the single most compelling fact (traction, insight, or team). No hype or filler. Make a clear, low-friction ask (a short call or a warm intro). Respect their time, short.",
   },
   {
     value: "recruiter",

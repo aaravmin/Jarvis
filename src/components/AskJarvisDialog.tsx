@@ -99,7 +99,7 @@ export function AskJarvisDialog({ open, onClose }: { open: boolean; onClose: () 
 
           <div className="flex items-center justify-between border-t border-border px-4 py-3">
             <p className="text-[11px] text-muted">
-              Results land in <span className="text-muted-strong">Review</span> — nothing is added until
+              Results land in <span className="text-muted-strong">Review</span>, nothing is added until
               you approve it.
             </p>
             <button

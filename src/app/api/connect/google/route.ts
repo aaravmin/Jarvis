@@ -5,7 +5,7 @@ import { buildAuthUrl } from "@/lib/google/oauth";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/connect/google — start the OAuth flow. Requires a signed-in user (so the callback knows
+ * GET /api/connect/google, start the OAuth flow. Requires a signed-in user (so the callback knows
  * whose tokens to store). Sets a short-lived httpOnly state cookie for CSRF, then redirects to
  * Google's consent screen.
  */

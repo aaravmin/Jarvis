@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * POST /api/google/import-contacts — { sheet: <url|id> }. Reads the Google Sheet and lands each row in
+ * POST /api/google/import-contacts, { sheet: <url|id> }. Reads the Google Sheet and lands each row in
  * the Review queue as a suggested contact (provenance = the sheet + the row). Returns { runId, resultCount }.
  */
 export async function POST(request: Request) {

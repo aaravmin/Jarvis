@@ -5,7 +5,7 @@ import { scrubObviousPersonalReferences, extractPlaceholders } from "@/lib/templ
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/templates — list saved templates + connection types for the current user. */
+/** GET /api/templates, list saved templates + connection types for the current user. */
 export async function GET() {
   const supabase = await createClient();
   const {
@@ -21,7 +21,7 @@ export async function GET() {
 }
 
 /**
- * POST /api/templates — persist a GENERALIZED template + its connection type. By contract this body
+ * POST /api/templates, persist a GENERALIZED template + its connection type. By contract this body
  * carries only the reusable, scrubbed artifact: the personal connection detail is never accepted or
  * stored here (we read only these named fields and ignore anything else).
  */

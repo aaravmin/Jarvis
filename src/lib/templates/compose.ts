@@ -12,7 +12,7 @@ import type { ComposeResult } from "./types";
  * personal connection detail for ONE contact, Claude produces two things at once:
  *   1. the concrete email to send (personal detail woven in naturally), and
  *   2. a GENERALIZED, reusable template + connection TYPE with the personal specifics stripped to a
- *      {{connection}} placeholder — so future contacts with a similar kind of connection are covered.
+ *      {{connection}} placeholder, so future contacts with a similar kind of connection are covered.
  *
  * The personal detail is used only to write (1) and is never returned inside (2). A server-side
  * scrubber backstops the model in case it echoes a name/company into the generalized output.
@@ -66,7 +66,7 @@ HARD PRIVACY RULE for the generalized outputs (generalized_*, connection_type_*)
   descriptive placeholders like {{name}}, {{role}}, {{ask}}.
 - The connection TYPE describes only the KIND of relationship in the abstract (e.g. "introduced through
   a parent's professional network", "former colleague of a family member"). It must be reusable for any
-  future contact with that same kind of connection — so it must contain zero specifics.
+  future contact with that same kind of connection, so it must contain zero specifics.
 
 Keep the concrete email tight and genuine. Keep the generalized template a clean, fill-in-the-blanks skeleton.`;
 
@@ -76,7 +76,7 @@ export type ComposeInput = {
   baseTemplateId?: string;
   driveTemplateRef?: string;
   connectionTypeId?: string;
-  /** PERSONAL — used only to write the concrete email; never persisted. */
+  /** PERSONAL, used only to write the concrete email; never persisted. */
   connectionDetail: string;
   context?: string;
   tone?: string;
@@ -127,8 +127,8 @@ export async function composeConnectionEmail(
 
   const userMsg = [
     `Contact: ${input.contactName}${input.contactEmail ? ` <${input.contactEmail}>` : ""}`,
-    baseText ? `BASE TEMPLATE${baseName ? ` ("${baseName}")` : ""}:\n---\n${baseText}\n---` : "No base template — write from scratch in a warm, concise voice.",
-    `PERSONAL CONNECTION (use ONLY for the concrete email — never put this in the generalized outputs):\n${input.connectionDetail.trim()}`,
+    baseText ? `BASE TEMPLATE${baseName ? ` ("${baseName}")` : ""}:\n---\n${baseText}\n---` : "No base template, write from scratch in a warm, concise voice.",
+    `PERSONAL CONNECTION (use ONLY for the concrete email, never put this in the generalized outputs):\n${input.connectionDetail.trim()}`,
     typeGuidance,
     input.context ? `Additional context:\n${input.context.trim()}` : "",
     input.tone ? `Tone: ${input.tone.trim()}` : "",
@@ -175,7 +175,7 @@ export async function composeConnectionEmail(
     baseTemplateName: baseName,
     privacyOk: !leaked,
     privacyNote: leaked
-      ? "Jarvis removed a personal detail that slipped into the reusable template — it now stores only the connection type."
+      ? "Jarvis removed a personal detail that slipped into the reusable template, it now stores only the connection type."
       : undefined,
   };
 }

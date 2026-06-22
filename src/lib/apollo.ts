@@ -1,20 +1,20 @@
 import "server-only";
 
 /**
- * Optional Apollo.io people client — finds work emails. Two capabilities:
+ * Optional Apollo.io people client, finds work emails. Two capabilities:
  *   • MATCH (apolloMatchPerson): given an Apollo id (or a name + company / domain / LinkedIn) return
- *     that person's work email — used to enrich a contact that's missing one;
+ *     that person's work email, used to enrich a contact that's missing one;
  *   • SEARCH (apolloSearchPeople): given keywords / title / company, return candidate people to
- *     import as new contacts. NOTE: Apollo's search endpoint never returns emails — it's discovery
+ *     import as new contacts. NOTE: Apollo's search endpoint never returns emails, it's discovery
  *     only. To get an email for a search result you must MATCH it (by id) afterward, which import does.
  *
  * Entirely gated on APOLLO_API_KEY. With no key set, apolloEnabled() is false and the functions
- * return null / [] — every caller degrades gracefully (the feature just doesn't appear). It never
+ * return null / [], every caller degrades gracefully (the feature just doesn't appear). It never
  * throws on an Apollo outage: a failure degrades the feature, it doesn't crash the request.
  *
  * Provenance (hard rule #3): anything we persist from Apollo records Apollo as the source in the
  * contact's field_sources and is user-initiated (created_by 'user'), so the user is choosing to trust
- * it — we never auto-write Apollo data as a 'jarvis'-derived fact.
+ * it, we never auto-write Apollo data as a 'jarvis'-derived fact.
  */
 
 const API = "https://api.apollo.io/api/v1";
@@ -26,13 +26,13 @@ export function apolloEnabled(): boolean {
 }
 
 export type ApolloPerson = {
-  id?: string; // Apollo's person id — the precise key to enrich (match) this exact person later
+  id?: string; // Apollo's person id, the precise key to enrich (match) this exact person later
   name: string;
   firstName?: string;
   lastName?: string;
   title?: string;
   organization?: string;
-  email?: string; // a real, usable address — undefined when Apollo returns a locked placeholder
+  email?: string; // a real, usable address, undefined when Apollo returns a locked placeholder
   emailStatus?: string; // apollo's email_status: "verified" | "guessed" | "unavailable" | ...
   linkedinUrl?: string;
   photoUrl?: string;
@@ -52,19 +52,19 @@ async function apolloFetch(path: string, body: Record<string, unknown>): Promise
     });
     if (!res.ok) {
       // Don't crash, but surface the status (403 = plan/endpoint issue, 422 = bad params) so a
-      // misconfigured key isn't an invisible no-op. Never log the body — it can echo the request.
+      // misconfigured key isn't an invisible no-op. Never log the body, it can echo the request.
       console.warn(`[apollo] ${path} → ${res.status}`);
       return null;
     }
     return await res.json();
   } catch {
-    return null; // outage / timeout / bad JSON — degrade, never throw
+    return null; // outage / timeout / bad JSON, degrade, never throw
   } finally {
     clearTimeout(timer);
   }
 }
 
-// Apollo returns "email_not_unlocked@domain.com" placeholders for rows you haven't paid to reveal —
+// Apollo returns "email_not_unlocked@domain.com" placeholders for rows you haven't paid to reveal -
 // never surface those as if they were a real address.
 function realEmail(email?: string | null): string | undefined {
   const e = (email ?? "").trim();
@@ -102,7 +102,7 @@ function mapPerson(p: RawPerson): ApolloPerson {
   };
 }
 
-/** Enrich one person to reveal their work email — by Apollo id (most precise, for a search result) or
+/** Enrich one person to reveal their work email, by Apollo id (most precise, for a search result) or
  *  by name (+ optional company / domain / LinkedIn). null when not found, not enough to match on, or
  *  no key. `reveal_personal_emails` is left off so we only surface work emails. */
 export async function apolloMatchPerson(input: {
@@ -130,9 +130,9 @@ export async function apolloMatchPerson(input: {
 }
 
 /**
- * Search Apollo for candidate people (discovery only — emails are NOT returned here; the caller must
+ * Search Apollo for candidate people (discovery only, emails are NOT returned here; the caller must
  * MATCH each result by id to reveal an email). Returns [] when no key / on any error. Uses the
- * `/mixed_people/api_search` endpoint — the plain `/mixed_people/search` is the dashboard endpoint and
+ * `/mixed_people/api_search` endpoint, the plain `/mixed_people/search` is the dashboard endpoint and
  * 403s on API/lower plans.
  */
 export async function apolloSearchPeople(input: {

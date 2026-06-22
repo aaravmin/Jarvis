@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Jarvis — Personal Command Center",
+  title: "Jarvis, Personal Command Center",
   description:
-    "One place that tracks your email, meetings, calendar, goals, people, and job applications — and proactively tells you what to follow up on, with a source link for every item.",
+    "One place that tracks your email, meetings, calendar, goals, people, and job applications, and proactively tells you what to follow up on, with a source link for every item.",
 };
 
 export default function RootLayout({

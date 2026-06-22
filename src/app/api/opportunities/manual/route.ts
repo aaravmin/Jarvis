@@ -11,7 +11,7 @@ const CATEGORIES: OpportunityCategory[] = [
 ];
 
 /**
- * POST /api/opportunities/manual — manually add an opportunity with rich fields. Body fields below.
+ * POST /api/opportunities/manual, manually add an opportunity with rich fields. Body fields below.
  * The deadline is chrono-resolved (hard rule #2). User-created → accepted (no provenance needed).
  */
 export async function POST(request: Request) {

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 const CONTACT_COLS =
   "id, full_name, company, role_title, background, relevance, the_ask, notes, source_quote, confidence, review_status, field_sources";
 
-/** GET /api/research/[runId] — load a run and its discovered people (RLS-scoped). */
+/** GET /api/research/[runId], load a run and its discovered people (RLS-scoped). */
 export async function GET(_request: Request, { params }: { params: Promise<{ runId: string }> }) {
   const { runId } = await params;
   const supabase = await createClient();
@@ -63,7 +63,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ run
 }
 
 /**
- * PATCH /api/research/[runId] — review actions.
+ * PATCH /api/research/[runId], review actions.
  * Body: { action: 'accept'|'dismiss', contactId } | { action: 'accept-all'|'dismiss-all' } |
  *       { action: 'cancel' }.
  */

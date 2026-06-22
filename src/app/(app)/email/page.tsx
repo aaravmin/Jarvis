@@ -85,7 +85,7 @@ export default async function EmailPage() {
                       <p className="truncate text-sm text-foreground">{e.title}</p>
                       <p className="truncate text-xs text-muted">
                         {e.from_name}
-                        {e.raw_text ? ` — ${e.raw_text}` : ""}
+                        {e.raw_text ? `, ${e.raw_text}` : ""}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">

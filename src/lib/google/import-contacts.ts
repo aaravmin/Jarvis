@@ -7,7 +7,7 @@ import { readSheet, extractSpreadsheetId } from "@/lib/google/sheets";
  * contacts-from-sheet: read a Google Sheet (e.g. an alumni database) and land each row in the Review
  * queue as a suggested contact, with the sheet + the exact row as provenance (hard rules #3 + #5).
  *
- * Column mapping is heuristic (no LLM) — robust and deterministic for typical sheets. Rows reuse the
+ * Column mapping is heuristic (no LLM), robust and deterministic for typical sheets. Rows reuse the
  * `research_runs` "run" abstraction so they show in Review via the existing people UI; nothing lands
  * in Contacts until the user accepts it.
  */
@@ -99,7 +99,7 @@ export async function importContactsFromSheet(
   for (const row of rows.slice(1)) {
     const fullName = buildName(row, map);
     if (!fullName) continue;
-    // The exact row, as the provenance quote (must be non-empty — DB CHECK).
+    // The exact row, as the provenance quote (must be non-empty, DB CHECK).
     const rowQuote = header
       .map((h, i) => (row[i] ? `${h}: ${row[i]}` : null))
       .filter(Boolean)

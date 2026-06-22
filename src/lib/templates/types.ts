@@ -4,7 +4,7 @@
  * The privacy contract (the user's explicit instruction): the CONCRETE draft may contain the personal
  * connection detail ("my dad worked with you at Acme") because it's the actual email they'll send. But
  * the GENERALIZED template and the ConnectionType that get persisted must only ever describe the *kind*
- * of relationship — never the specifics. The detail is used in-memory to write one email and discarded.
+ * of relationship, never the specifics. The detail is used in-memory to write one email and discarded.
  */
 
 export type TemplateSource = "user" | "jarvis" | "drive";
@@ -34,7 +34,7 @@ export type EmailTemplate = {
 /** The concrete email written for one specific contact (may include personal specifics). */
 export type ComposedDraft = { subject: string; body: string };
 
-/** The generalized, reusable template saved after approval — NO personal specifics. */
+/** The generalized, reusable template saved after approval, NO personal specifics. */
 export type GeneralizedTemplate = {
   name: string;
   subject: string;
@@ -42,7 +42,7 @@ export type GeneralizedTemplate = {
   placeholders: string[];
 };
 
-/** The generalized connection type proposed alongside the draft — NO personal specifics. */
+/** The generalized connection type proposed alongside the draft, NO personal specifics. */
 export type ProposedConnectionType = {
   label: string;
   description: string;

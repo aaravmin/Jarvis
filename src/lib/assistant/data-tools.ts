@@ -6,18 +6,18 @@ import { formatWhen, formatDate, formatEventTime, calendarLocation } from "@/lib
 import { buildAskActions, type AskActions } from "@/lib/assistant/actions";
 
 /**
- * The bridge that lets the Jarvis assistant ANSWER QUESTIONS about the user's own connected data —
- * their Gmail, Google Calendar, meetings, tasks, contacts and opportunities — not just see them on a
+ * The bridge that lets the Jarvis assistant ANSWER QUESTIONS about the user's own connected data -
+ * their Gmail, Google Calendar, meetings, tasks, contacts and opportunities, not just see them on a
  * dashboard. Everything here is read-only and RLS-scoped (the user-scoped Supabase client can only
  * ever touch the signed-in user's rows), so the assistant can reason over real data with no risk of
  * leaking another user's.
  *
  * Two capabilities are handed to `ask()`:
- *   • a compact DIGEST (buildDataDigest) injected into the system prompt — breadth at a glance, so
+ *   • a compact DIGEST (buildDataDigest) injected into the system prompt, breadth at a glance, so
  *     "what's on my plate today?" answers immediately;
  *   • a SEARCH tool (searchMyData) the model can call to drill into specifics not in the digest
  *     ("what did Professor Lee email me about?").
- * Dates are only ever formatted here (display) — never computed by the model (hard rule #2).
+ * Dates are only ever formatted here (display), never computed by the model (hard rule #2).
  */
 
 export type DataKind = "email" | "calendar" | "meeting" | "task" | "contact" | "opportunity";
@@ -62,7 +62,7 @@ function clip(s: string | null | undefined, n: number): string {
   return t.length > n ? t.slice(0, n - 1) + "…" : t;
 }
 
-/** Minimal structural view of a PostgREST filter builder — just the range filters we narrow on. */
+/** Minimal structural view of a PostgREST filter builder, just the range filters we narrow on. */
 interface RangeFilter<T> {
   gte(column: string, value: string): T;
   lte(column: string, value: string): T;
@@ -83,7 +83,7 @@ function applyWindow<T extends RangeFilter<T>>(q: T, col: string, when: DataQuer
 /**
  * The window for a NULLABLE date column (tasks.due_at, opportunities.deadline_at) as a PostgREST
  * or-string. A bare gte/lte comparison silently drops null-dated rows (SQL NULL ≠ true), which would
- * hide undated open tasks and rolling/unparsed-deadline opportunities — so today/upcoming KEEP nulls
+ * hide undated open tasks and rolling/unparsed-deadline opportunities, so today/upcoming KEEP nulls
  * (they're open, not gone). "past" excludes nulls (an undated item isn't in the past). Returns null
  * for "all"/undefined (no window). Timestamps are quoted so their ms dots don't confuse the parser.
  */
@@ -95,7 +95,7 @@ function nullableWindowOr(col: string, when: DataQuery["when"], b: ReturnType<ty
 }
 
 // ---------------------------------------------------------------------------
-// Digest — the assistant's at-a-glance memory of the user's world.
+// Digest, the assistant's at-a-glance memory of the user's world.
 // ---------------------------------------------------------------------------
 
 type SourceRow = {
@@ -168,11 +168,11 @@ export async function buildDataDigest(supabase: SupabaseClient): Promise<string>
   const evRows = (events.data ?? []) as SourceRow[];
   if (evRows.length) {
     sections.push(
-      `Upcoming calendar events (from today). Each shows the exact start and end — use these times verbatim and never invent an end time. All-day events show a DATE only (no clock time); do not state a start or end time for them:\n` +
+      `Upcoming calendar events (from today). Each shows the exact start and end, use these times verbatim and never invent an end time. All-day events show a DATE only (no clock time); do not state a start or end time for them:\n` +
         evRows
           .map((e) => {
             const loc = calendarLocation(e.raw_text);
-            return `- ${formatEventTime(e.occurred_at ?? undefined, e.ends_at ?? undefined, e.is_all_day ?? false) || "(no time)"} — ${clip(e.title, 90) || "(untitled)"}${loc ? ` · ${clip(loc, 60)}` : ""}`;
+            return `- ${formatEventTime(e.occurred_at ?? undefined, e.ends_at ?? undefined, e.is_all_day ?? false) || "(no time)"}, ${clip(e.title, 90) || "(untitled)"}${loc ? ` · ${clip(loc, 60)}` : ""}`;
           })
           .join("\n"),
     );
@@ -182,7 +182,7 @@ export async function buildDataDigest(supabase: SupabaseClient): Promise<string>
   if (taskRows.length) {
     sections.push(
       `Open tasks (things the user has committed to):\n` +
-        taskRows.map((t) => `- ${t.due_at ? `due ${formatDate(t.due_at)}` : "no due date"} — ${clip(t.title, 100)}`).join("\n"),
+        taskRows.map((t) => `- ${t.due_at ? `due ${formatDate(t.due_at)}` : "no due date"}, ${clip(t.title, 100)}`).join("\n"),
     );
   }
 
@@ -204,7 +204,7 @@ export async function buildDataDigest(supabase: SupabaseClient): Promise<string>
   const meetRows = (meetings.data ?? []) as SourceRow[];
   if (meetRows.length) {
     sections.push(
-      `Recent meetings:\n` + meetRows.map((m) => `- ${formatWhen(m.occurred_at ?? undefined) || "(no date)"} — ${clip(m.title, 90) || "(untitled)"}`).join("\n"),
+      `Recent meetings:\n` + meetRows.map((m) => `- ${formatWhen(m.occurred_at ?? undefined) || "(no date)"}, ${clip(m.title, 90) || "(untitled)"}`).join("\n"),
     );
   }
 
@@ -216,7 +216,7 @@ export async function buildDataDigest(supabase: SupabaseClient): Promise<string>
           .map((c) => {
             const role = [c.role_title, c.company].filter(Boolean).join(" @ ");
             const fu = c.follow_up_status && c.follow_up_status !== "done" ? ` · follow-up: ${c.follow_up_status.replace(/_/g, " ")}` : "";
-            return `- ${c.full_name}${role ? ` — ${role}` : ""}${fu}`;
+            return `- ${c.full_name}${role ? `, ${role}` : ""}${fu}`;
           })
           .join("\n"),
     );
@@ -227,7 +227,7 @@ export async function buildDataDigest(supabase: SupabaseClient): Promise<string>
     sections.push(
       `Tracked opportunities:\n` +
         oppRows
-          .map((o) => `- ${clip(o.title, 80)}${o.organization ? ` (${clip(o.organization, 40)})` : ""}${o.raw_deadline ? ` — deadline: ${clip(o.raw_deadline, 40)}` : ""}`)
+          .map((o) => `- ${clip(o.title, 80)}${o.organization ? ` (${clip(o.organization, 40)})` : ""}${o.raw_deadline ? `, deadline: ${clip(o.raw_deadline, 40)}` : ""}`)
           .join("\n"),
     );
   }
@@ -239,7 +239,7 @@ export async function buildDataDigest(supabase: SupabaseClient): Promise<string>
 }
 
 // ---------------------------------------------------------------------------
-// Search tool — let the model drill into specifics on demand.
+// Search tool, let the model drill into specifics on demand.
 // ---------------------------------------------------------------------------
 
 export async function searchMyData(supabase: SupabaseClient, q: DataQuery): Promise<DataSearchResult> {
@@ -261,23 +261,23 @@ export async function searchMyData(supabase: SupabaseClient, q: DataQuery): Prom
     const { data } = await query.order("occurred_at", { ascending: when === "upcoming" }).limit(perKind);
     const rows = (data ?? []) as (SourceRow & { from_email?: string | null })[];
     if (rows.length) {
-      const label = sk === "email" ? "Emails" : sk === "calendar" ? "Calendar events (exact start and end — use verbatim, never invent an end time; all-day events show a DATE only, with no clock time)" : "Meetings";
+      const label = sk === "email" ? "Emails" : sk === "calendar" ? "Calendar events (exact start and end, use verbatim, never invent an end time; all-day events show a DATE only, with no clock time)" : "Meetings";
       out.push(
         `${label}:\n` +
           rows
             .map((r) => {
-              // Calendar rows show the resolved start–end range and parsed location; everything else
+              // Calendar rows show the resolved start-end range and parsed location; everything else
               // shows its when + raw body. The model is never handed a raw end-time ISO.
               if (sk === "calendar") {
                 const span = formatEventTime(r.occurred_at ?? undefined, r.ends_at ?? undefined, r.is_all_day ?? false) || "(no date)";
                 const loc = calendarLocation(r.raw_text);
                 const link = r.permalink ? ` [${r.permalink}]` : "";
-                return `- ${span} — ${clip(r.title, 90) || "(untitled)"}${loc ? ` · ${clip(loc, 80)}` : ""}${link}`;
+                return `- ${span}, ${clip(r.title, 90) || "(untitled)"}${loc ? ` · ${clip(loc, 80)}` : ""}${link}`;
               }
-              const from = sk === "email" && r.from_name ? ` — from ${r.from_name}` : "";
+              const from = sk === "email" && r.from_name ? `, from ${r.from_name}` : "";
               const body = r.raw_text ? ` · ${clip(r.raw_text, 100)}` : "";
               const link = r.permalink ? ` [${r.permalink}]` : "";
-              return `- ${formatWhen(r.occurred_at ?? undefined) || "(no date)"} — ${clip(r.title, 90) || "(untitled)"}${from}${body}${link}`;
+              return `- ${formatWhen(r.occurred_at ?? undefined) || "(no date)"}, ${clip(r.title, 90) || "(untitled)"}${from}${body}${link}`;
             })
             .join("\n"),
       );
@@ -292,7 +292,7 @@ export async function searchMyData(supabase: SupabaseClient, q: DataQuery): Prom
     const { data } = await query.order("due_at", { ascending: true, nullsFirst: false }).limit(perKind);
     const rows = (data ?? []) as TaskRow[];
     if (rows.length) {
-      out.push(`Tasks:\n` + rows.map((t) => `- ${t.due_at ? `due ${formatDate(t.due_at)}` : "no due date"} — ${clip(t.title, 100)}${t.reasoning ? ` (${clip(t.reasoning, 60)})` : ""}`).join("\n"));
+      out.push(`Tasks:\n` + rows.map((t) => `- ${t.due_at ? `due ${formatDate(t.due_at)}` : "no due date"}, ${clip(t.title, 100)}${t.reasoning ? ` (${clip(t.reasoning, 60)})` : ""}`).join("\n"));
     }
   }
 
@@ -307,7 +307,7 @@ export async function searchMyData(supabase: SupabaseClient, q: DataQuery): Prom
           rows
             .map((c) => {
               const role = [c.role_title, c.company].filter(Boolean).join(" @ ");
-              return `- ${c.full_name}${role ? ` — ${role}` : ""}${c.relevance ? ` · ${clip(c.relevance, 80)}` : ""}`;
+              return `- ${c.full_name}${role ? `, ${role}` : ""}${c.relevance ? ` · ${clip(c.relevance, 80)}` : ""}`;
             })
             .join("\n"),
       );
@@ -325,7 +325,7 @@ export async function searchMyData(supabase: SupabaseClient, q: DataQuery): Prom
       out.push(
         `Opportunities:\n` +
           rows
-            .map((o) => `- ${clip(o.title, 80)}${o.organization ? ` (${clip(o.organization, 40)})` : ""}${o.raw_deadline ? ` — deadline: ${clip(o.raw_deadline, 40)}` : ""}${o.how_to_apply_url ? ` [${o.how_to_apply_url}]` : ""}`)
+            .map((o) => `- ${clip(o.title, 80)}${o.organization ? ` (${clip(o.organization, 40)})` : ""}${o.raw_deadline ? `, deadline: ${clip(o.raw_deadline, 40)}` : ""}${o.how_to_apply_url ? ` [${o.how_to_apply_url}]` : ""}`)
             .join("\n"),
       );
     }

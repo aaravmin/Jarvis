@@ -8,14 +8,14 @@ import {
 } from "@/lib/llm/grok";
 
 /**
- * The unified LLM provider — routes EVERY call to xAI Grok (see `grok.ts`).
+ * The unified LLM provider, routes EVERY call to xAI Grok (see `grok.ts`).
  *
  * Jarvis standardized on a single model provider (xAI Grok) on 2026-06-19. This module keeps the
  * historical `gemini*` export names and the Gemini `contents`/`parts` request shape because ~10 call
  * sites already speak it (the orb assistant, email extraction, research/opportunity engines, etc.).
  * Rather than rewrite all of them, this file is now a thin ADAPTER: it translates the Gemini-shaped
  * calls into xAI's OpenAI-style `messages` API and delegates to the three Grok primitives. No call hits
- * Google anymore — GEMINI_API_KEY / Vertex are unused. (The file name is a cosmetic leftover; the only
+ * Google anymore, GEMINI_API_KEY / Vertex are unused. (The file name is a cosmetic leftover; the only
  * real LLM client is `grok.ts`.)
  *
  *   geminiStructured<T>()  → grokStructured()  (forced JSON against a JSON Schema)
@@ -26,11 +26,11 @@ import {
  * as `{role:'user'|'model', parts:[{text}|{functionCall}|{functionResponse}]}`; xAI uses OpenAI roles
  * (`user`/`assistant`/`tool`) with `tool_calls` on the assistant turn and `tool_call_id` on each tool
  * reply. We pair the two by emitting a fresh unique id per tool call and dequeuing those ids FIFO when
- * the matching tool responses arrive — exactly the order Gemini emits call-then-response, so a tool-loop
+ * the matching tool responses arrive, exactly the order Gemini emits call-then-response, so a tool-loop
  * transcript survives the round-trip (grok messages → contents → grok messages) used by the research and
  * opportunity engines for their follow-up structured pass.
  *
- * All model output stays UNTRUSTED — the call sites validate, clamp, and re-derive everything (dates are
+ * All model output stays UNTRUSTED, the call sites validate, clamp, and re-derive everything (dates are
  * never computed by the model; HARD RULE #2).
  */
 
@@ -73,7 +73,7 @@ function isResponse(p: GeminiPart): p is Extract<GeminiPart, { functionResponse:
  * Gemini `contents` → xAI `messages`. A `model` turn with functionCalls becomes an assistant message
  * carrying `tool_calls`; the following `user` turn's functionResponses become `tool` messages. Because
  * Gemini emits a call turn then its response turn in order, we mint a fresh id per call, queue it, and
- * dequeue FIFO for the responses — guaranteeing unique ids that pair correctly even if the same function
+ * dequeue FIFO for the responses, guaranteeing unique ids that pair correctly even if the same function
  * is called twice.
  */
 function toMessages(contents: GeminiContent[]): GrokMessage[] {
@@ -202,7 +202,7 @@ export async function geminiToolLoop(opts: {
     system: opts.system,
     messages: toMessages(opts.contents),
     // GeminiFunction and GrokFunction are the same {name, description?, parameters?} shape, and Grok
-    // takes JSON-Schema params directly — no conversion needed.
+    // takes JSON-Schema params directly, no conversion needed.
     functions: opts.functions,
     execute: opts.execute,
     maxTurns: opts.maxTurns,

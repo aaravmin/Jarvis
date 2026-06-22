@@ -6,13 +6,13 @@ import { formatWhen, formatEventTime, calendarLocation } from "@/lib/format";
 import { loadProfile, profileDigest } from "@/lib/profile";
 
 /**
- * The "Today" agent — builds a prioritized, time-ordered plan for the day from the user's real
+ * The "Today" agent, builds a prioritized, time-ordered plan for the day from the user's real
  * calendar events, open tasks, and recent emails. What to do first; what matters most.
  *
  * Hard rule #2 is sacred here: the model NEVER computes or emits a clock time or date. Fixed calendar
  * events keep the real start time we pass in (from sources.occurred_at); the model only SEQUENCES the
  * flexible tasks/emails around them and tags each with a coarse part-of-day. Our deterministic code
- * then derives the sort order and the displayed time — the model's output is ordering + prose only.
+ * then derives the sort order and the displayed time, the model's output is ordering + prose only.
  *
  * The plan is ephemeral (a view, never persisted) so it stays L0/suggest-only: nothing is created.
  * Every block still carries a working source (hard rule #4) so the Today UI can render it in a <Card>.
@@ -47,7 +47,7 @@ type PlanItem = {
   title: string;
   fixed: boolean;
   whenISO?: string; // events: real start time (drives sort + display)
-  allDay?: boolean; // all-day events have no clock time — display a date / "All day", never a time
+  allDay?: boolean; // all-day events have no clock time, display a date / "All day", never a time
   context: string; // line shown to the model
   source: CardSource;
 };
@@ -67,7 +67,7 @@ function capitalize(s: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Load today's raw material (deterministic — real times come from the data).
+// Load today's raw material (deterministic, real times come from the data).
 // ---------------------------------------------------------------------------
 
 type CalRow = { id: string; title: string | null; permalink: string | null; occurred_at: string | null; ends_at: string | null; is_all_day: boolean | null; raw_text: string | null };
@@ -127,10 +127,10 @@ async function loadTodayItems(supabase: SupabaseClient): Promise<PlanItem[]> {
       fixed: true,
       whenISO: e.occurred_at ?? undefined,
       allDay,
-      context: `[e${i}] ${formatEventTime(e.occurred_at ?? undefined, e.ends_at ?? undefined, allDay) || "(no time)"} — ${title}${detail ? ` (${detail})` : ""}`,
+      context: `[e${i}] ${formatEventTime(e.occurred_at ?? undefined, e.ends_at ?? undefined, allDay) || "(no time)"}, ${title}${detail ? ` (${detail})` : ""}`,
       source: {
         type: "calendar",
-        quote: `${title}${detail ? ` — ${detail}` : ""}`,
+        quote: `${title}${detail ? `, ${detail}` : ""}`,
         title,
         permalink: e.permalink ?? undefined,
         occurredAt: e.occurred_at ?? undefined,
@@ -156,7 +156,7 @@ async function loadTodayItems(supabase: SupabaseClient): Promise<PlanItem[]> {
       kind: "task",
       title,
       fixed: false,
-      context: `[t${i}] (${due}) ${title}${t.reasoning ? ` — ${clip(t.reasoning, 70)}` : ""}`,
+      context: `[t${i}] (${due}) ${title}${t.reasoning ? `, ${clip(t.reasoning, 70)}` : ""}`,
       source: {
         type: toSourceType(src?.source_type),
         quote: (t.source_quote && t.source_quote.trim()) || title,
@@ -176,10 +176,10 @@ async function loadTodayItems(supabase: SupabaseClient): Promise<PlanItem[]> {
       kind: "email",
       title: subject,
       fixed: false,
-      context: `[m${i}] from ${e.from_name ?? "unknown"} — "${subject}"${snippet ? ` (${snippet})` : ""}`,
+      context: `[m${i}] from ${e.from_name ?? "unknown"}, "${subject}"${snippet ? ` (${snippet})` : ""}`,
       source: {
         type: "email",
-        quote: `${subject}${snippet ? ` — ${snippet}` : ""}`,
+        quote: `${subject}${snippet ? `, ${snippet}` : ""}`,
         title: subject,
         permalink: e.permalink ?? undefined,
         occurredAt: e.occurred_at ?? undefined,
@@ -191,7 +191,7 @@ async function loadTodayItems(supabase: SupabaseClient): Promise<PlanItem[]> {
 }
 
 // ---------------------------------------------------------------------------
-// The forced-tool plan call (ordering + prose only — no dates).
+// The forced-tool plan call (ordering + prose only, no dates).
 // ---------------------------------------------------------------------------
 
 const PLAN_TOOL = {
@@ -200,7 +200,7 @@ const PLAN_TOOL = {
     type: "object" as const,
     additionalProperties: false,
     properties: {
-      summary: { type: "string", description: "1–2 sentences: the shape of the day and the single most important thing." },
+      summary: { type: "string", description: "1-2 sentences: the shape of the day and the single most important thing." },
       blocks: {
         type: "array",
         items: {
@@ -215,7 +215,7 @@ const PLAN_TOOL = {
               description: "For flexible tasks/emails: when in the day to do it. For fixed events: the part of day matching their real time.",
             },
             priority: { type: "string", enum: ["high", "medium", "low"] },
-            action: { type: "string", description: "Imperative one-liner — what to do (e.g. 'Prep two questions for the interview')." },
+            action: { type: "string", description: "Imperative one-liner, what to do (e.g. 'Prep two questions for the interview')." },
             why: { type: "string", description: "Short reason it sits here / why it matters today." },
           },
           required: ["ref", "order", "priority", "action"],
@@ -255,8 +255,8 @@ export async function buildDayPlan(supabase: SupabaseClient): Promise<DayPlan> {
   const who = profileDigest(profile);
 
   const sections: string[] = [];
-  if (events.length) sections.push(`FIXED CALENDAR EVENTS (already scheduled at the given time — keep them at that time, never restate a new time; an event shown with a DATE only is all-day, so don't give it a clock time):\n${events.map((e) => e.context).join("\n")}`);
-  if (tasks.length) sections.push(`TASKS (flexible — assign a part of day and an order, never a clock time):\n${tasks.map((t) => t.context).join("\n")}`);
+  if (events.length) sections.push(`FIXED CALENDAR EVENTS (already scheduled at the given time, keep them at that time, never restate a new time; an event shown with a DATE only is all-day, so don't give it a clock time):\n${events.map((e) => e.context).join("\n")}`);
+  if (tasks.length) sections.push(`TASKS (flexible, assign a part of day and an order, never a clock time):\n${tasks.map((t) => t.context).join("\n")}`);
   if (emails.length) sections.push(`RECENT EMAILS THAT MAY NEED ACTION (flexible; include only the ones that warrant action today):\n${emails.map((m) => m.context).join("\n")}`);
 
   const userMsg = `${who ? `${who}\n\n` : ""}Here is everything on the user's plate for today:\n\n${sections.join("\n\n")}\n\nBuild the user's plan for today via the build_day_plan tool. Sequence the items sensibly: schedule flexible work around the fixed events, decide what to do first, and surface what matters most. Reference each item you include by its [ref].`;
@@ -264,7 +264,7 @@ export async function buildDayPlan(supabase: SupabaseClient): Promise<DayPlan> {
   const system = `You are Jarvis, building the user's plan for TODAY. Produce a focused, realistic, prioritized day.
 
 CRITICAL RULES:
-- Never invent or compute clock times or dates. Fixed calendar events already have their real time — do not change it or restate a new one. For flexible tasks/emails, only choose a part of day (morning/afternoon/evening/anytime) and an order — never a specific time.
+- Never invent or compute clock times or dates. Fixed calendar events already have their real time, do not change it or restate a new one. For flexible tasks/emails, only choose a part of day (morning/afternoon/evening/anytime) and an order, never a specific time.
 - Use only the items given. Do not invent meetings, tasks, or emails. Reference each by its [ref].
 - Put high-stakes and time-sensitive things first; protect time before fixed events for anything that needs prep. Overdue tasks are high priority.
 - Be concise. Drop pure noise (e.g. newsletters) rather than padding the plan.`;
@@ -305,7 +305,7 @@ CRITICAL RULES:
   }
 
   // Fallback: if the model returned nothing usable, lay items out deterministically so the day is
-  // never blank — events at their real time, then tasks, then emails.
+  // never blank, events at their real time, then tasks, then emails.
   if (!built.length) {
     items.forEach((it, idx) => {
       const sortKey = it.fixed && it.whenISO ? new Date(it.whenISO).getTime() : startMs + bucketHour("anytime") * 3_600_000 + idx * 60_000;

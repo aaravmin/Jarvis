@@ -27,7 +27,7 @@ const input =
 /**
  * One task row with the full manual loop the dashboard was missing: check it off (toggles
  * items.status done⇄accepted), edit its title/notes/due, or delete it. The due date is always
- * re-resolved server-side by chrono (hard rule #2) — this component only sends the raw phrase.
+ * re-resolved server-side by chrono (hard rule #2), this component only sends the raw phrase.
  */
 export function TaskItem({ task }: { task: Task }) {
   const router = useRouter();
@@ -86,7 +86,7 @@ export function TaskItem({ task }: { task: Task }) {
               setRawDue(e.target.value);
               if (e.target.value) setClearDue(false);
             }}
-            placeholder={task.due_at ? `When — currently ${formatDate(task.due_at)} (leave blank to keep)` : "When (e.g. Friday 5pm) — optional"}
+            placeholder={task.due_at ? `When, currently ${formatDate(task.due_at)} (leave blank to keep)` : "When (e.g. Friday 5pm), optional"}
           />
           {task.due_at && (
             <label className="flex items-center gap-1.5 text-xs text-muted">

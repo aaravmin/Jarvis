@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CONTACT_OUTREACH_STATUSES, type ContactOutreachStatus } from "@/lib/research/types";
 
-/** Dot color per outreach state — quick visual scan down a list of contacts. */
+/** Dot color per outreach state, quick visual scan down a list of contacts. */
 const DOT: Record<ContactOutreachStatus, string> = {
   not_emailed: "bg-muted",
   emailed: "bg-accent",

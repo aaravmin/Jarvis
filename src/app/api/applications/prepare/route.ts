@@ -3,16 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 import { runApplication } from "@/lib/agents/application/run";
 import type { ApplicationKind } from "@/lib/agents/application/types";
 
-// Reads a form + a Grok grounding pass — can take ~30-60s. Server-side; tokens never touch the browser.
+// Reads a form + a Grok grounding pass, can take ~30-60s. Server-side; tokens never touch the browser.
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 const VALID_KINDS: ApplicationKind[] = ["job", "grant", "other"];
 
 /**
- * POST /api/applications/prepare — prepare an application at a URL.
+ * POST /api/applications/prepare, prepare an application at a URL.
  * Body: { targetUrl, kind?, opportunityId? }. Returns the ApplicationRunView (status needs_review).
- * The agent NEVER submits — the user reviews the field_plan and submits themselves (hard rule #5).
+ * The agent NEVER submits, the user reviews the field_plan and submits themselves (hard rule #5).
  */
 export async function POST(request: Request) {
   const supabase = await createClient();

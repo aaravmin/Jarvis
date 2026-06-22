@@ -5,7 +5,7 @@ import type { OpportunityRunView, OpportunityKindFilter } from "@/lib/agents/opp
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/opportunities/[runId] — load a run and its discovered opportunities (RLS-scoped). */
+/** GET /api/opportunities/[runId], load a run and its discovered opportunities (RLS-scoped). */
 export async function GET(_request: Request, { params }: { params: Promise<{ runId: string }> }) {
   const { runId } = await params;
   const supabase = await createClient();
@@ -43,7 +43,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ run
 }
 
 /**
- * PATCH /api/opportunities/[runId] — review actions.
+ * PATCH /api/opportunities/[runId], review actions.
  * Body: { action: 'accept'|'dismiss', opportunityId } | { action: 'accept-all'|'dismiss-all' } |
  *       { action: 'cancel' }.
  */

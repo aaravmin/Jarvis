@@ -4,7 +4,7 @@ import type { CardSource, SourceType } from "@/lib/types";
 
 /**
  * Loads the email-derived action items waiting in the Review queue (roadmap B2). These are the
- * suggest-only (L0) candidates the extractor produced — the user accepts or dismisses each. Every
+ * suggest-only (L0) candidates the extractor produced, the user accepts or dismisses each. Every
  * row carries its provenance so the Card primitive can render a working source chip (hard rule #4).
  */
 
@@ -53,7 +53,7 @@ export async function loadReviewItems(supabase: SupabaseClient): Promise<ReviewI
   const rows = (data ?? []) as Row[];
   const items: ReviewItem[] = [];
   for (const r of rows) {
-    // A FK embed comes back as an object; some client versions type it as an array — normalize.
+    // A FK embed comes back as an object; some client versions type it as an array, normalize.
     const src = Array.isArray(r.sources) ? r.sources[0] : r.sources;
     const quote = (r.source_quote ?? "").trim();
     // The Card primitive throws without a non-empty quote; an item missing one can't be reviewed safely.

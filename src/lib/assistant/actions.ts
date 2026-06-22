@@ -12,11 +12,11 @@ import { formatWhen } from "@/lib/format";
 import type { AskActionRef } from "@/lib/assistant/types";
 
 /**
- * The WRITE side of the Jarvis assistant — the actions it can take on the user's behalf, wired into
+ * The WRITE side of the Jarvis assistant, the actions it can take on the user's behalf, wired into
  * ask()'s tool loop. Everything here is gated and conservative:
- *   • Calendar: creates a real event (calendar.events scope), but the model NEVER computes the time —
+ *   • Calendar: creates a real event (calendar.events scope), but the model NEVER computes the time -
  *     it passes the user's verbatim phrase and resolveEventTime() resolves it with chrono (hard rule #2).
- *   • Email: creates a DRAFT only (gmail.compose) — nothing is ever sent without the user (autonomy L0,
+ *   • Email: creates a DRAFT only (gmail.compose), nothing is ever sent without the user (autonomy L0,
  *     hard rule #5).
  *   • Templates: reads a Drive doc the user names and saves it as a template (drive.readonly + Supabase
  *     system of record, hard rule #1).
@@ -55,7 +55,7 @@ function ymdLocal(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-/** The calendar day AFTER d, as YYYY-MM-DD (local, DST-safe — uses the local-midnight constructor). */
+/** The calendar day AFTER d, as YYYY-MM-DD (local, DST-safe, uses the local-midnight constructor). */
 function nextDayYmd(d: Date): string {
   return ymdLocal(new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1));
 }
@@ -70,7 +70,7 @@ function prevDayYmd(ymd: string): string {
  * Format a YYYY-MM-DD as a plain calendar date for display, WITHOUT a timezone round-trip. Parsing a
  * bare date as UTC-midnight and rendering it in a negative-offset zone (e.g. America/New_York) would
  * show the previous day; anchoring at noon-local avoids that skew so the confirmation matches the
- * actual all-day date (hard rule #7 — never tell the user a wrong date).
+ * actual all-day date (hard rule #7, never tell the user a wrong date).
  */
 function formatYmdLabel(ymd: string): string {
   const [y, m, d] = ymd.split("-").map(Number);
@@ -86,13 +86,13 @@ function describeResolved(t: { startISO?: string; endISO?: string; startDate?: s
   if (t.startDate) {
     if (t.endDate) {
       const last = prevDayYmd(t.endDate); // endDate is exclusive → the last INCLUDED day is the day before
-      if (last !== t.startDate) return `${formatYmdLabel(t.startDate)} – ${formatYmdLabel(last)}`;
+      if (last !== t.startDate) return `${formatYmdLabel(t.startDate)}, ${formatYmdLabel(last)}`;
     }
     return formatYmdLabel(t.startDate);
   }
   const start = formatWhen(t.startISO ?? "");
   if (t.endISO && t.endISO.slice(0, 10) !== (t.startISO ?? "").slice(0, 10)) {
-    return `${start} – ${formatWhen(t.endISO)}`; // multi-day timed span — show the end too
+    return `${start}, ${formatWhen(t.endISO)}`; // multi-day timed span, show the end too
   }
   return start;
 }
@@ -105,7 +105,7 @@ const SEGMENT_WORDS = /\b(tonight|morning|afternoon|evening|night|noon|midnight|
  * OR when a meridiem was implied AND the phrase contains a day-segment word ("tonight", "this
  * morning"). A meridiem WITHOUT a segment word does NOT count: chrono attaches a default meridiem to
  * bare relative phrases ("next week", "next month", "in 2 weeks"), and treating those as timed would
- * fabricate a clock time the user never gave (hard rules #2/#7) — they must stay all-day.
+ * fabricate a clock time the user never gave (hard rules #2/#7), they must stay all-day.
  */
 function isTimedComponent(c: chrono.ParsedComponents, text: string): boolean {
   if (c.isCertain("hour")) return true;
@@ -114,7 +114,7 @@ function isTimedComponent(c: chrono.ParsedComponents, text: string): boolean {
 
 /**
  * Hard-rule-#2 boundary for calendar events. The model hands us the user's VERBATIM phrase
- * ("tomorrow at 3pm", "next Friday 2–3pm", "June 20") and chrono resolves it here — the model never
+ * ("tomorrow at 3pm", "next Friday 2-3pm", "June 20") and chrono resolves it here, the model never
  * emits a computed date. A phrase with a time-of-day → a timed event; a day-only phrase → an all-day
  * event. Ambiguous dates resolve forward (the next occurrence). Unparseable → ok:false, and the
  * assistant asks the user to clarify rather than guessing.
@@ -147,7 +147,7 @@ function resolveEventTime(raw: string, refISO: string): ResolvedTime {
         endISO = first.end.date().toISOString(); // explicit end time ("2-3pm")
       } else {
         // Start is timed but the end is a date-only boundary ("tomorrow 9am to next Friday"). Don't
-        // drop it (which would collapse to a default 1-hour event) — span to the end day at the
+        // drop it (which would collapse to a default 1-hour event), span to the end day at the
         // start's time-of-day, so the multi-day extent the user gave is preserved.
         const s = first.start.date();
         const e = first.end.date();
@@ -158,7 +158,7 @@ function resolveEventTime(raw: string, refISO: string): ResolvedTime {
     return { ok: true, startISO, endISO };
   }
   // Day-only → all-day event. chrono's range end is INCLUSIVE ("June 20 to June 22" means through the
-  // 22nd), but Google Calendar all-day end dates are EXCLUSIVE — so bump one day. (createEvent applies
+  // 22nd), but Google Calendar all-day end dates are EXCLUSIVE, so bump one day. (createEvent applies
   // the same +1 when no end is supplied, so single-day and multi-day all-day events stay consistent.)
   const startDate = ymdLocal(first.start.date());
   const endDate = first.end ? nextDayYmd(first.end.date()) : undefined;
@@ -188,7 +188,7 @@ export function buildAskActions(supabase: SupabaseClient, userId: string): AskAc
       if (!t.ok) {
         return {
           ok: false,
-          message: `I couldn't work out when to schedule "${title}". Give me a date and time — for example "tomorrow at 3pm" or "June 20 from 2 to 3pm".`,
+          message: `I couldn't work out when to schedule "${title}". Give me a date and time, for example "tomorrow at 3pm" or "June 20 from 2 to 3pm".`,
         };
       }
 
@@ -223,7 +223,7 @@ export function buildAskActions(supabase: SupabaseClient, userId: string): AskAc
           },
         };
       } catch (e) {
-        return { ok: false, message: friendly(e, "I couldn't create that event — please try again.") };
+        return { ok: false, message: friendly(e, "I couldn't create that event, please try again.") };
       }
     },
 
@@ -244,7 +244,7 @@ export function buildAskActions(supabase: SupabaseClient, userId: string): AskAc
         const who = to?.trim() ? ` to ${to.trim()}` : "";
         return {
           ok: true,
-          message: `I saved a draft${who}${subj ? ` ("${subj}")` : ""} in your Gmail Drafts. Nothing is sent — review and send it yourself.`,
+          message: `I saved a draft${who}${subj ? ` ("${subj}")` : ""} in your Gmail Drafts. Nothing is sent, review and send it yourself.`,
           ref: {
             kind: "draft",
             label: "Open in Gmail drafts",
@@ -253,13 +253,13 @@ export function buildAskActions(supabase: SupabaseClient, userId: string): AskAc
           },
         };
       } catch (e) {
-        return { ok: false, message: friendly(e, "I couldn't create that draft — please try again.") };
+        return { ok: false, message: friendly(e, "I couldn't create that draft, please try again.") };
       }
     },
 
     async saveTemplate({ document, name }) {
       const docRef = (document ?? "").trim();
-      if (!docRef) return { ok: false, message: "Tell me which Google Doc to save — its name or its link." };
+      if (!docRef) return { ok: false, message: "Tell me which Google Doc to save, its name or its link." };
 
       let token: string;
       try {
@@ -319,7 +319,7 @@ export function buildAskActions(supabase: SupabaseClient, userId: string): AskAc
           },
         };
       } catch (e) {
-        return { ok: false, message: friendly(e, "I couldn't save that document as a template — please try again.") };
+        return { ok: false, message: friendly(e, "I couldn't save that document as a template, please try again.") };
       }
     },
 
@@ -360,13 +360,13 @@ export function buildAskActions(supabase: SupabaseClient, userId: string): AskAc
           ref: {
             kind: "contact",
             // Link to their LinkedIn (the source) when we have it; otherwise it's a plain receipt.
-            label: r.profileUrl ? `Open ${r.fullName ?? "this contact"} on LinkedIn` : `${r.fullName ?? "Contact"} — saved to People`,
+            label: r.profileUrl ? `Open ${r.fullName ?? "this contact"} on LinkedIn` : `${r.fullName ?? "Contact"}, saved to People`,
             url: r.profileUrl ?? undefined,
             detail: [r.role, r.email].filter(Boolean).join(" · ") || undefined,
           },
         };
       } catch {
-        return { ok: false, message: "I couldn't add that contact just now — try again, or paste their LinkedIn URL." };
+        return { ok: false, message: "I couldn't add that contact just now, try again, or paste their LinkedIn URL." };
       }
     },
   };

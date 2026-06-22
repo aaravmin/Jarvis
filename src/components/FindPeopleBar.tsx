@@ -8,7 +8,7 @@ import { RESEARCH_TARGETS } from "@/lib/research/targets";
 
 /**
  * Inline cohort-research bar for the People page. Same submit path as AskJarvisDialog (and Phase 8
- * voice) — on completion it routes to Review where the discovered people await approval.
+ * voice), on completion it routes to Review where the discovered people await approval.
  */
 export function FindPeopleBar() {
   const router = useRouter();
@@ -62,7 +62,7 @@ export function FindPeopleBar() {
       {error && <p className="mt-2 px-6 text-xs text-danger">{error}</p>}
       {running && (
         <p className="mt-2 px-6 text-xs text-muted">
-          Searching the web and verifying every match against real citations — this can take up to a
+          Searching the web and verifying every match against real citations, this can take up to a
           minute. Results appear in Review.
         </p>
       )}

@@ -24,9 +24,9 @@ type ScrapeResult = {
 };
 
 /**
- * "Find LinkedIn contacts" — drives the user's logged-in LinkedIn to a People search relevant to a
+ * "Find LinkedIn contacts", drives the user's logged-in LinkedIn to a People search relevant to a
  * linked job/grant and lands the results in the Review queue. First use opens a login window
- * (needsLogin) — the user signs in once, then clicks again. Never connects/messages anyone.
+ * (needsLogin), the user signs in once, then clicks again. Never connects/messages anyone.
  */
 export function FindLinkedInContactsButton({ applicationId, opportunityId, org, className }: Props) {
   const router = useRouter();

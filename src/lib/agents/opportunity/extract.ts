@@ -12,11 +12,11 @@ import type { OpportunityCategory, OpportunityKindFilter } from "@/lib/agents/op
  * Why this is still provenance-safe after the Claude→Gemini switch: the model never browses on its
  * own. Every web result it sees comes from webSearch() (Tavily), and we keep each result's real page
  * text as the citation corpus. A reported source_quote only survives if it's a genuine substring of
- * one of those real pages — exactly the gate the Anthropic citation objects used to provide.
+ * one of those real pages, exactly the gate the Anthropic citation objects used to provide.
  *
  * Dates (hard rule #2): the model is forbidden from computing or resolving a date. It returns only
  * the VERBATIM string it saw (raw_deadline, raw_event_dates). Our code (deadline.ts) resolves those
- * to timestamps deterministically with chrono-node — never here, never the model.
+ * to timestamps deterministically with chrono-node, never here, never the model.
  */
 
 const WEB_SEARCH_FN = {
@@ -84,19 +84,19 @@ export type ValidatedOpportunity = {
   fieldSources: Record<string, { url?: string; quote?: string; confidence?: number }>;
 };
 
-const SYSTEM = `You are Jarvis's opportunity-research agent. Find REAL, currently-open opportunities — programs, jobs, internships, hackathons, fellowships, grants, scholarships, competitions, accelerators — that match the user's request, using web search.
+const SYSTEM = `You are Jarvis's opportunity-research agent. Find REAL, currently-open opportunities, programs, jobs, internships, hackathons, fellowships, grants, scholarships, competitions, accelerators, that match the user's request, using web search.
 
 Rules:
-1. Every opportunity must be justified by a web search result you actually retrieved. Quote the EXACT short sentence (<= ~150 characters) that proves it matches — verbatim, never paraphrased.
+1. Every opportunity must be justified by a web search result you actually retrieved. Quote the EXACT short sentence (<= ~150 characters) that proves it matches, verbatim, never paraphrased.
 2. Only assert a fact (deadline text, location, requirements, how-to-apply link, prize/comp) if a search result supports it. Never guess or invent an application link.
-3. NEVER compute, resolve, or normalize a date. Copy the deadline/date text EXACTLY as written on the source into raw_deadline / raw_event_dates (e.g. "Applications due March 15, 2026", "Rolling", "Feb 7–9"). Do not output ISO dates or "days left".
+3. NEVER compute, resolve, or normalize a date. Copy the deadline/date text EXACTLY as written on the source into raw_deadline / raw_event_dates (e.g. "Applications due March 15, 2026", "Rolling", "Feb 7-9"). Do not output ISO dates or "days left".
 4. Prefer precision over recall: omit anything you cannot verify rather than guessing.
 5. Put uncertainty in plain language (closed/expired ambiguity, low confidence) into notes.`;
 
 const REPORT_TOOL = {
   name: "report_opportunities",
   description:
-    "Report the opportunities that match the request. Every claim MUST be backed by a web_search citation you actually retrieved. source_quote is the EXACT verbatim snippet that proves this opportunity matches — never a paraphrase. For dates, copy the VERBATIM text into raw_deadline / raw_event_dates; NEVER compute or resolve a date. Omit any field you cannot back with a citation.",
+    "Report the opportunities that match the request. Every claim MUST be backed by a web_search citation you actually retrieved. source_quote is the EXACT verbatim snippet that proves this opportunity matches, never a paraphrase. For dates, copy the VERBATIM text into raw_deadline / raw_event_dates; NEVER compute or resolve a date. Omit any field you cannot back with a citation.",
   input_schema: {
     type: "object" as const,
     additionalProperties: false,
@@ -115,7 +115,7 @@ const REPORT_TOOL = {
               description: "Best-fit bucket for this opportunity.",
             },
             description: { type: "string", description: "1-2 sentences on what it is." },
-            location: { type: "string", description: 'e.g. "Remote", "San Francisco, CA", "Hybrid — NYC".' },
+            location: { type: "string", description: 'e.g. "Remote", "San Francisco, CA", "Hybrid, NYC".' },
             is_remote: { type: "boolean" },
             how_to_apply_url: { type: "string", description: "The application or details URL." },
             requirements: { type: "string", description: "Eligibility / who can apply." },
@@ -131,7 +131,7 @@ const REPORT_TOOL = {
             },
             raw_event_dates: {
               type: "string",
-              description: 'VERBATIM event/start date text. NEVER computed. e.g. "Hackathon runs Feb 7–9, 2026".',
+              description: 'VERBATIM event/start date text. NEVER computed. e.g. "Hackathon runs Feb 7-9, 2026".',
             },
             notes: { type: "string" },
             source_quote: { type: "string" },
@@ -217,7 +217,7 @@ function validate(raw: RawOpportunity, citations: Citation[], urls: Set<string>)
     requirements: raw.requirements?.trim() || undefined,
     requiredSkills,
     compOrPrize: raw.comp_or_prize?.trim() || undefined,
-    // Raw date strings pass through UNRESOLVED — chrono resolves them later, never the model.
+    // Raw date strings pass through UNRESOLVED, chrono resolves them later, never the model.
     rawDeadline: raw.raw_deadline?.trim() || undefined,
     rawEventDates: raw.raw_event_dates?.trim() || undefined,
     notes: notes.length ? notes.join(" · ") : undefined,
@@ -242,7 +242,7 @@ function buildSummary(query: string, opps: ValidatedOpportunity[], citationCount
     `Opportunity search for: "${query}"`,
     `Verified ${opps.length} ${opps.length === 1 ? "opportunity" : "opportunities"} against ${citationCount} web citations.`,
     "",
-    ...opps.map((o) => `• ${o.title}${o.organization ? ` — ${o.organization}` : ""}: “${o.sourceQuote}”`),
+    ...opps.map((o) => `• ${o.title}${o.organization ? `, ${o.organization}` : ""}: “${o.sourceQuote}”`),
   ].join("\n");
 }
 
@@ -260,12 +260,12 @@ export async function runOpportunityResearch(
   relevance?: string,
 ): Promise<OpportunityOutcome> {
   const relevanceBlock = relevance
-    ? `\n\nTune results to THIS person — strongly prefer opportunities that fit their level/age and advance their goals; drop ones that don't (e.g. internships not senior roles for a student; programs open to undergrads, not PhD-only):\n${relevance}`
+    ? `\n\nTune results to THIS person, strongly prefer opportunities that fit their level/age and advance their goals; drop ones that don't (e.g. internships not senior roles for a student; programs open to undergrads, not PhD-only):\n${relevance}`
     : "";
 
   const seedBlock =
     seedHints && seedHints.length
-      ? `\n\nCandidate sources to investigate first (from a preliminary search — verify each yourself, do not trust them blindly):\n${seedHints
+      ? `\n\nCandidate sources to investigate first (from a preliminary search, verify each yourself, do not trust them blindly):\n${seedHints
           .slice(0, 8)
           .map((s) => `- ${s}`)
           .join("\n")}`
@@ -297,7 +297,7 @@ export async function runOpportunityResearch(
     };
   }
 
-  // Phase 1 — let the model drive Tavily searches (it picks the queries; Tavily returns real pages).
+  // Phase 1, let the model drive Tavily searches (it picks the queries; Tavily returns real pages).
   await geminiToolLoop({
     system: SYSTEM,
     contents: [
@@ -320,7 +320,7 @@ Search the web (call web_search, possibly several times) and identify real, curr
     maxTokens: MAX_TOKENS,
   });
 
-  // Phase 2 — force a structured report over ONLY the harvested results. Nothing else is in scope, so
+  // Phase 2, force a structured report over ONLY the harvested results. Nothing else is in scope, so
   // the model cannot invent a source; validate() then drops anything whose quote/URL isn't backed.
   let rawOpps: RawOpportunity[] = [];
   if (citations.length) {
@@ -331,11 +331,11 @@ Search the web (call web_search, possibly several times) and identify real, curr
 
 ${kindGuidance(kindFilter)}
 
-Here are the web search results you retrieved. Use ONLY these — do not introduce any other source:
+Here are the web search results you retrieved. Use ONLY these, do not introduce any other source:
 
 ${corpus}
 
-Report every qualifying opportunity. Each source_quote MUST be an exact verbatim substring of one source's CONTENT above (never a paraphrase). Set how_to_apply_url / field_sources urls only to URLs that appear above. Copy deadline/date text VERBATIM into raw_deadline / raw_event_dates — never resolve a date. Omit any field you cannot back.`,
+Report every qualifying opportunity. Each source_quote MUST be an exact verbatim substring of one source's CONTENT above (never a paraphrase). Set how_to_apply_url / field_sources urls only to URLs that appear above. Copy deadline/date text VERBATIM into raw_deadline / raw_event_dates, never resolve a date. Omit any field you cannot back.`,
       schema: REPORT_TOOL.input_schema,
       maxTokens: REPORT_MAX_TOKENS,
     });

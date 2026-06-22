@@ -10,7 +10,7 @@ const input =
 /**
  * Per-contact entry point to the Outreach agent. Pick an audience (the tone branch) + a goal; Grok
  * drafts a tailored email grounded in what the contact is working on. The draft is editable, then
- * saved into Gmail Drafts (never sent — hard rule #5).
+ * saved into Gmail Drafts (never sent, hard rule #5).
  */
 export function OutreachButton({ contactId, name }: { contactId: string; name: string }) {
   const [open, setOpen] = useState(false);

@@ -8,7 +8,7 @@ import { NAV_ITEMS } from "@/lib/nav";
 import { Brand } from "@/components/Brand";
 
 /**
- * The slide-in navigation drawer + its hamburger trigger — the app's ONLY nav surface. There is no
+ * The slide-in navigation drawer + its hamburger trigger, the app's ONLY nav surface. There is no
  * always-on rail: the tab list lives behind a left hamburger and overlays on demand at every screen
  * size, so Jarvis opens to just the orb and the clock. Closes on Escape, overlay click, and route
  * change; locks body scroll while open.

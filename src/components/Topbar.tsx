@@ -9,7 +9,7 @@ import { GoalFilter } from "@/components/goals/GoalFilter";
 
 /**
  * A minimal top control strip. The left hamburger <NavDrawer> is the only nav surface and shows on
- * every page. The goal filter + "Ask Jarvis" command button sit on the right — but NOT on the home
+ * every page. The goal filter + "Ask Jarvis" command button sit on the right, but NOT on the home
  * orb screen (/jarvis), which is kept deliberately bare (just the orb, the clock, and its own ask
  * box). Ask Jarvis already lives below the clock there, so a second one up top would be redundant.
  */

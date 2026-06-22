@@ -6,7 +6,7 @@ import { FilePlus2, Upload, Loader2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { DOC_TYPES, DOC_TYPE_LABEL, type DocType } from "@/lib/documents/types";
 
-const MAX_FILE = 10 * 1024 * 1024; // 10 MB — plenty for a resume/portfolio PDF
+const MAX_FILE = 10 * 1024 * 1024; // 10 MB, plenty for a resume/portfolio PDF
 const MAX_TEXT = 200_000;
 
 const input =
@@ -17,7 +17,7 @@ const input =
 const TEXT_LIKE = /\.(txt|md|markdown|json|csv|tex)$/i;
 
 /**
- * Add a document the Application & Outreach Agent can use — upload a file (resume, grant material…) and
+ * Add a document the Application & Outreach Agent can use, upload a file (resume, grant material…) and
  * provide the text the agent should read. The file goes straight to the private 'documents' Storage
  * bucket (RLS-scoped to your own folder); only metadata + text reach our API.
  */
@@ -46,7 +46,7 @@ export function UploadDocumentForm() {
     if (!picked) return;
     setErr(null);
     if (picked.size > MAX_FILE) {
-      setErr(`That file is too large — keep it under ${Math.round(MAX_FILE / 1024 / 1024)} MB.`);
+      setErr(`That file is too large, keep it under ${Math.round(MAX_FILE / 1024 / 1024)} MB.`);
       if (fileRef.current) fileRef.current.value = "";
       return;
     }
@@ -167,7 +167,7 @@ export function UploadDocumentForm() {
         <textarea
           className={`${input} min-h-[140px] resize-y`}
           placeholder={
-            "Optional — attach a file and Jarvis reads it for you.\n" +
+            "Optional, attach a file and Jarvis reads it for you.\n" +
             "PDF, DOCX and text files are extracted automatically on upload; paste here only to add or override text."
           }
           value={f.text}

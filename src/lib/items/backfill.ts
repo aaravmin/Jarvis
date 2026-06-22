@@ -6,7 +6,7 @@ import { extractItemsFromSources } from "@/lib/google/extract-items";
  * Backfill action-item extraction over already-ingested sources that have never been mined.
  *
  * Email sync only extracts NEWLY-ingested mail (it dedups by Gmail id), so any email stored before
- * the extractor existed — or before a later improvement — never produced items. Meeting transcripts
+ * the extractor existed, or before a later improvement, never produced items. Meeting transcripts
  * pasted before extraction would be the same. This lets the user mine those on demand from the Review
  * tab, so the queue isn't empty just because the mail arrived first.
  *
@@ -31,7 +31,7 @@ export async function backfillExtraction(supabase: SupabaseClient, userId: strin
   const sources = srcRows ?? [];
   if (!sources.length) return { scanned: 0, inserted: 0, remaining: 0 };
 
-  // Which sources already produced items? Skip them — never mine the same source twice.
+  // Which sources already produced items? Skip them, never mine the same source twice.
   const { data: itemRows } = await supabase
     .from("items")
     .select("source_id")

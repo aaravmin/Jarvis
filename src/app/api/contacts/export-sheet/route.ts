@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * POST /api/contacts/export-sheet — create a Google Sheet of the user's contacts and return its URL.
+ * POST /api/contacts/export-sheet, create a Google Sheet of the user's contacts and return its URL.
  * Requires the spreadsheets scope (friendly reconnect error otherwise).
  */
 export async function POST() {

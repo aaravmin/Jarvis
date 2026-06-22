@@ -5,7 +5,7 @@ import type { AgentKind, RouteDecision } from "@/lib/agents/types";
 
 /**
  * The intent router. Classifies one free-text request into exactly ONE agent so we never run all of
- * them in conjunction. A cheap forced-JSON classification on Gemini Flash — fast, and it shouldn't
+ * them in conjunction. A cheap forced-JSON classification on Gemini Flash, fast, and it shouldn't
  * burn the heavier reasoning the research agents use.
  *
  * Safe by construction: any failure (no key, refusal, malformed output, unknown agent) falls back to
@@ -41,7 +41,7 @@ function buildSystem(): string {
     const a = AGENTS[k];
     return `- ${k}: ${a.blurb}\n    e.g. ${a.triggers}`;
   }).join("\n");
-  return `You are Jarvis's task router. Pick the SINGLE best agent for the user's request — never more than one.
+  return `You are Jarvis's task router. Pick the SINGLE best agent for the user's request, never more than one.
 
 Agents:
 ${catalog}
@@ -50,8 +50,8 @@ Guidance:
 - "find/research PEOPLE (alumni, founders, recruiters, named individuals)" → contact.
 - "find programs / jobs / internships / hackathons / fellowships / grants / scholarships / competitions" → opportunity.
 - "prepare / fill out / start / help me with an APPLICATION" AND the request contains a URL (a job posting or grant form link) → application. (If they want to FIND opportunities, that's opportunity, not application.)
-- QUESTIONS about the user's own data — their inbox, schedule, meetings, tasks, contacts, or what's on their plate ("what's on my calendar", "did X email me?", "what do I owe a reply to?", "what should I do today?") → assistant. The assistant can read their connected Gmail/Calendar/meetings/tasks and answer.
-- CALENDAR actions — "add the interview to my calendar", "schedule/block focus time", "draft an email to X" → assistant. It creates real calendar events and drafts email via its own write tools; there is no separate calendar agent.
+- QUESTIONS about the user's own data, their inbox, schedule, meetings, tasks, contacts, or what's on their plate ("what's on my calendar", "did X email me?", "what do I owe a reply to?", "what should I do today?") → assistant. The assistant can read their connected Gmail/Calendar/meetings/tasks and answer.
+- CALENDAR actions, "add the interview to my calendar", "schedule/block focus time", "draft an email to X" → assistant. It creates real calendar events and drafts email via its own write tools; there is no separate calendar agent.
 - email → ONLY when the user wants to turn their inbox INTO action items ("turn my inbox into tasks", "pull action items out of my email"). This mines already-synced mail into the Review queue.
 - meeting → extract tasks from a pasted meeting transcript.
 - Anything general (web facts, reading local files, chit-chat, or no clear fit) → assistant.

@@ -22,7 +22,7 @@ function header(headers: { name?: string; value?: string }[], name: string): str
 
 const MAX_BODY = 16_000; // enough for a real email; guards against a giant newsletter blowing up tokens
 
-/** Gmail's MIME tree node — recursive, optionally multipart, each part optionally carrying body data. */
+/** Gmail's MIME tree node, recursive, optionally multipart, each part optionally carrying body data. */
 type GmailPart = {
   mimeType?: string;
   body?: { data?: string; size?: number };
@@ -168,7 +168,7 @@ export type GmailDraft = { id: string; messageId?: string; url: string };
 
 /**
  * Create a Gmail DRAFT (never sends) from a subject/body. Requires the gmail.compose scope. The draft
- * lands in the user's Drafts folder for them to review and send — keeping us at autonomy L0 for email.
+ * lands in the user's Drafts folder for them to review and send, keeping us at autonomy L0 for email.
  */
 export async function createDraft(
   token: string,

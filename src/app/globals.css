@@ -128,7 +128,7 @@ body {
 .orb-pulse-ring { animation: orb-pulse-ring 2.4s ease-out infinite; }
 
 /* ---- Jarvis orb (layered morphing blob) ----------------------------------- */
-/* A living orb: layered gradient blobs that morph (border-radius), rotate 360°, drift, and glow —
+/* A living orb: layered gradient blobs that morph (border-radius), rotate 360°, drift, and glow -
    richer and faster when Jarvis is talking ([data-active="true"]). Speed/scale scale off two custom
    props (--orb-spin, --orb-morph, --orb-amp) so one attribute toggles "idle" vs "talking".
    A press pulse (one-shot grow-then-shrink) is run imperatively on the orb button, not here. */
@@ -203,7 +203,7 @@ body {
     jarvis-morph-2 calc(var(--orb-morph) * 1.15) ease-in-out infinite,
     jarvis-drift var(--orb-morph) ease-in-out infinite reverse;
 }
-/* The luminous core — morphs gently and breathes; holds the wordmark. */
+/* The luminous core, morphs gently and breathes; holds the wordmark. */
 .jarvis-orb__core {
   position: relative;
   width: 64%;

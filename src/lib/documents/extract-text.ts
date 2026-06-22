@@ -2,7 +2,7 @@ import "server-only";
 
 /**
  * Server-side text extraction for uploaded documents. The Application & Outreach agent grounds every
- * field/draft in the user's materials (hard rule #3) — and the most common material is a PDF or DOCX
+ * field/draft in the user's materials (hard rule #3), and the most common material is a PDF or DOCX
  * resume. Without this, a PDF resume produced an empty corpus and the agent could fill nothing. We
  * extract here, on the server, so the user only has to attach the file (no manual copy-paste).
  *
@@ -55,7 +55,7 @@ async function fromDocx(buffer: Buffer): Promise<string> {
 }
 
 /**
- * Best-effort text from a document's bytes. Never throws — on any failure it returns "" so the upload
+ * Best-effort text from a document's bytes. Never throws, on any failure it returns "" so the upload
  * still succeeds and the user can paste text manually. `name` is the original filename (for extension
  * sniffing when the mime type is generic, e.g. application/octet-stream).
  */
@@ -74,7 +74,7 @@ export async function extractDocumentText(
   }
 }
 
-/** Which file kinds we can pull text from — used by the UI to set expectations. */
+/** Which file kinds we can pull text from, used by the UI to set expectations. */
 export function canExtract(mimeType: string | undefined, name: string): boolean {
   return isPdf(mimeType, name) || isDocx(mimeType, name) || isPlainish(mimeType, name);
 }

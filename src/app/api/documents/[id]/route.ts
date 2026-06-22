@@ -4,7 +4,7 @@ import { deleteDocument, setDefaultDocument } from "@/lib/documents/store";
 
 export const dynamic = "force-dynamic";
 
-/** PATCH /api/documents/:id — { setDefault: true } marks this the default doc of its type. */
+/** PATCH /api/documents/:id, { setDefault: true } marks this the default doc of its type. */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
   const {
@@ -33,7 +33,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 }
 
-/** DELETE /api/documents/:id — remove the metadata row and its stored object (RLS scopes to the user). */
+/** DELETE /api/documents/:id, remove the metadata row and its stored object (RLS scopes to the user). */
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
   const {

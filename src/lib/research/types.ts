@@ -20,7 +20,7 @@ export const CONTACT_OUTREACH_STATUSES: { value: ContactOutreachStatus; label: s
 
 /**
  * Provenance for a single auto-filled field (validated against real web_search citations).
- * `status` is an optional machine-readable verdict written by the validate/enrich pass — e.g. the
+ * `status` is an optional machine-readable verdict written by the validate/enrich pass, e.g. the
  * `email` field carries "verified" | "mismatch" | "unconfirmed" | "invalid" so the card can show a
  * coloured "checked" badge, not just the prose quote.
  */
@@ -43,7 +43,7 @@ export type DiscoveredGoalLink = {
 };
 
 /**
- * A discovered person as returned to the UI — AFTER server-side validation. Every value here that
+ * A discovered person as returned to the UI, AFTER server-side validation. Every value here that
  * carries a source has been checked against the run's real web_search citations; unbacked claims
  * are dropped or marked unverified in `notes`. `sourceQuote` is guaranteed non-empty (unprovenanced
  * candidates are dropped server-side), so a <Card> built from this never trips its guardrail.

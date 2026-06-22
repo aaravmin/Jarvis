@@ -1,14 +1,14 @@
 /**
- * LinkedIn contact-sourcing agent — types.
+ * LinkedIn contact-sourcing agent, types.
  *
  * What it is: given a job/grant the user has linked (an application run or an opportunity, or a raw
  * org + role), Jarvis drives a REAL, logged-in browser (the user's own LinkedIn session, persisted on
  * disk) to a People search, reads the result cards, and lands the discovered people in the Review queue
- * as suggested contacts — each with the LinkedIn profile URL and the on-page headline as provenance.
+ * as suggested contacts, each with the LinkedIn profile URL and the on-page headline as provenance.
  *
  * Boundaries (deliberate, honest):
  * - Uses the USER'S OWN authenticated session in a visible window. It is the user browsing their own
- *   account, one page, rate-limited — not a headless mass-scrape. LinkedIn's markup shifts often, so the
+ *   account, one page, rate-limited, not a headless mass-scrape. LinkedIn's markup shifts often, so the
  *   reader is best-effort by design.
  * - Reads only what the search results page renders (name, headline, location, profile URL). It never
  *   logs in for the user, never sends connection requests, never messages anyone.
@@ -24,7 +24,7 @@ export type LinkedInPerson = {
 };
 
 /**
- * Everything we can read off ONE profile page (all best-effort — LinkedIn's markup churns and an
+ * Everything we can read off ONE profile page (all best-effort, LinkedIn's markup churns and an
  * out-of-network profile shows far less). The orchestrator merges this with Apollo (which supplies the
  * work email LinkedIn hides) into a single contact. `profileUrl` is normalized to /in/<slug>.
  */
@@ -70,7 +70,7 @@ export type LinkedInScrapeInput = {
 /** Outcome of a full scrape: search + persist into the Review queue. */
 export type LinkedInScrapeResult = {
   ok: boolean;
-  /** True when the visible window is sitting on LinkedIn's login — the user must sign in and retry. */
+  /** True when the visible window is sitting on LinkedIn's login, the user must sign in and retry. */
   needsLogin: boolean;
   /** People read off the results page (before dedup). */
   found: number;

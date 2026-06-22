@@ -22,7 +22,7 @@ export function LiveClock() {
   const time = now
     ? now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
     : "--:--";
-  // "SUNDAY 26 APRIL" — uppercase weekday + day + month, no year.
+  // "SUNDAY 26 APRIL", uppercase weekday + day + month, no year.
   const date = now
     ? `${now.toLocaleDateString(undefined, { weekday: "long" })} ${now.getDate()} ${now.toLocaleDateString(undefined, { month: "long" })}`.toUpperCase()
     : "";

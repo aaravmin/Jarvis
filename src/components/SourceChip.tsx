@@ -30,7 +30,7 @@ function confidenceTone(c: number): string {
 
 /**
  * The provenance chip + modal. Clicking the chip opens the exact source quote and a link to the
- * original. This is rendered by <Card> for EVERY card — it is the "tells me exactly where it got
+ * original. This is rendered by <Card> for EVERY card, it is the "tells me exactly where it got
  * that" feature.
  */
 export function SourceChip({ source }: { source: CardSource }) {
@@ -192,7 +192,7 @@ export function SourceChip({ source }: { source: CardSource }) {
                   View original
                 </a>
               ) : (
-                <span className="text-xs text-muted">No external link — shown in context above.</span>
+                <span className="text-xs text-muted">No external link, shown in context above.</span>
               )}
             </div>
           </div>

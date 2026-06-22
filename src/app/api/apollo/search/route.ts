@@ -5,7 +5,7 @@ import { apolloEnabled, apolloSearchPeople } from "@/lib/apollo";
 export const dynamic = "force-dynamic";
 
 /**
- * POST /api/apollo/search — discover people via Apollo.io. Body: { query, company?, limit? }.
+ * POST /api/apollo/search, discover people via Apollo.io. Body: { query, company?, limit? }.
  * Returns { people: ApolloPerson[] }. Read-only (no rows written); importing chosen results is a
  * separate, explicit step (POST /api/apollo/import).
  */

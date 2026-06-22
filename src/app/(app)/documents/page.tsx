@@ -29,7 +29,7 @@ export default async function DocumentsPage() {
           <FolderOpen className="h-5 w-5 text-accent" /> Documents
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Your resumes and grant materials — the Application &amp; Outreach agent&apos;s memory. It fills
+          Your resumes and grant materials, the Application &amp; Outreach agent&apos;s memory. It fills
           job and grant applications from these, and tailors outreach with them. Mark a default resume so
           the agent knows which to use.
         </p>

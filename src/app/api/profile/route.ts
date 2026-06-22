@@ -4,7 +4,7 @@ import { loadProfile } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/profile — the user's profile (or nulls). */
+/** GET /api/profile, the user's profile (or nulls). */
 export async function GET() {
   const supabase = await createClient();
   const {
@@ -14,7 +14,7 @@ export async function GET() {
   return NextResponse.json({ profile: (await loadProfile(supabase)) ?? {} });
 }
 
-/** PUT /api/profile — upsert. Body: { headline?, age?, level?, lookingFor? }. */
+/** PUT /api/profile, upsert. Body: { headline?, age?, level?, lookingFor? }. */
 export async function PUT(request: Request) {
   const supabase = await createClient();
   const {

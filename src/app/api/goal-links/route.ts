@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 const TYPES: GoalEntityType[] = ["contact", "opportunity", "item", "source"];
 
 /**
- * POST /api/goal-links — manually anchor an entity to a goal.
+ * POST /api/goal-links, manually anchor an entity to a goal.
  * Body: { goalId, entityType, entityId, rationale? }. User-initiated links are accepted immediately.
  */
 export async function POST(request: Request) {
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   const { data: ownGoal } = await supabase.from("goals").select("id").eq("id", body.goalId).maybeSingle();
   if (!ownGoal) return NextResponse.json({ error: "Goal not found." }, { status: 404 });
 
-  // Verify the entity belongs to the user (entity_id is polymorphic — no FK — so check ownership here).
+  // Verify the entity belongs to the user (entity_id is polymorphic, no FK, so check ownership here).
   const table = { contact: "contacts", opportunity: "opportunities", item: "items", source: "sources" }[
     body.entityType as GoalEntityType
   ];

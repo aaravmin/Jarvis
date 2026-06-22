@@ -1,7 +1,7 @@
 /**
  * Defense-in-depth scrubber. The PRIMARY guarantee that the personal connection detail is never
  * persisted is structural: the save endpoint only ever receives the generalized template, never the
- * detail. This scrubber is the backstop — if the model accidentally echoes a name/company/email from
+ * detail. This scrubber is the backstop, if the model accidentally echoes a name/company/email from
  * the personal detail into the generalized output, we replace it with the {{connection}} placeholder
  * before it can be shown as "safe to save".
  */
@@ -23,7 +23,7 @@ const STOPWORDS = new Set([
 const RELATIONSHIP_NOUNS =
   "dad|father|mom|mother|mum|parent|parents|uncle|aunt|cousin|brother|sister|sibling|grandfather|grandmother|grandpa|grandma|granddad|nephew|niece|friend|buddy|pal|colleague|coworker|co-worker|neighbor|neighbour|roommate|family|relative|mentor|boss|manager|professor|teacher|classmate|teammate|partner|spouse|husband|wife";
 
-/** Phone-like runs — catches area codes / prefixes that the bare \d{4,} rule missed. */
+/** Phone-like runs, catches area codes / prefixes that the bare \d{4,} rule missed. */
 const PHONE_RE = /\+?\d[\d().\s-]{6,}\d/g;
 
 function escapeRegExp(s: string): string {
@@ -31,7 +31,7 @@ function escapeRegExp(s: string): string {
 }
 
 /**
- * Replace any occurrence of the personal `detail` (verbatim, or its identifying tokens — proper nouns,
+ * Replace any occurrence of the personal `detail` (verbatim, or its identifying tokens, proper nouns,
  * relationship nouns, emails, phone numbers, digit runs) inside `text` with the connection placeholder.
  * Returns the scrubbed text and whether anything was stripped.
  */
@@ -47,7 +47,7 @@ export function scrubPersonalDetail(text: string, detail: string): { text: strin
   for (const m of detail.matchAll(/\b[\w.+-]+@[\w.-]+\.\w+\b/g)) tokens.add(m[0]);
   for (const m of detail.matchAll(/\b\d{3,}\b/g)) tokens.add(m[0]);
   for (const m of detail.matchAll(PHONE_RE)) tokens.add(m[0].trim());
-  // Relationship nouns from the detail — catches paraphrased leaks the proper-noun rule misses.
+  // Relationship nouns from the detail, catches paraphrased leaks the proper-noun rule misses.
   for (const m of detail.matchAll(new RegExp(`\\b(?:${RELATIONSHIP_NOUNS})\\b`, "gi"))) tokens.add(m[0]);
 
   // Longest tokens first so "Acme Corp" is replaced before its parts.

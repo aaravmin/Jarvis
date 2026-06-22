@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 /**
- * POST /api/applications/:id/autofill — open a real browser and type the grounded field_plan into the
+ * POST /api/applications/:id/autofill, open a real browser and type the grounded field_plan into the
  * live form, leaving the window OPEN for the user to review and submit. Never submits (hard rule #5).
  * Requires JARVIS_BROWSER=playwright; otherwise returns { unavailable:true } and the UI stays manual.
  */

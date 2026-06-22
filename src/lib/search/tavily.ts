@@ -5,7 +5,7 @@ import "server-only";
  * RECALL BOOST: a quick preliminary search whose result URLs are seeded into the Opportunity agent's
  * context so Claude has fresh, relevant pages to investigate.
  *
- * Provenance is unaffected: seeds are hints only. Nothing Tavily returns is ever stored as a fact —
+ * Provenance is unaffected: seeds are hints only. Nothing Tavily returns is ever stored as a fact -
  * the agent must still cite a real web_search result for any claim to survive the citation gate
  * (src/lib/agents/citation-gate.ts). That keeps hard rule #3 intact.
  *
@@ -43,7 +43,7 @@ export async function tavilySearch(
         max_results: Math.min(Math.max(opts.maxResults ?? 8, 1), 20),
         include_answer: false,
         // Richer page text lets the research engines back a model's VERBATIM quote against a real
-        // source (hard rule #3) — the citation gate checks the quote is a substring of this content.
+        // source (hard rule #3), the citation gate checks the quote is a substring of this content.
         include_raw_content: opts.includeRawContent ?? false,
       }),
       signal: controller.signal,
@@ -52,7 +52,7 @@ export async function tavilySearch(
     const data = (await res.json()) as { results?: TavilyResult[] };
     return Array.isArray(data.results) ? data.results : [];
   } catch {
-    return []; // outage / timeout / bad JSON — degrade to no seeds, never throw
+    return []; // outage / timeout / bad JSON, degrade to no seeds, never throw
   } finally {
     clearTimeout(timer);
   }
@@ -98,7 +98,7 @@ function kindKeywords(kindFilter: string): string {
 }
 
 /**
- * Preliminary search → short "Title — url" hints for the agent prompt. Empty array when Tavily is
+ * Preliminary search → short "Title, url" hints for the agent prompt. Empty array when Tavily is
  * not configured (the agent then relies purely on its own web_search, exactly as before).
  */
 export async function tavilySeedHints(query: string, kindFilter = "all"): Promise<string[]> {
@@ -107,5 +107,5 @@ export async function tavilySeedHints(query: string, kindFilter = "all"): Promis
     maxResults: 8,
     searchDepth: "advanced",
   });
-  return results.map((r) => `${r.title} — ${r.url}`);
+  return results.map((r) => `${r.title}, ${r.url}`);
 }

@@ -33,7 +33,7 @@ async function attachChildren(
   return contactRows.map((c) => rowsToPerson(c, channels, goalLinks));
 }
 
-/** Every accepted contact for the People tab — manual AND provenanced (RLS scopes to the user). */
+/** Every accepted contact for the People tab, manual AND provenanced (RLS scopes to the user). */
 export async function loadAcceptedPeople(supabase: SupabaseClient): Promise<DiscoveredPerson[]> {
   const { data } = await supabase
     .from("contacts")
@@ -41,13 +41,13 @@ export async function loadAcceptedPeople(supabase: SupabaseClient): Promise<Disc
     .eq("review_status", "accepted")
     .order("created_at", { ascending: false });
   const rows = (data ?? []) as unknown as ContactRow[];
-  // Manual (user-created) contacts carry no source quote — they're shown via PersonCard's non-Card
+  // Manual (user-created) contacts carry no source quote, they're shown via PersonCard's non-Card
   // path, so we no longer filter them out here (that filter was hiding every contact the user saved).
   return attachChildren(supabase, rows);
 }
 
 /**
- * Every accepted contact — manual AND provenanced — for the Sheets export (the user's full contact
+ * Every accepted contact, manual AND provenanced, for the Sheets export (the user's full contact
  * list). Same result set as loadAcceptedPeople; kept as a distinct name for the export call site.
  */
 export async function loadAllAcceptedContacts(supabase: SupabaseClient): Promise<DiscoveredPerson[]> {

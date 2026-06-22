@@ -10,7 +10,7 @@ const input =
 /**
  * Paste a meeting transcript and let Jarvis pull the action items out of it. The transcript is stored
  * as a `meeting` source and mined by the same extractor the inbox uses; results land in the Review
- * queue (suggest-only). Nothing here computes a date or invents a task — that's enforced server-side.
+ * queue (suggest-only). Nothing here computes a date or invents a task, that's enforced server-side.
  */
 export function PasteMeetingForm() {
   const router = useRouter();
@@ -59,13 +59,13 @@ export function PasteMeetingForm() {
       <div className="space-y-2">
         <input
           className={input}
-          placeholder="Meeting name (optional) — e.g. Advisor sync"
+          placeholder="Meeting name (optional), e.g. Advisor sync"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
         <textarea
           className={`${input} min-h-[180px] resize-y`}
-          placeholder="Paste the transcript or your notes here. Jarvis reads it and proposes the action items — each with the exact line it came from."
+          placeholder="Paste the transcript or your notes here. Jarvis reads it and proposes the action items, each with the exact line it came from."
           value={transcript}
           onChange={(e) => setTranscript(e.target.value)}
         />

@@ -111,7 +111,7 @@ async function readPeople(page: PwPage): Promise<LinkedInPerson[]> {
 
 /**
  * Run one People search against the live, logged-in page. Returns the people found, or a typed reason
- * (unavailable when the browser backend is off, needs_login when the user must sign in — the window is
+ * (unavailable when the browser backend is off, needs_login when the user must sign in, the window is
  * left open on the login page for exactly that).
  */
 export async function searchLinkedInPeople(query: string, limit: number): Promise<LinkedInSearchResult> {
@@ -160,7 +160,7 @@ export async function searchLinkedInPeople(query: string, limit: number): Promis
   try {
     await page.waitForSelector('a[href*="/in/"]', { timeout: RESULTS_TIMEOUT_MS });
   } catch {
-    /* maybe no results, or a slow render — fall through and read whatever is there */
+    /* maybe no results, or a slow render, fall through and read whatever is there */
   }
   await page.waitForTimeout(1200);
   try {
@@ -174,7 +174,7 @@ export async function searchLinkedInPeople(query: string, limit: number): Promis
 
   let people = await readPeople(page);
 
-  // Zero results on a non-wall URL can still mean an interstitial sign-in overlay — double-check.
+  // Zero results on a non-wall URL can still mean an interstitial sign-in overlay, double-check.
   if (people.length === 0 && isLoginWall(page.url())) {
     return {
       ok: false,
@@ -195,7 +195,7 @@ const PROFILE_TIMEOUT_MS = 30_000;
 export function normalizeLinkedInProfileUrl(url: string): string | null {
   const m = (url || "").match(/linkedin\.com\/in\/([^/?#\s]+)/i);
   if (!m) return null;
-  // decodeURIComponent throws on a malformed %-sequence in a pasted link — fall back to the raw slug.
+  // decodeURIComponent throws on a malformed %-sequence in a pasted link, fall back to the raw slug.
   let slug = m[1];
   try {
     slug = decodeURIComponent(m[1]);
@@ -208,7 +208,7 @@ export function normalizeLinkedInProfileUrl(url: string): string | null {
 /**
  * Read one profile page. Anchored on stable structures where possible (h1, the #about / #experience
  * section anchors, the page <title> and og:description) rather than LinkedIn's churning utility class
- * names, with several fallbacks each. Everything is best-effort — an out-of-network profile or a
+ * names, with several fallbacks each. Everything is best-effort, an out-of-network profile or a
  * shifted layout simply yields fewer fields; the orchestrator backfills the email from Apollo.
  */
 const PROFILE_READER = `(() => {
@@ -299,7 +299,7 @@ function buildProfile(profileUrl: string, raw: Record<string, string>): LinkedIn
  * Scrape ONE LinkedIn profile via the user's own logged-in window. Same boundaries as the search: it
  * reads a page the user could open themselves, never logs in / connects / messages. Returns the data,
  * or a typed reason (unavailable when the browser backend is off, needs_login when LinkedIn shows an
- * auth wall — the window is left on the login page for the user to sign in and retry).
+ * auth wall, the window is left on the login page for the user to sign in and retry).
  */
 export async function scrapeLinkedInProfile(profileUrl: string): Promise<LinkedInProfileResult> {
   if (!browserEnabled()) {
@@ -344,7 +344,7 @@ export async function scrapeLinkedInProfile(profileUrl: string): Promise<LinkedI
   try {
     await page.waitForSelector("main h1, h1", { timeout: PROFILE_TIMEOUT_MS });
   } catch {
-    /* slow render — read whatever is present */
+    /* slow render, read whatever is present */
   }
   await page.waitForTimeout(800);
 

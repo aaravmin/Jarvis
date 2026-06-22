@@ -7,16 +7,16 @@ import { apolloEnabled, apolloMatchPerson, type ApolloPerson } from "@/lib/apoll
 import type { LinkedInPerson } from "@/lib/agents/linkedin/types";
 
 /**
- * Add ONE contact the conversational assistant was asked to "look up" or "make a card for" — the brain's
+ * Add ONE contact the conversational assistant was asked to "look up" or "make a card for", the brain's
  * hands for the LinkedIn/Apollo scraping that the People tab already exposes via a button. Two ways in:
  *   • a LinkedIn URL the user pasted → straight to importContactFromLinkedIn (scrape page + Apollo email);
  *   • just a NAME (+ optional company) → resolve their profile first, then import:
- *       – browser People-search (the user's own logged-in window) finds the /in/ URL → import it;
- *       – else Apollo match-by-name returns a LinkedIn URL → import that;
- *       – else Apollo gave real data but no URL → save a contact from Apollo alone (email/role/company).
+ *, browser People-search (the user's own logged-in window) finds the /in/ URL → import it;
+ *, else Apollo match-by-name returns a LinkedIn URL → import that;
+ *, else Apollo gave real data but no URL → save a contact from Apollo alone (email/role/company).
  *
  * Every created contact is an explicit, single-person USER action → `created_by='user'`,
- * `review_status='accepted'` (it lands in People, like the manual form / the People-tab importer — NOT
+ * `review_status='accepted'` (it lands in People, like the manual form / the People-tab importer, NOT
  * autonomous discovery, so not Review). Provenance rides in `field_sources` + `source_quote` so the
  * card's source chip works (hard rule #4). Degrades honestly: with no browser and no Apollo it tells the
  * user to paste a URL or set the env vars, instead of inventing anyone.
@@ -26,7 +26,7 @@ export type AddContactInput = {
   name?: string;
   linkedinUrl?: string;
   company?: string;
-  /** A short note on who they are / why (e.g. "CS101 professor") — saved to the contact's notes. */
+  /** A short note on who they are / why (e.g. "CS101 professor"), saved to the contact's notes. */
   context?: string;
 };
 
@@ -38,7 +38,7 @@ export type AddContactResult = {
   profileUrl: string | null;
   role: string | null;
   email: string | null;
-  /** True when LinkedIn showed a login wall and we had no other way in — sign in and retry. */
+  /** True when LinkedIn showed a login wall and we had no other way in, sign in and retry. */
   needsLogin: boolean;
   alreadyExisted: boolean;
   message: string;
@@ -94,13 +94,13 @@ export async function addContact(
   const name = (input.name ?? "").trim();
   const company = (input.company ?? "").trim();
 
-  // 1 — Resolve a LinkedIn URL: the user's, else search for it by name.
+  // 1, Resolve a LinkedIn URL: the user's, else search for it by name.
   let url = input.linkedinUrl ? normalizeLinkedInProfileUrl(input.linkedinUrl) : null;
 
   if (!url && name) {
     const query = [name, company].filter(Boolean).join(" ");
 
-    // 1a — Browser People-search (the most reliable source of the real /in/ URL).
+    // 1a, Browser People-search (the most reliable source of the real /in/ URL).
     if (browserEnabled()) {
       const res = await searchLinkedInPeople(query, 6);
       if (!res.ok && res.reason === "needs_login") {
@@ -112,24 +112,24 @@ export async function addContact(
       }
     }
 
-    // 1b — Apollo match by name → it carries a linkedin_url we can import (and reveals the work email).
+    // 1b, Apollo match by name → it carries a linkedin_url we can import (and reveals the work email).
     if (!url && apolloEnabled()) {
       const ap = await apolloMatchPerson({ name, company: company || undefined });
       if (ap?.linkedinUrl) {
         url = normalizeLinkedInProfileUrl(ap.linkedinUrl) ?? ap.linkedinUrl;
       } else if (ap?.name) {
-        // Real Apollo data but no LinkedIn URL — save the contact from Apollo alone.
+        // Real Apollo data but no LinkedIn URL, save the contact from Apollo alone.
         return await insertFromApollo(supabase, userId, ap, input.context);
       }
     }
   }
 
-  // 2 — Have a URL → the full scrape + Apollo importer (handles dedup, provenance, the source chip).
+  // 2, Have a URL → the full scrape + Apollo importer (handles dedup, provenance, the source chip).
   if (url) {
     const r = await importContactFromLinkedIn(supabase, userId, url);
     if (r.ok && r.contactId && !r.alreadyExisted && input.context?.trim()) {
       // Fold the user's "who is this" note into the NEW contact (the importer doesn't take one).
-      // Skip when the contact already existed — we'd otherwise overwrite the notes they already have.
+      // Skip when the contact already existed, we'd otherwise overwrite the notes they already have.
       await supabase.from("contacts").update({ notes: input.context.trim().slice(0, 500) }).eq("id", r.contactId);
     }
     return {
@@ -145,13 +145,13 @@ export async function addContact(
     };
   }
 
-  // 3 — Couldn't resolve anyone. Say why, honestly.
+  // 3, Couldn't resolve anyone. Say why, honestly.
   if (!name && !input.linkedinUrl) {
-    return failResult("Tell me who to add — a name (their company helps) or their LinkedIn profile URL.");
+    return failResult("Tell me who to add, a name (their company helps) or their LinkedIn profile URL.");
   }
   const why =
     !browserEnabled() && !apolloEnabled()
-      ? "I have no way to look people up automatically right now — paste their LinkedIn URL, or set JARVIS_BROWSER=playwright / APOLLO_API_KEY."
+      ? "I have no way to look people up automatically right now, paste their LinkedIn URL, or set JARVIS_BROWSER=playwright / APOLLO_API_KEY."
       : "Paste their LinkedIn URL and I'll build the full card.";
   return failResult(`I couldn't find ${name || "that person"} online. ${why}`);
 }
@@ -188,7 +188,7 @@ async function insertFromApollo(
   const sourceQuote = ([role, company].filter(Boolean).join(" at ") || `Matched via Apollo.io: ${fullName}`).slice(0, 500);
   // Keep at least one url-bearing field_sources entry so the card's source chip links back to a source
   // (rowsToPerson picks the first field_sources url as the permalink). With only a bare name from Apollo,
-  // the per-field entries above can all be empty — seed the Apollo source itself.
+  // the per-field entries above can all be empty, seed the Apollo source itself.
   if (!Object.values(fieldSources).some((v) => v?.url)) {
     fieldSources.profile = { url: "https://apollo.io", quote: sourceQuote, confidence: 0.5 };
   }
@@ -221,7 +221,7 @@ async function insertFromApollo(
     const { error: chErr } = await supabase.from("contact_channels").insert(channels);
     if (chErr) {
       console.warn(`[add-contact] channel insert failed for ${contactId}: ${chErr.message}`);
-      channelNote = " (couldn't save their email — open the contact to add it)";
+      channelNote = " (couldn't save their email, open the contact to add it)";
     }
   }
 

@@ -4,7 +4,7 @@ import { geminiStructured } from "@/lib/llm/gemini";
 /**
  * The Gemini flows for the goals-anchor system (all forced structured output, following the existing
  * extract.ts pattern). The model never computes dates and never decides whether an intersection exists
- * (that's deterministic SQL) — it only writes prose: goal titles, link rationales, combined-ask
+ * (that's deterministic SQL), it only writes prose: goal titles, link rationales, combined-ask
  * suggestions, and goal-connection guidance.
  */
 
@@ -26,7 +26,7 @@ export type GeneratedGoal = { title: string; description?: string; rationale?: s
 
 export async function generateGoalsFromContext(context: string): Promise<GeneratedGoal[]> {
   const out = await forceTool<{ goals?: GeneratedGoal[] }>(
-    `You turn a person's freeform context (a note, a paste, a brain-dump) into a small set of clear, durable GOALS — the anchors everything else hangs off. A goal is an outcome they're working toward, e.g. "Build a startup called FinePrint", "Break into quant trading", "Get into a PhD program". Keep them concrete and few (1-6). Never invent goals not implied by the context. No dates.`,
+    `You turn a person's freeform context (a note, a paste, a brain-dump) into a small set of clear, durable GOALS, the anchors everything else hangs off. A goal is an outcome they're working toward, e.g. "Build a startup called FinePrint", "Break into quant trading", "Get into a PhD program". Keep them concrete and few (1-6). Never invent goals not implied by the context. No dates.`,
     `Context:\n${context.slice(0, 8000)}\n\nExtract the goals via the tool.`,
     {
       name: "extract_goals",
@@ -68,9 +68,9 @@ export type ProposedLink = { goalId: string; rationale?: string; confidence?: nu
 
 export async function proposeGoalLinks(entityFacts: string, goals: GoalDigest[]): Promise<ProposedLink[]> {
   if (!goals.length) return [];
-  const digest = goals.map((g) => `- (${g.id}) ${g.title}${g.description ? ` — ${g.description}` : ""}`).join("\n");
+  const digest = goals.map((g) => `- (${g.id}) ${g.title}${g.description ? `, ${g.description}` : ""}`).join("\n");
   const out = await forceTool<{ links?: { goal_id?: string; rationale?: string; confidence?: number }[] }>(
-    `You decide which of the user's GOALS an entity (a person, opportunity, meeting, task, etc.) advances. Only pick goal ids from the supplied list; drop anything that doesn't clearly fit. Give a one-line rationale for each link. Be selective — a weak fit is no link.`,
+    `You decide which of the user's GOALS an entity (a person, opportunity, meeting, task, etc.) advances. Only pick goal ids from the supplied list; drop anything that doesn't clearly fit. Give a one-line rationale for each link. Be selective, a weak fit is no link.`,
     `Entity:\n${entityFacts.slice(0, 4000)}\n\nThe user's goals (reference these ids only):\n${digest}\n\nReturn the goal links via the tool.`,
     {
       name: "link_to_goals",
@@ -106,7 +106,7 @@ export async function proposeGoalLinks(entityFacts: string, goals: GoalDigest[])
 export async function generateCombinedAsk(entityFacts: string, goals: GoalDigest[]): Promise<string | null> {
   const digest = goals.map((g) => `- ${g.title}${g.description ? `: ${g.description}` : ""}`).join("\n");
   const out = await forceTool<{ combined_ask?: string }>(
-    `This entity advances MULTIPLE of the user's goals at once. Propose a SINGLE, natural way to utilize it for all of them together — e.g. one combined ask to a person that serves both goals — so the user doesn't have to badger them separately for each thing. Be specific and considerate; one short paragraph. No dates.`,
+    `This entity advances MULTIPLE of the user's goals at once. Propose a SINGLE, natural way to utilize it for all of them together, e.g. one combined ask to a person that serves both goals, so the user doesn't have to badger them separately for each thing. Be specific and considerate; one short paragraph. No dates.`,
     `Entity:\n${entityFacts.slice(0, 3000)}\n\nThe goals it serves:\n${digest}\n\nWrite the single combined-ask suggestion via the tool.`,
     {
       name: "propose_combined_ask",
@@ -129,8 +129,8 @@ export async function generateGoalConnection(
 ): Promise<string | null> {
   const shared = sharedEntities.length ? `Shared entities serving both:\n${sharedEntities.map((s) => `- ${s}`).join("\n")}` : "No shared entities yet.";
   const out = await forceTool<{ rationale?: string }>(
-    `You explain how two of the user's goals connect and how to INTERSECT them — leverage work on one to advance the other, or make one ask/relationship serve both. One short, actionable paragraph. No dates.`,
-    `Goal A: ${goalA.title}${goalA.description ? ` — ${goalA.description}` : ""}\nGoal B: ${goalB.title}${goalB.description ? ` — ${goalB.description}` : ""}\n${shared}\n\nWrite the connection guidance via the tool.`,
+    `You explain how two of the user's goals connect and how to INTERSECT them, leverage work on one to advance the other, or make one ask/relationship serve both. One short, actionable paragraph. No dates.`,
+    `Goal A: ${goalA.title}${goalA.description ? `, ${goalA.description}` : ""}\nGoal B: ${goalB.title}${goalB.description ? `, ${goalB.description}` : ""}\n${shared}\n\nWrite the connection guidance via the tool.`,
     {
       name: "connect_goals",
       input_schema: {

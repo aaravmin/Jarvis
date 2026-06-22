@@ -20,7 +20,7 @@ export type NavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
-  /** One line describing the section — shown in empty states and the drawer. */
+  /** One line describing the section, shown in empty states and the drawer. */
   description: string;
   /** Which roadmap phase / agent delivers the real functionality for this section. */
   deliveredBy: string;
@@ -35,14 +35,14 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Jarvis",
     href: "/jarvis",
     icon: Sparkles,
-    description: "Ask Jarvis anything — it searches the web and reads your files.",
+    description: "Ask Jarvis anything, it searches the web and reads your files.",
     deliveredBy: "Assistant",
   },
   {
     label: "Today",
     href: "/today",
     icon: Home,
-    description: "Your daily home — today's tasks, today's events, and anything overdue.",
+    description: "Your daily home, today's tasks, today's events, and anything overdue.",
     deliveredBy: "Phase 1 · P1-T3",
   },
   {
@@ -56,7 +56,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Templates",
     href: "/templates",
     icon: FileText,
-    description: "Reusable email templates and the connection types they fit — adapt one to a contact, save a generalized version.",
+    description: "Reusable email templates and the connection types they fit, adapt one to a contact, save a generalized version.",
     deliveredBy: "Email agent · connection-aware templates",
   },
   {
@@ -84,21 +84,21 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Opportunities",
     href: "/opportunities",
     icon: Compass,
-    description: "The Opportunity agent: programs, jobs, hackathons — found and tracked with deadlines.",
+    description: "The Opportunity agent: programs, jobs, hackathons, found and tracked with deadlines.",
     deliveredBy: "Opportunity agent",
   },
   {
     label: "Apply",
     href: "/apply",
     icon: Wand2,
-    description: "The Application agent: paste a job/grant link, Jarvis fills the form from your documents — you review and submit.",
+    description: "The Application agent: paste a job/grant link, Jarvis fills the form from your documents, you review and submit.",
     deliveredBy: "Application & Outreach agent",
   },
   {
     label: "Documents",
     href: "/documents",
     icon: FolderOpen,
-    description: "Your resumes and grant materials — the Application & Outreach agent fills forms and tailors outreach from these.",
+    description: "Your resumes and grant materials, the Application & Outreach agent fills forms and tailors outreach from these.",
     deliveredBy: "Application & Outreach agent",
   },
   {
@@ -126,7 +126,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Connections",
     href: "/connections",
     icon: Plug,
-    description: "Connect Google so agents can read your Gmail, Calendar, Drive & Sheets — and save drafts, add events, and export contacts.",
+    description: "Connect Google so agents can read your Gmail, Calendar, Drive & Sheets, and save drafts, add events, and export contacts.",
     deliveredBy: "Google connector",
   },
 ];

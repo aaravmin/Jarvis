@@ -1,24 +1,24 @@
 import "server-only";
 
 /**
- * The Grok provider — the "brain" of the Application & Outreach Agent (xAI's Grok). We talk to xAI's
+ * The Grok provider, the "brain" of the Application & Outreach Agent (xAI's Grok). We talk to xAI's
  * OpenAI-compatible REST API directly (no SDK) so the surface stays small and auditable, exactly like
  * the Gemini provider. Three primitives mirror `gemini.ts` so the agent code reads the same:
  *
- *   1. grokStructured<T>()  — forced JSON output against a JSON Schema (response_format: json_schema).
- *   2. grokToolLoop()       — a function-calling agent loop (web search + page tools).
- *   3. grokText()           — plain prose, no schema.
+ *   1. grokStructured<T>(), forced JSON output against a JSON Schema (response_format: json_schema).
+ *   2. grokToolLoop(), a function-calling agent loop (web search + page tools).
+ *   3. grokText(), plain prose, no schema.
  *
  * Why Grok and not Gemini for this module: the Application & Outreach Agent needs strong agentic
  * tool-calling / form-reasoning, and the user's org provisions an xAI key (XAI_API_KEY) for it. The
- * existing features keep running on Gemini — this is an additive second backend, not a replacement.
+ * existing features keep running on Gemini, this is an additive second backend, not a replacement.
  *
  * Auth: a single bearer key, `XAI_API_KEY` (server-side only). The model is configurable via XAI_MODEL
- * (default grok-4.3 — xAI's current flagship reasoning model as of the May 2026 consolidation; the
+ * (default grok-4.3, xAI's current flagship reasoning model as of the May 2026 consolidation; the
  * legacy grok-3* names now redirect to it).
  *
  * Robustness: every call retries on transient overload / rate-limit (429/500/503), with exponential
- * backoff honoring `retry-after` when present. All model output is treated as UNTRUSTED — the call
+ * backoff honoring `retry-after` when present. All model output is treated as UNTRUSTED, the call
  * sites validate, clamp, and re-derive everything (dates are never computed by the model; HARD RULE #2).
  */
 
@@ -146,7 +146,7 @@ function textOf(resp: GrokResponse): string {
 /**
  * Force structured JSON out of Grok against a JSON Schema (xAI's response_format: json_schema).
  * Mirrors geminiStructured: returns null on any failure (blocked, truncated, unparseable) so callers
- * can degrade gracefully — they all validate the shape themselves anyway. xAI exposes no `strict`
+ * can degrade gracefully, they all validate the shape themselves anyway. xAI exposes no `strict`
  * flag, so we still salvage-parse and the call sites never trust the output.
  */
 export async function grokStructured<T>(opts: {

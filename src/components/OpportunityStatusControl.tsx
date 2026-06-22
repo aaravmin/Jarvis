@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { APPLICATION_STATUSES, type ApplicationStatus } from "@/lib/agents/opportunity/types";
 
-/** Dot color per pipeline state — quick visual scan down a list of opportunities. */
+/** Dot color per pipeline state, quick visual scan down a list of opportunities. */
 const DOT: Record<ApplicationStatus, string> = {
   not_applied: "bg-muted",
   waiting_to_open: "bg-muted-strong",

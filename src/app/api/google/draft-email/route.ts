@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * POST /api/google/draft-email — { template: <name|url|id>, to?, context? }. Reads the Drive template
+ * POST /api/google/draft-email, { template: <name|url|id>, to?, context? }. Reads the Drive template
  * and returns a filled { subject, body } draft (draft-only; sending needs the gmail.send write scope).
  */
 export async function POST(request: Request) {

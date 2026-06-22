@@ -8,7 +8,7 @@ import { webSearch } from "@/lib/search/tavily";
  * Tavily returned before anything is returned for persistence.
  *
  * The load-bearing rule (hard rule #3): the model's reported URLs and quotes are UNTRUSTED. The model
- * never browses on its own — every page it sees comes from webSearch() (Tavily), and we keep each
+ * never browses on its own, every page it sees comes from webSearch() (Tavily), and we keep each
  * result's real page text as the citation corpus + a per-run URL allowlist, then:
  *   - DROP any candidate whose source_quote is not a real substring of a retrieved page, and
  *   - null any field/channel source URL not in the allowlist.
@@ -26,7 +26,7 @@ const WEB_SEARCH_FN = {
   },
 };
 
-const MAX_TURNS = 12; // room for several search angles — recall matters ("find as many as you can")
+const MAX_TURNS = 12; // room for several search angles, recall matters ("find as many as you can")
 const MAX_TOKENS = 8000;
 // Phase 2 (the structured report) needs more room: a cohort of people, each with verbatim quotes
 // and channels, can be large, and truncated output would silently drop candidates.
@@ -79,16 +79,16 @@ type Citation = { url: string; citedText: string };
 const RESEARCH_SYSTEM = `You are Jarvis's people-research agent. Find REAL, named people who match the user's cohort query, using web search.
 
 Rules:
-1. Every person must be justified by a web search result you actually retrieved. When you state a person matches, cite the source and quote the EXACT short sentence (<= ~150 characters) that asserts it — verbatim, never paraphrased or stitched together.
+1. Every person must be justified by a web search result you actually retrieved. When you state a person matches, cite the source and quote the EXACT short sentence (<= ~150 characters) that asserts it, verbatim, never paraphrased or stitched together.
 2. Only assert a fact (email, company, role, background) if a search result supports it. Never guess or invent contact information.
 3. Never compute or emit any date or "reach out by" value.
-4. Be exhaustive within what you can verify. The user wants as MANY real matches as possible (e.g. "find as many Brown alumni at X as you can"), so search from several angles and report EVERY distinct person you can back with a citation — do not stop at two or three. But the verification bar never drops: omit anyone you cannot cite rather than guessing, and never pad the list with unverifiable names.
+4. Be exhaustive within what you can verify. The user wants as MANY real matches as possible (e.g. "find as many Brown alumni at X as you can"), so search from several angles and report EVERY distinct person you can back with a citation, do not stop at two or three. But the verification bar never drops: omit anyone you cannot cite rather than guessing, and never pad the list with unverifiable names.
 5. Put uncertainty in plain language (same-name ambiguity, low confidence) so it can go into a notes field.`;
 
 const REPORT_TOOL = {
   name: "report_candidates",
   description:
-    "Report the people who match the cohort. Every claim MUST be backed by a web_search citation you actually retrieved. source_quote is the EXACT verbatim snippet from a search result that asserts this person matches the cohort — never a paraphrase. Omit any field you cannot back with a citation rather than guessing it. Do NOT include any date, datetime, or follow-up field anywhere.",
+    "Report the people who match the cohort. Every claim MUST be backed by a web_search citation you actually retrieved. source_quote is the EXACT verbatim snippet from a search result that asserts this person matches the cohort, never a paraphrase. Omit any field you cannot back with a citation rather than guessing it. Do NOT include any date, datetime, or follow-up field anywhere.",
   input_schema: {
     type: "object" as const,
     additionalProperties: false,
@@ -152,7 +152,7 @@ function norm(s: string): string {
 /**
  * Is `quote` genuinely backed by the real citation `citedText`? Directional on purpose: the quote
  * must be (essentially) a substring OF the citation. We tolerate the ~150-char cited_text truncation
- * by also accepting the reverse direction — but ONLY when the real citation fragment is itself
+ * by also accepting the reverse direction, but ONLY when the real citation fragment is itself
  * substantial (>= 40 chars), so a short real fragment can never "back" a long model-authored paraphrase.
  */
 function backs(citedText: string, quote: string): boolean {
@@ -248,7 +248,7 @@ function buildSummary(query: string, candidates: ValidatedCandidate[], citationC
     `Research run for: "${query}"`,
     `Verified ${candidates.length} ${candidates.length === 1 ? "person" : "people"} against ${citationCount} web citations.`,
     "",
-    ...candidates.map((c) => `• ${c.fullName}${c.company ? ` — ${c.company}` : ""}: “${c.sourceQuote}”`),
+    ...candidates.map((c) => `• ${c.fullName}${c.company ? `, ${c.company}` : ""}: “${c.sourceQuote}”`),
   ];
   return lines.join("\n");
 }
@@ -294,7 +294,7 @@ export async function runPeopleResearch(
     };
   }
 
-  // Phase 1 — let the model drive Tavily searches (it picks the queries; Tavily returns real pages).
+  // Phase 1, let the model drive Tavily searches (it picks the queries; Tavily returns real pages).
   await geminiToolLoop({
     system: RESEARCH_SYSTEM,
     contents: [
@@ -307,7 +307,7 @@ export async function runPeopleResearch(
 The user's goals (reference these ids in goal_links; do not invent ids):
 ${goalsDigest}
 
-Search the web (call web_search several times, from different angles) and identify as many real, named people as you can who match this cohort — aim for breadth, not just the first few. For each person, note the exact short sentence from a result that proves they match.`,
+Search the web (call web_search several times, from different angles) and identify as many real, named people as you can who match this cohort, aim for breadth, not just the first few. For each person, note the exact short sentence from a result that proves they match.`,
           },
         ],
       },
@@ -318,7 +318,7 @@ Search the web (call web_search several times, from different angles) and identi
     maxTokens: MAX_TOKENS,
   });
 
-  // Phase 2 — force a structured report over ONLY the harvested results. Nothing else is in scope, so
+  // Phase 2, force a structured report over ONLY the harvested results. Nothing else is in scope, so
   // the model cannot invent a source; validate() then drops anything whose quote/URL isn't backed.
   let rawCandidates: RawCandidate[] = [];
   if (citations.length) {
@@ -330,11 +330,11 @@ Search the web (call web_search several times, from different angles) and identi
 The user's goals (reference these ids in goal_links; do not invent ids):
 ${goalsDigest}
 
-Here are the web search results you retrieved. Use ONLY these — do not introduce any other source:
+Here are the web search results you retrieved. Use ONLY these, do not introduce any other source:
 
 ${corpus}
 
-Report EVERY qualifying person you can back from the results above — do not truncate to a handful; if ten people are supported by citations, return all ten. Each source_quote MUST be an exact verbatim substring of one source's CONTENT above (never a paraphrase). Set channel/field source_url values only to URLs that appear above. Omit any field you cannot back. Do not include any dates.`,
+Report EVERY qualifying person you can back from the results above, do not truncate to a handful; if ten people are supported by citations, return all ten. Each source_quote MUST be an exact verbatim substring of one source's CONTENT above (never a paraphrase). Set channel/field source_url values only to URLs that appear above. Omit any field you cannot back. Do not include any dates.`,
       schema: REPORT_TOOL.input_schema,
       maxTokens: REPORT_MAX_TOKENS,
     });

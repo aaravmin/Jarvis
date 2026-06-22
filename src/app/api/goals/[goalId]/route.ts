@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-/** PATCH /api/goals/[goalId] — rename / re-describe. Body: { title?, description? }. */
+/** PATCH /api/goals/[goalId], rename / re-describe. Body: { title?, description? }. */
 export async function PATCH(request: Request, { params }: { params: Promise<{ goalId: string }> }) {
   const { goalId } = await params;
   const supabase = await createClient();
@@ -34,7 +34,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ go
   return NextResponse.json({ ok: true });
 }
 
-/** DELETE /api/goals/[goalId] — remove a goal (its links cascade). */
+/** DELETE /api/goals/[goalId], remove a goal (its links cascade). */
 export async function DELETE(_request: Request, { params }: { params: Promise<{ goalId: string }> }) {
   const { goalId } = await params;
   const supabase = await createClient();

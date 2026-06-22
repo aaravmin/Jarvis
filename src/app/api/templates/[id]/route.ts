@@ -4,7 +4,7 @@ import { deleteTemplate } from "@/lib/templates/store";
 
 export const dynamic = "force-dynamic";
 
-/** DELETE /api/templates/:id — remove a saved template (RLS guarantees it's the user's own). */
+/** DELETE /api/templates/:id, remove a saved template (RLS guarantees it's the user's own). */
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
   const {

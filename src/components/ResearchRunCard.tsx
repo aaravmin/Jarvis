@@ -199,7 +199,7 @@ export function ResearchRunCard({
 
       {run.status === "done" && people.length === 0 && (
         <p className="mt-3 rounded-lg border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
-          No verifiable matches. Every candidate must be backed by a real web citation — anything the
+          No verifiable matches. Every candidate must be backed by a real web citation, anything the
           model couldn&apos;t prove was dropped rather than guessed.
         </p>
       )}

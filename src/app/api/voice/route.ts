@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 /**
- * POST /api/voice — { text } → audio/mpeg bytes (Jarvis speaking). Auth-gated; the ElevenLabs key
+ * POST /api/voice, { text } → audio/mpeg bytes (Jarvis speaking). Auth-gated; the ElevenLabs key
  * never leaves the server. On any failure (no key, outage) returns a JSON error so the client can
  * quietly skip speaking and just show the text answer.
  */

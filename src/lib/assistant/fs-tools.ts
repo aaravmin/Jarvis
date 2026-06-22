@@ -58,7 +58,7 @@ async function resolveSafe(input: string): Promise<{ ok: true; real: string } | 
     return { ok: false, reason: `outside the allowed folders (${roots().join(", ")})` };
   }
   if (DENY.some((rx) => rx.test(real))) {
-    return { ok: false, reason: "this looks like a secret/credential or system path — access denied" };
+    return { ok: false, reason: "this looks like a secret/credential or system path, access denied" };
   }
   return { ok: true, real };
 }
@@ -98,7 +98,7 @@ export async function readFile(input: string): Promise<FsResult> {
     if (stat.size > MAX_BYTES) {
       return {
         ok: false,
-        text: `"${safe.real}" is ${(stat.size / 1024).toFixed(0)} KB — too large to read in full (cap ${MAX_BYTES / 1024} KB).`,
+        text: `"${safe.real}" is ${(stat.size / 1024).toFixed(0)} KB, too large to read in full (cap ${MAX_BYTES / 1024} KB).`,
       };
     }
     const buf = await fs.readFile(safe.real);

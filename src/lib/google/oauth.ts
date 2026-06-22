@@ -4,7 +4,7 @@ import "server-only";
  * Google OAuth 2.0 helpers (server-only). Per hard rule #6 we use the NARROWEST scopes that each
  * shipped feature needs: read-only for ingestion/templates, plus the minimal write scopes for the
  * three write features (draft into Gmail, create calendar events, export a contacts Sheet). Tokens are
- * never exposed to the browser — these run in route handlers and are stored server-side via store.ts.
+ * never exposed to the browser, these run in route handlers and are stored server-side via store.ts.
  *
  * NOTE: when this list changes the user must RECONNECT Google (the consent screen re-grants scopes;
  * `prompt=consent` forces it). Until they do, write routes return a clear "reconnect" error.
@@ -12,7 +12,7 @@ import "server-only";
 
 // Individual scope constants (also used by store.ts to gate write features on the granted scope).
 export const SCOPE_GMAIL_READONLY = "https://www.googleapis.com/auth/gmail.readonly";
-/** Create/manage drafts (and send) — we only ever create drafts; nothing is sent without the user. */
+/** Create/manage drafts (and send), we only ever create drafts; nothing is sent without the user. */
 export const SCOPE_GMAIL_COMPOSE = "https://www.googleapis.com/auth/gmail.compose";
 /** View + create/edit events on the user's calendars (covers our read ingest AND event creation). */
 export const SCOPE_CALENDAR_EVENTS = "https://www.googleapis.com/auth/calendar.events";
@@ -53,7 +53,7 @@ function clientSecret(): string {
   return v;
 }
 
-/** The redirect URI — must EXACTLY match an Authorized redirect URI in the Google OAuth client. */
+/** The redirect URI, must EXACTLY match an Authorized redirect URI in the Google OAuth client. */
 export function redirectUri(): string {
   if (process.env.GOOGLE_OAUTH_REDIRECT) return process.env.GOOGLE_OAUTH_REDIRECT;
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";

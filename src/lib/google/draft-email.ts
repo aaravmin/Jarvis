@@ -6,7 +6,7 @@ import { readDocText, findDocsByName, extractFileId } from "@/lib/google/drive";
 
 /**
  * draft-from-template: read a Google Drive template doc and have Gemini fill it into an email draft
- * for a given recipient/context. Read-only + draft-only — nothing is sent (that needs the gmail.send
+ * for a given recipient/context. Read-only + draft-only, nothing is sent (that needs the gmail.send
  * write scope, added later). Returns the subject + body for the user to review/copy.
  */
 
@@ -34,7 +34,7 @@ export type EmailDraft = { subject: string; body: string; templateName?: string;
 
 /**
  * Draft an email. With a Drive template, fill its placeholders; WITHOUT one, draft from scratch given
- * the recipient + context. Draft-only (no send — that needs the gmail.send write scope).
+ * the recipient + context. Draft-only (no send, that needs the gmail.send write scope).
  */
 export async function draftEmailFromTemplate(
   supabase: SupabaseClient,

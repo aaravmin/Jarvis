@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * POST /api/templates/compose — adapt a base template to a contact's personal connection. Returns the
+ * POST /api/templates/compose, adapt a base template to a contact's personal connection. Returns the
  * concrete draft AND a proposed generalized template + connection type. Saves NOTHING (autonomy L0:
  * the user reviews, then saves the draft to Gmail and/or the generalized template separately).
  */

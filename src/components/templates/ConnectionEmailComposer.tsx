@@ -8,7 +8,7 @@ import type { EmailTemplate, ConnectionType, ComposeResult } from "@/lib/templat
 /**
  * The connection-aware email composer. You pick a base template (a saved one or a Drive doc) and
  * describe a personal connection to a contact; Jarvis writes the concrete email AND proposes a
- * generalized, reusable template tied to the connection TYPE — with the personal specifics stripped.
+ * generalized, reusable template tied to the connection TYPE, with the personal specifics stripped.
  * Nothing is stored until you click save (autonomy L0).
  */
 export function ConnectionEmailComposer({
@@ -31,7 +31,7 @@ export function ConnectionEmailComposer({
   const [err, setErr] = useState<string | null>(null);
   const [result, setResult] = useState<ComposeResult | null>(null);
 
-  // Editable copies of the model output (the user can tweak before saving — "maybe edit it").
+  // Editable copies of the model output (the user can tweak before saving, "maybe edit it").
   const [draftSubject, setDraftSubject] = useState("");
   const [draftBody, setDraftBody] = useState("");
   const [genName, setGenName] = useState("");
@@ -160,7 +160,7 @@ export function ConnectionEmailComposer({
         <h2 className="text-sm font-semibold text-foreground">Compose with a connection</h2>
         <p className="mt-1 text-xs text-muted">
           Describe how you know this contact. Jarvis writes the email and saves a reusable template for
-          this <em>kind</em> of connection — never the personal details.
+          this <em>kind</em> of connection, never the personal details.
         </p>
       </div>
 
@@ -173,7 +173,7 @@ export function ConnectionEmailComposer({
         <label className="block">
           <span className="mb-1 block text-xs text-muted">Base template</span>
           <select value={baseTemplateId} onChange={(e) => setBaseTemplateId(e.target.value)} className={field}>
-            <option value="">— None / write from scratch —</option>
+            <option value="">- None / write from scratch -</option>
             {templates.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -185,7 +185,7 @@ export function ConnectionEmailComposer({
         <label className="block">
           <span className="mb-1 block text-xs text-muted">Connection type</span>
           <select value={connectionTypeId} onChange={(e) => setConnectionTypeId(e.target.value)} className={field}>
-            <option value="">— New / let Jarvis name it —</option>
+            <option value="">- New / let Jarvis name it -</option>
             {connectionTypes.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.label}
@@ -206,7 +206,7 @@ export function ConnectionEmailComposer({
 
       <div className="mt-3">
         <label className="mb-1 flex items-center gap-1.5 text-xs font-medium text-accent">
-          <Lock className="h-3.5 w-3.5" /> Private connection detail — used to write this email, never saved
+          <Lock className="h-3.5 w-3.5" /> Private connection detail, used to write this email, never saved
         </label>
         <textarea
           value={connectionDetail}
@@ -221,7 +221,7 @@ export function ConnectionEmailComposer({
         value={context}
         onChange={(e) => setContext(e.target.value)}
         rows={2}
-        placeholder="What's the email about? (the ask, intro, follow-up…) — optional"
+        placeholder="What's the email about? (the ask, intro, follow-up…), optional"
         className={`${field} mt-3 resize-y`}
       />
 
@@ -245,7 +245,7 @@ export function ConnectionEmailComposer({
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               {draftSavedUrl ? (
                 <a href={draftSavedUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg bg-success/15 px-3 py-1.5 text-xs font-medium text-success hover:bg-success/25">
-                  <Check className="h-3.5 w-3.5" /> Saved to Gmail — open Drafts
+                  <Check className="h-3.5 w-3.5" /> Saved to Gmail, open Drafts
                 </a>
               ) : (
                 <button type="button" onClick={saveDraftToGmail} disabled={savingDraft} className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-strong disabled:opacity-50">
@@ -275,7 +275,7 @@ export function ConnectionEmailComposer({
               }`}
             >
               {result.privacyOk ? <ShieldCheck className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
-              {result.privacyOk ? "Generalized for reuse — review the text before saving" : result.privacyNote ?? "A personal detail was removed"}
+              {result.privacyOk ? "Generalized for reuse, review the text before saving" : result.privacyNote ?? "A personal detail was removed"}
             </p>
 
             <div className="grid gap-3 sm:grid-cols-2">

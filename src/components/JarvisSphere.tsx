@@ -3,7 +3,7 @@
 import type { OrbState } from "@/components/JarvisOrb";
 
 /**
- * The Jarvis mark — no hard circle, just a soft blue morphing glow with "JARVIS" in white over it.
+ * The Jarvis mark, no hard circle, just a soft blue morphing glow with "JARVIS" in white over it.
  * Two counter-rotating gradient blobs morph + drift behind the wordmark and the ambient glow swells;
  * it idles slowly and moves more when listening/thinking (`data-active`). Pure CSS (SSR-safe).
  */

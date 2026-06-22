@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * POST /api/goals/generate — { context }. Claude turns freeform context into suggested goals. They
+ * POST /api/goals/generate, { context }. Claude turns freeform context into suggested goals. They
  * land review_status='review' (L0) with the context as their source, for the user to accept.
  */
 export async function POST(request: Request) {

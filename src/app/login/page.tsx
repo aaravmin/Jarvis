@@ -2,7 +2,7 @@ import { Brand } from "@/components/Brand";
 import { LoginForm } from "./LoginForm";
 
 export const metadata = {
-  title: "Sign in — Jarvis",
+  title: "Sign in, Jarvis",
 };
 
 export default async function LoginPage({
@@ -19,7 +19,7 @@ export default async function LoginPage({
           <Brand withWordmark={false} />
           <div>
             <h1 className="text-lg font-semibold text-foreground">
-              Jarvis — Command Center
+              Jarvis, Command Center
             </h1>
             <p className="mt-1 text-sm text-muted">
               Sign in to your private workspace. Your data is yours, scoped to your account.

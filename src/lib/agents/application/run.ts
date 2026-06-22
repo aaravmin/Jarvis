@@ -52,14 +52,14 @@ function buildSummary(opts: {
   notes: string;
 }): string {
   if (opts.empty) {
-    return "Couldn't read a fillable form on that page automatically — it may be built with JavaScript. Open the link and apply manually; your materials are ready below.";
+    return "Couldn't read a fillable form on that page automatically, it may be built with JavaScript. Open the link and apply manually; your materials are ready below.";
   }
   const lines = [
     `Read ${opts.fieldCount} field${opts.fieldCount === 1 ? "" : "s"} from the form (${opts.via === "browser" ? "rendered" : "static"} read).`,
     `Grounded ${opts.filled} from your materials${opts.resumeName ? ` (resume: ${opts.resumeName})` : ""}.`,
     opts.unfilled > 0
       ? `${opts.unfilled} required field${opts.unfilled === 1 ? "" : "s"} still need you before submitting.`
-      : "Every required field is grounded — review and submit.",
+      : "Every required field is grounded, review and submit.",
   ];
   if (opts.notes) lines.push(opts.notes);
   return lines.join(" ");

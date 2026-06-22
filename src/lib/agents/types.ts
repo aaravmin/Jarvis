@@ -2,7 +2,7 @@
  * Shared types for Jarvis's multi-agent system.
  *
  * The design goal (the user's ask): a single request is CLASSIFIED and routed to exactly ONE
- * specialized agent — we never run all agents in conjunction for every task. The router decides; the
+ * specialized agent, we never run all agents in conjunction for every task. The router decides; the
  * registry describes what each agent does and whether it can run yet; /api/agent dispatches.
  */
 
@@ -10,12 +10,12 @@ import type { AskActionRef, AskCitation, AskFileRef } from "@/lib/assistant/type
 
 export type AgentKind =
   | "opportunity" // find programs / jobs / hackathons (LIVE)
-  | "contact" // find/research people (LIVE — the people agent)
-  | "application" // prepare a job/grant application from a link (LIVE — fills, never submits)
-  | "email" // mine synced Gmail into sourced tasks/follow-ups in Review (LIVE — the backfill engine)
+  | "contact" // find/research people (LIVE, the people agent)
+  | "application" // prepare a job/grant application from a link (LIVE, fills, never submits)
+  | "email" // mine synced Gmail into sourced tasks/follow-ups in Review (LIVE, the backfill engine)
   | "meeting" // transcript → action items (paste a transcript)
   | "assistant"; // general ask + write actions: web search, local files, create events, draft email (LIVE)
-// Note: calendar requests (read OR create events) route to the assistant — it answers from synced
+// Note: calendar requests (read OR create events) route to the assistant, it answers from synced
 // Calendar data and creates real events via its create_calendar_event tool. No separate agent needed.
 
 /** Can the agent actually run right now? */

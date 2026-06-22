@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 type EmptyStateProps = {
   icon: LucideIcon;
   title: string;
-  /** Optional action (e.g. an "Add" button) — no explanatory copy. */
+  /** Optional action (e.g. an "Add" button), no explanatory copy. */
   action?: ReactNode;
 };
 
