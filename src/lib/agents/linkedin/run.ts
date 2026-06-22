@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { searchLinkedInPeople } from "./search";
+import { getCredentialForSite } from "@/lib/credentials/store";
 import type { LinkedInScrapeInput, LinkedInScrapeResult } from "./types";
 
 /**
@@ -120,7 +121,8 @@ export async function runLinkedInScrape(
     });
   }
 
-  const search = await searchLinkedInPeople(query, limit);
+  const login = await getCredentialForSite(supabase, userId, "linkedin.com");
+  const search = await searchLinkedInPeople(query, limit, { userId, login });
   if (!search.ok) {
     return empty({ needsLogin: search.reason === "needs_login", message: search.message });
   }

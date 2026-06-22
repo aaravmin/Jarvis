@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { scrapeLinkedInProfile, normalizeLinkedInProfileUrl } from "@/lib/agents/linkedin/search";
+import { getCredentialForSite } from "@/lib/credentials/store";
 import { apolloEnabled, apolloMatchPerson, type ApolloPerson } from "@/lib/apollo";
 import type { LinkedInProfile } from "@/lib/agents/linkedin/types";
 
@@ -103,7 +104,8 @@ export async function importContactFromLinkedIn(
   let profile: LinkedInProfile | null = null;
   let needsLogin = false;
   let usedBrowser = false;
-  const scraped = await scrapeLinkedInProfile(profileUrl);
+  const linkedInLogin = await getCredentialForSite(supabase, userId, "linkedin.com");
+  const scraped = await scrapeLinkedInProfile(profileUrl, { userId, login: linkedInLogin });
   if (scraped.ok) {
     profile = scraped.profile;
     usedBrowser = true;

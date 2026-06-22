@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { importContactFromLinkedIn } from "@/lib/contacts/import-linkedin";
 import { normalizeLinkedInProfileUrl, searchLinkedInPeople } from "@/lib/agents/linkedin/search";
+import { getCredentialForSite } from "@/lib/credentials/store";
 import { browserEnabled } from "@/lib/agents/application/browser";
 import { apolloEnabled, apolloMatchPerson, type ApolloPerson } from "@/lib/apollo";
 import type { LinkedInPerson } from "@/lib/agents/linkedin/types";
@@ -102,9 +103,10 @@ export async function addContact(
 
     // 1a, Browser People-search (the most reliable source of the real /in/ URL).
     if (browserEnabled()) {
-      const res = await searchLinkedInPeople(query, 6);
+      const login = await getCredentialForSite(supabase, userId, "linkedin.com");
+      const res = await searchLinkedInPeople(query, 6, { userId, login });
       if (!res.ok && res.reason === "needs_login") {
-        return failResult("Log into LinkedIn in the window I just opened, then ask me to add them again.", { needsLogin: true });
+        return failResult(res.message || "Log into LinkedIn in the window I just opened, then ask me to add them again.", { needsLogin: true });
       }
       if (res.ok) {
         const best = pickBest(res.people, name);

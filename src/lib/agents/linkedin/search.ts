@@ -14,43 +14,59 @@ import type { LinkedInPerson, LinkedInProfile, LinkedInProfileResult, LinkedInSe
 
 const RESULTS_TIMEOUT_MS = 30_000;
 
-/** Where the persistent Chromium profile (and thus the LinkedIn cookie) lives. Override per machine. */
-function profileDir(): string {
-  return process.env.LINKEDIN_USER_DATA_DIR || path.join(os.homedir(), ".jarvis-browser", "linkedin");
+/** A decrypted site login the caller fetched from the vault, for auto-sign-in. */
+export type LinkedInLogin = { username: string | null; password: string };
+/** Per-call options: whose browser profile to use, and an optional saved login to auto-fill. */
+export type ScrapeOpts = { userId?: string | null; login?: LinkedInLogin | null };
+
+/**
+ * Where the persistent Chromium profile (and thus the LinkedIn cookie) lives, namespaced PER USER so a
+ * multi-user deployment never shares one LinkedIn session across accounts. Override the base per machine
+ * with LINKEDIN_USER_DATA_DIR.
+ */
+function profileDir(userId?: string | null): string {
+  const base = process.env.LINKEDIN_USER_DATA_DIR || path.join(os.homedir(), ".jarvis-browser", "linkedin");
+  return userId ? path.join(base, userId) : base;
 }
 
-// ── Single long-lived context ─────────────────────────────────────────────────────────────────────
+// ── Long-lived contexts, one per user ──────────────────────────────────────────────────────────────
 type Holder = { context: PwPersistentContext };
-const g = globalThis as unknown as { __jarvisLinkedInCtx?: Holder | null };
+const g = globalThis as unknown as { __jarvisLinkedInCtxByUser?: Map<string, Holder> };
+function holders(): Map<string, Holder> {
+  return (g.__jarvisLinkedInCtxByUser ??= new Map());
+}
 
-async function getContext(): Promise<PwPersistentContext | null> {
-  const existing = g.__jarvisLinkedInCtx?.context;
+async function getContext(userId?: string | null): Promise<PwPersistentContext | null> {
+  const key = userId || "__default__";
+  const map = holders();
+  const existing = map.get(key)?.context;
   if (existing) {
     try {
       existing.pages(); // throws if the context/browser was closed out from under us
       return existing;
     } catch {
-      g.__jarvisLinkedInCtx = null;
+      map.delete(key);
     }
   }
   // Headed: a login needs a real window, and a genuine profile is far less bot-detectable.
-  const context = await launchPersistentContext(profileDir(), { headless: false });
+  const context = await launchPersistentContext(profileDir(userId), { headless: false });
   if (!context) return null;
-  g.__jarvisLinkedInCtx = { context };
+  map.set(key, { context });
   return context;
 }
 
-/** Drop our handle and close the window (e.g. to force a fresh login). Safe if nothing is open. */
+/** Close every open context (e.g. to force a fresh login). Safe if nothing is open. */
 export async function closeLinkedInContext(): Promise<void> {
-  const c = g.__jarvisLinkedInCtx?.context;
-  g.__jarvisLinkedInCtx = null;
-  if (c) {
+  const map = g.__jarvisLinkedInCtxByUser;
+  if (!map) return;
+  for (const h of map.values()) {
     try {
-      await c.close();
+      await h.context.close();
     } catch {
       /* already gone */
     }
   }
+  map.clear();
 }
 
 function searchUrl(query: string): string {
@@ -61,6 +77,28 @@ function searchUrl(query: string): string {
 /** True when the page is sitting on a login / auth wall rather than real content. */
 function isLoginWall(url: string): boolean {
   return /linkedin\.com\/(login|uas\/login|authwall|checkpoint)/i.test(url) || /\/signup/i.test(url);
+}
+
+/**
+ * Best-effort auto-login with a saved credential. Fills LinkedIn's #username + #password and submits.
+ * Returns true only if we end up OFF the login/auth wall. LinkedIn may still demand a 2FA or captcha
+ * checkpoint, in which case this returns false and the caller falls back to asking the user to finish
+ * signing in manually. Requires both a username and a password.
+ */
+async function tryAutoLogin(page: PwPage, login: LinkedInLogin): Promise<boolean> {
+  if (!login.username || !login.password) return false;
+  try {
+    await page.goto("https://www.linkedin.com/login", { waitUntil: "domcontentloaded", timeout: RESULTS_TIMEOUT_MS });
+    await page.waitForSelector("#username, #password", { timeout: 8000 }).catch(() => {});
+    await page.locator("#username").fill(login.username).catch(() => {});
+    await page.locator("#password").fill(login.password).catch(() => {});
+    await page.locator('button[type="submit"]').click().catch(() => {});
+    await page.waitForLoadState("domcontentloaded", { timeout: RESULTS_TIMEOUT_MS }).catch(() => {});
+    await page.waitForTimeout(1500);
+    return !isLoginWall(page.url());
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -114,7 +152,7 @@ async function readPeople(page: PwPage): Promise<LinkedInPerson[]> {
  * (unavailable when the browser backend is off, needs_login when the user must sign in, the window is
  * left open on the login page for exactly that).
  */
-export async function searchLinkedInPeople(query: string, limit: number): Promise<LinkedInSearchResult> {
+export async function searchLinkedInPeople(query: string, limit: number, opts?: ScrapeOpts): Promise<LinkedInSearchResult> {
   if (!browserEnabled()) {
     return {
       ok: false,
@@ -124,7 +162,7 @@ export async function searchLinkedInPeople(query: string, limit: number): Promis
     };
   }
 
-  const context = await getContext();
+  const context = await getContext(opts?.userId);
   if (!context) {
     return {
       ok: false,
@@ -141,19 +179,31 @@ export async function searchLinkedInPeople(query: string, limit: number): Promis
     return { ok: false, reason: "error", message: "LinkedIn didn't load in time. Try again in a moment." };
   }
 
-  // If LinkedIn bounced us to a login/auth wall, surface it to the user and leave the window open there.
+  // If LinkedIn bounced us to a login/auth wall, try the saved login first; if that doesn't clear it,
+  // leave the window open on the login page for the user to finish.
   if (isLoginWall(page.url())) {
-    try {
-      await page.goto("https://www.linkedin.com/login", { waitUntil: "domcontentloaded", timeout: RESULTS_TIMEOUT_MS });
-      await page.bringToFront();
-    } catch {
-      /* best effort */
+    if (opts?.login && (await tryAutoLogin(page, opts.login))) {
+      try {
+        await page.goto(searchUrl(query), { waitUntil: "domcontentloaded", timeout: RESULTS_TIMEOUT_MS });
+      } catch {
+        /* fall through to the wall check below */
+      }
     }
-    return {
-      ok: false,
-      reason: "needs_login",
-      message: "Log into LinkedIn in the window Jarvis just opened, then click Find LinkedIn contacts again.",
-    };
+    if (isLoginWall(page.url())) {
+      try {
+        await page.goto("https://www.linkedin.com/login", { waitUntil: "domcontentloaded", timeout: RESULTS_TIMEOUT_MS });
+        await page.bringToFront();
+      } catch {
+        /* best effort */
+      }
+      return {
+        ok: false,
+        reason: "needs_login",
+        message: opts?.login?.username
+          ? "I tried your saved LinkedIn login but it did not get through (LinkedIn may want a verification step). Finish signing in in the open window, then try again."
+          : "Log into LinkedIn in the window Jarvis just opened, then click Find LinkedIn contacts again.",
+      };
+    }
   }
 
   // Let the result list render (it's lazy). Best-effort wait, then a nudge-scroll to load more cards.
@@ -301,7 +351,7 @@ function buildProfile(profileUrl: string, raw: Record<string, string>): LinkedIn
  * or a typed reason (unavailable when the browser backend is off, needs_login when LinkedIn shows an
  * auth wall, the window is left on the login page for the user to sign in and retry).
  */
-export async function scrapeLinkedInProfile(profileUrl: string): Promise<LinkedInProfileResult> {
+export async function scrapeLinkedInProfile(profileUrl: string, opts?: ScrapeOpts): Promise<LinkedInProfileResult> {
   if (!browserEnabled()) {
     return {
       ok: false,
@@ -309,7 +359,7 @@ export async function scrapeLinkedInProfile(profileUrl: string): Promise<LinkedI
       message: "LinkedIn page-scraping needs the browser backend (set JARVIS_BROWSER=playwright).",
     };
   }
-  const context = await getContext();
+  const context = await getContext(opts?.userId);
   if (!context) {
     return {
       ok: false,
@@ -328,17 +378,28 @@ export async function scrapeLinkedInProfile(profileUrl: string): Promise<LinkedI
   const needsLogin = (): LinkedInProfileResult => ({
     ok: false,
     reason: "needs_login",
-    message: "Log into LinkedIn in the window Jarvis just opened, then import the profile again.",
+    message: opts?.login?.username
+      ? "I tried your saved LinkedIn login but it did not get through (LinkedIn may want a verification step). Finish signing in in the open window, then try again."
+      : "Log into LinkedIn in the window Jarvis just opened, then import the profile again.",
   });
 
   if (isLoginWall(page.url())) {
-    try {
-      await page.goto("https://www.linkedin.com/login", { waitUntil: "domcontentloaded", timeout: PROFILE_TIMEOUT_MS });
-      await page.bringToFront();
-    } catch {
-      /* best effort */
+    if (opts?.login && (await tryAutoLogin(page, opts.login))) {
+      try {
+        await page.goto(profileUrl, { waitUntil: "domcontentloaded", timeout: PROFILE_TIMEOUT_MS });
+      } catch {
+        /* fall through to the wall check below */
+      }
     }
-    return needsLogin();
+    if (isLoginWall(page.url())) {
+      try {
+        await page.goto("https://www.linkedin.com/login", { waitUntil: "domcontentloaded", timeout: PROFILE_TIMEOUT_MS });
+        await page.bringToFront();
+      } catch {
+        /* best effort */
+      }
+      return needsLogin();
+    }
   }
 
   try {
