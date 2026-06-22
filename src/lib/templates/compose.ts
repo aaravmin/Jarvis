@@ -6,6 +6,22 @@ import { readDocText, findDocsByName, extractFileId } from "@/lib/google/drive";
 import { getTemplate, getConnectionType } from "./store";
 import { scrubPersonalDetail, extractPlaceholders, CONNECTION_PLACEHOLDER } from "./scrub";
 import type { ComposeResult } from "./types";
+import { loadProfile, profileDigest } from "@/lib/profile";
+import { listDocuments } from "@/lib/documents/store";
+import type { AppDocument } from "@/lib/documents/types";
+import { recentStyleExamples, styleExamplesBlock } from "@/lib/learning/store";
+
+/** A short digest of the user's uploaded materials (resume/bio), so the email speaks to real background. */
+function materialsDigest(docs: AppDocument[]): string {
+  const top = docs
+    .slice(0, 2)
+    .map((d) => {
+      const snippet = (d.extractedText ?? "").replace(/\s+/g, " ").trim().slice(0, 500);
+      return `- ${d.name}${snippet ? `: ${snippet}` : ""}`;
+    })
+    .filter(Boolean);
+  return top.length ? `MY MATERIALS (resume/bio, use to speak accurately about my background, never invent):\n${top.join("\n")}` : "";
+}
 
 /**
  * The connection-aware composer. Given a base template (a saved one, a Drive doc, or none) plus a
@@ -56,7 +72,10 @@ const SYSTEM = `You write outreach emails AND distill them into reusable, privac
 
 You produce TWO things via the connection_email tool:
 1. The CONCRETE email for this specific contact. Weave in the personal connection naturally and warmly.
-   Fill any base-template placeholders from the provided context. Don't invent facts.
+   Fill any base-template placeholders from the provided context. Don't invent facts. Write in the
+   USER'S voice using their profile and materials, and reference their real background, never made-up
+   facts. If past revisions are shown, match the user's revealed style and preferences (tone, length,
+   greeting and sign-off, phrasing, what they add or cut).
 2. A GENERALIZED, reusable template + a connection TYPE.
 
 HARD PRIVACY RULE for the generalized outputs (generalized_*, connection_type_*):
@@ -125,11 +144,24 @@ export async function composeConnectionEmail(
     }
   }
 
+  // 3. Ground in the user's own memory (profile + materials) and learn from how they edit past drafts.
+  const [profile, docs, examples] = await Promise.all([
+    loadProfile(supabase),
+    listDocuments(supabase, userId),
+    recentStyleExamples(supabase, userId, "outreach_email"),
+  ]);
+  const senderDigest = profileDigest(profile);
+  const materials = materialsDigest(docs);
+  const styleBlock = styleExamplesBlock(examples);
+
   const userMsg = [
     `Contact: ${input.contactName}${input.contactEmail ? ` <${input.contactEmail}>` : ""}`,
     baseText ? `BASE TEMPLATE${baseName ? ` ("${baseName}")` : ""}:\n---\n${baseText}\n---` : "No base template, write from scratch in a warm, concise voice.",
     `PERSONAL CONNECTION (use ONLY for the concrete email, never put this in the generalized outputs):\n${input.connectionDetail.trim()}`,
     typeGuidance,
+    senderDigest ? `ABOUT ME (the sender):\n${senderDigest}` : "",
+    materials,
+    styleBlock,
     input.context ? `Additional context:\n${input.context.trim()}` : "",
     input.tone ? `Tone: ${input.tone.trim()}` : "",
     "Produce both outputs now.",

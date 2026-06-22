@@ -103,8 +103,24 @@ export function ConnectionEmailComposer({
         }),
       });
       const data = await res.json();
-      if (!res.ok) setErr(data?.error ?? "Couldn't save the draft.");
-      else setDraftSavedUrl(data.url ?? "https://mail.google.com/mail/u/0/#drafts");
+      if (!res.ok) {
+        setErr(data?.error ?? "Couldn't save the draft.");
+      } else {
+        setDraftSavedUrl(data.url ?? "https://mail.google.com/mail/u/0/#drafts");
+        // Learn from any edits the user made to the AI draft before saving, so future drafts match them.
+        if (result && draftBody.trim() !== result.draft.body.trim()) {
+          void fetch("/api/learning", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              kind: "outreach_email",
+              context: `To ${contactName}`,
+              aiText: result.draft.body,
+              finalText: draftBody,
+            }),
+          }).catch(() => {});
+        }
+      }
     } catch {
       setErr("Network error saving the draft.");
     } finally {
