@@ -22,15 +22,30 @@ export function LoginForm({ initialError }: { initialError?: string }) {
     { error: initialError },
   );
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
 
   async function signInWithGoogle() {
     setGoogleBusy(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-    if (error) setGoogleBusy(false); // on success the browser navigates away
+    setGoogleError(null);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+      if (error) {
+        // On success the browser navigates away; we only land here when sign-in could not start.
+        setGoogleBusy(false);
+        setGoogleError(
+          /provider is not enabled|not enabled/i.test(error.message)
+            ? "Google sign-in is not turned on yet. Enable the Google provider in your Supabase dashboard (Auth > Providers)."
+            : error.message,
+        );
+      }
+    } catch {
+      setGoogleBusy(false);
+      setGoogleError("Could not reach the sign-in service.");
+    }
   }
 
   return (
@@ -43,6 +58,10 @@ export function LoginForm({ initialError }: { initialError?: string }) {
       >
         <GoogleG /> {googleBusy ? "Redirecting…" : "Continue with Google"}
       </button>
+
+      {googleError && (
+        <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">{googleError}</p>
+      )}
 
       <div className="flex items-center gap-3 text-[11px] text-muted">
         <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />
