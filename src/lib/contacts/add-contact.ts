@@ -145,6 +145,8 @@ export async function addContact(
   let url = input.linkedinUrl ? normalizeLinkedInProfileUrl(input.linkedinUrl) : null;
   // Names we found that did NOT confidently match, kept so we can ask rather than guess.
   let candidates: string[] = [];
+  // True when we identified the right person by name but had nothing to fill the card with.
+  let identifiedThin = false;
 
   if (!url && name) {
     const query = [name, company].filter(Boolean).join(" ");
@@ -168,7 +170,8 @@ export async function addContact(
       const ap = await apolloMatchPerson({ name, company: company || undefined });
       if (ap?.name && nameMatches(ap.name, name)) {
         if (ap.linkedinUrl) url = normalizeLinkedInProfileUrl(ap.linkedinUrl) ?? ap.linkedinUrl;
-        else return await insertFromApollo(supabase, userId, ap, input.context);
+        else if (ap.email || ap.title || ap.organization) return await insertFromApollo(supabase, userId, ap, input.context);
+        else identifiedThin = true; // matched the name but Apollo has no details, do not save a bare card
       } else if (ap?.name) {
         // Apollo returned a different person; offer them as a candidate, never add them silently.
         candidates = [...new Set([...candidates, ap.name])];
@@ -212,11 +215,19 @@ export async function addContact(
       { candidates },
     );
   }
-  const why =
-    !browserEnabled() && !apolloEnabled()
-      ? "I have no way to look people up automatically right now, paste their LinkedIn URL, or set JARVIS_BROWSER=playwright / APOLLO_API_KEY."
-      : "Paste their LinkedIn URL and I'll build the full card.";
-  return failResult(`I couldn't find ${name || "that person"} online. ${why}`);
+
+  // How to actually fill the card. Reading the LinkedIn profile (role, company, bio, the URL) needs the
+  // browser backend logged into LinkedIn; the work email needs Apollo. Say what is missing so the user
+  // can turn it on, instead of saving a name-only card.
+  const enrichHint = browserEnabled()
+    ? "Paste their LinkedIn URL (or make sure you are logged into the LinkedIn window I open) and I will fill in their role, company, bio, and email."
+    : "To fill a card automatically I need to read their LinkedIn: turn on the browser (set JARVIS_BROWSER=playwright and log into LinkedIn once), or paste their LinkedIn URL, and I will pull their role, company, bio, and email.";
+
+  if (identifiedThin) {
+    // We confirmed who they are but had nothing to fill the card with. Do NOT save a bare card.
+    return failResult(`I found ${name}, but could not pull their LinkedIn, role, or email automatically, so I did not save a half-empty card. ${enrichHint}`);
+  }
+  return failResult(`I couldn't find ${name || "that person"} online. ${enrichHint}`);
 }
 
 /**
