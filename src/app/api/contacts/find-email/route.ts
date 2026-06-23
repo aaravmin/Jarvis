@@ -37,7 +37,9 @@ export async function POST(request: Request) {
     linkedinUrl: linkedin || undefined,
   });
   const email = match?.email ?? null;
-  if (!email) return NextResponse.json({ email: null, found: false });
+  // `matched` distinguishes "Apollo found the person but the email is locked/missing" from "Apollo has
+  // no record of them", so the UI can tell the user whether Apollo is working at all.
+  if (!email) return NextResponse.json({ email: null, found: false, matched: Boolean(match) });
 
   // Persist onto an existing contact (RLS scopes the read + writes to the caller's own row).
   if (body.contactId) {

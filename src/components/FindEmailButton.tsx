@@ -47,7 +47,12 @@ export function FindEmailButton({
         return;
       }
       if (!data?.email) {
-        setMsg("No email found.");
+        // Tell the user whether Apollo found the person at all, so "is Apollo working" is observable.
+        setMsg(
+          data?.matched
+            ? "Apollo found them but their email is locked (your plan may need credits to reveal it)."
+            : "Apollo has no record of this person, so no email.",
+        );
         return;
       }
       if (onFound) {

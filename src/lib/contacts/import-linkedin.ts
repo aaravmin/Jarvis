@@ -4,6 +4,67 @@ import { scrapeLinkedInProfile, normalizeLinkedInProfileUrl } from "@/lib/agents
 import { getCredentialForSite } from "@/lib/credentials/store";
 import { apolloEnabled, apolloMatchPerson, type ApolloPerson } from "@/lib/apollo";
 import type { LinkedInProfile } from "@/lib/agents/linkedin/types";
+import { grokStructured } from "@/lib/llm/grok";
+import { webSearch, tavilyEnabled } from "@/lib/search/tavily";
+import { loadProfile, profileDigest } from "@/lib/profile";
+
+/**
+ * Build a grounded "who they are" + "why they matter to me" from real facts only (the scraped profile,
+ * plus a quick web search, plus the user's own profile for relevance). Never invents; falls back to the
+ * raw About text if the model is unavailable. No em-dashes in the output.
+ */
+async function enrichSummary(
+  supabase: SupabaseClient,
+  userId: string,
+  facts: { name: string; headline?: string; roleTitle?: string; company?: string; location?: string; about?: string; education?: string },
+): Promise<{ background: string; relevance: string }> {
+  let webText = "";
+  if (tavilyEnabled()) {
+    try {
+      const q = [facts.name, facts.company || facts.roleTitle].filter(Boolean).join(" ");
+      const hits = await webSearch(q, { maxResults: 4 });
+      webText = hits.map((h) => `${h.title}: ${h.content}`).join("\n").slice(0, 2500);
+    } catch {
+      /* web search is best-effort */
+    }
+  }
+  const me = profileDigest(await loadProfile(supabase));
+  const factLines = [
+    `Name: ${facts.name}`,
+    facts.headline && `Headline: ${facts.headline}`,
+    facts.roleTitle && `Current role: ${facts.roleTitle}`,
+    facts.company && `Company/org: ${facts.company}`,
+    facts.location && `Location: ${facts.location}`,
+    facts.education && `Education: ${facts.education}`,
+    facts.about && `Their LinkedIn About: ${facts.about.slice(0, 1500)}`,
+    webText && `From a web search:\n${webText}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const out = await grokStructured<{ background?: string; relevance?: string }>({
+    system:
+      "You write a short, factual profile of a professional contact from the PROVIDED FACTS ONLY. Never invent titles, employers, schools, or achievements not in the facts. If a detail is unknown, omit it. Write plainly, no em-dashes.",
+    user:
+      `THE PERSON (use only these facts):\n${factLines}\n\n` +
+      (me ? `ABOUT THE USER this contact is being saved for:\n${me}\n\n` : "") +
+      `Return two things:\n` +
+      `background: 2 to 4 sentences on who they are, what they do, and where they studied, from the facts only.\n` +
+      `relevance: 1 to 2 sentences on why they may matter to the user, grounded in who the user is and what this person does. If there is no clear link, give an honest neutral one (a shared field or school). Do not overstate.`,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: { background: { type: "string" }, relevance: { type: "string" } },
+      required: ["background", "relevance"],
+    },
+    schemaName: "contact_profile",
+    maxTokens: 600,
+  });
+  return {
+    background: (out?.background ?? "").trim() || (facts.about ?? "").slice(0, 800),
+    relevance: (out?.relevance ?? "").trim(),
+  };
+}
 
 /**
  * Add ONE contact from a pasted LinkedIn profile URL.
@@ -164,10 +225,21 @@ export async function importContactFromLinkedIn(
     companySrcUrl = "https://apollo.io";
   }
 
-  const background = (profile?.about || "").trim() || null;
   const location = (profile?.location || "").trim();
   const email = apollo?.email?.trim() || null;
   const emailStatus = apollo?.emailStatus;
+
+  // Rich, grounded "who they are" + "why they matter to me" (best-effort; falls back to the raw About).
+  const enriched = await enrichSummary(supabase, userId, {
+    name: fullName,
+    headline: profile?.headline,
+    roleTitle: roleTitle ?? undefined,
+    company: company ?? undefined,
+    location: location || undefined,
+    about: profile?.about,
+    education: profile?.education,
+  });
+  const background = enriched.background.trim() || null;
 
   // field_sources insertion order matters: the first url-bearing entry becomes the card's primary
   // permalink (see rowsToPerson), so page-read fields (LinkedIn URL) go before the Apollo email.
@@ -180,7 +252,7 @@ export async function importContactFromLinkedIn(
       confidence: companySrcUrl === profileUrl ? 0.7 : 0.6,
     };
   }
-  if (background) fieldSources.background = { url: profileUrl, quote: "From the profile's About section.", confidence: 0.7 };
+  if (background) fieldSources.background = { url: profileUrl, quote: "Summary from their LinkedIn profile and web research.", confidence: 0.7 };
   if (email) {
     fieldSources.email = {
       url: "https://apollo.io",
@@ -201,9 +273,15 @@ export async function importContactFromLinkedIn(
     fieldSources.profile = { url: profileUrl, quote: sourceQuote, confidence };
   }
 
-  const relevance = ["Imported from LinkedIn.", location].filter(Boolean).join(" · ");
+  const relevance = enriched.relevance || ["Found via LinkedIn.", location].filter(Boolean).join(" · ");
   const noteBits: string[] = [];
-  if (!email && apolloEnabled()) noteBits.push("No work email was available from Apollo.");
+  if (!email && apolloEnabled()) {
+    noteBits.push(
+      usedApollo
+        ? "Apollo matched this person but returned no unlocked work email (your Apollo plan may need credits to reveal it)."
+        : "Apollo had no record of this LinkedIn profile, so no work email.",
+    );
+  }
   if (!email && !apolloEnabled()) noteBits.push("Set APOLLO_API_KEY to auto-find their work email.");
   if (!usedBrowser && needsLogin) noteBits.push("LinkedIn page details were skipped (not logged in).");
   const notes = noteBits.join(" ") || null;

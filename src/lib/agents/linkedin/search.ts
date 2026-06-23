@@ -298,6 +298,20 @@ const PROFILE_READER = `(() => {
       if (subs && subs[0]) out.expCompany = clean(subs[0].textContent).split(" · ")[0];
     }
   }
+  // Education: read up to 3 schools from the #education section.
+  const eduAnchor = document.getElementById("education");
+  const eduSection = eduAnchor ? eduAnchor.closest("section") : null;
+  const schools = [];
+  if (eduSection) {
+    const items = eduSection.querySelectorAll("li");
+    for (const it of items) {
+      const bold = it.querySelector('span[aria-hidden=\\"true\\"]');
+      const s = clean(bold && bold.textContent);
+      if (s && schools.indexOf(s) === -1) schools.push(s);
+      if (schools.length >= 3) break;
+    }
+  }
+  out.education = schools.join("; ");
   out.docTitle = clean(document.title);
   const ogd = document.querySelector('meta[property="og:description"]');
   out.ogDescription = clean(ogd && ogd.getAttribute("content"));
@@ -342,6 +356,7 @@ function buildProfile(profileUrl: string, raw: Record<string, string>): LinkedIn
     company: company || undefined,
     location: raw.location || undefined,
     about: raw.about || undefined,
+    education: raw.education || undefined,
   };
 }
 

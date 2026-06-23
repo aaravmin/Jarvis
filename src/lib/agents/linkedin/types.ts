@@ -40,6 +40,8 @@ export type LinkedInProfile = {
   location?: string;
   /** The "About" section text, trimmed. */
   about?: string;
+  /** Schools from the Education section, joined with "; ". */
+  education?: string;
 };
 
 /** Result of scraping one profile page: the data, or a typed reason it couldn't. */
