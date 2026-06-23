@@ -42,6 +42,8 @@ export type AddContactResult = {
   /** True when LinkedIn showed a login wall and we had no other way in, sign in and retry. */
   needsLogin: boolean;
   alreadyExisted: boolean;
+  /** Names found that did NOT confidently match the request, so the assistant can ask which one. */
+  candidates?: string[];
   message: string;
 };
 
@@ -62,7 +64,7 @@ function failResult(message: string, over: Partial<AddContactResult> = {}): AddC
   };
 }
 
-/** Normalize a person's name for loose matching (case/punctuation-insensitive). */
+/** Normalize a person's name for matching (lowercase, strip punctuation, collapse spaces). */
 function normName(s: string): string {
   return (s || "")
     .toLowerCase()
@@ -71,20 +73,64 @@ function normName(s: string): string {
     .trim();
 }
 
+const NAME_STOP = new Set(["dr", "mr", "ms", "mrs", "prof", "the"]);
+/** Significant name tokens (drop 1-char initials and titles). */
+function nameTokens(s: string): string[] {
+  return normName(s).split(" ").filter((t) => t.length >= 2 && !NAME_STOP.has(t));
+}
+
+/** Levenshtein distance, capped, so we tolerate a small typo without matching a different name. */
+function editDistance(a: string, b: string): number {
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  const dp = Array.from({ length: a.length + 1 }, (_, i) => i);
+  for (let j = 1; j <= b.length; j++) {
+    let prev = dp[0];
+    dp[0] = j;
+    for (let i = 1; i <= a.length; i++) {
+      const tmp = dp[i];
+      dp[i] = Math.min(dp[i] + 1, dp[i - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = tmp;
+    }
+  }
+  return dp[a.length];
+}
+
 /**
- * Pick the search result that best matches the requested name. Prefer an exact normalized match, then a
- * containment match, then LinkedIn's own top-ranked result (the query carried the company, so its #1 is
- * usually right). The contact is reviewable on its card, so a rare wrong pick is correctable.
+ * Two name tokens count as the same only if equal or within a small typo distance (1 edit for short
+ * tokens, 2 for longer). Deliberately strict: "Soham"/"Sohum" match (a typo), but "Smith"/"Smithson"
+ * and "Mike"/"Michael" do not. A near-miss becomes a clarifying question, never a silent wrong match.
+ */
+function tokenSimilar(a: string, b: string): boolean {
+  if (a === b) return true;
+  const thresh = Math.max(a.length, b.length) >= 6 ? 2 : 1;
+  return editDistance(a, b) <= thresh;
+}
+
+/**
+ * Does a candidate's name actually match the requested one? EVERY token of the requested name must have
+ * a similar token in the candidate. So "Soham Sanu" matches "Soham K. Sanu" and tolerates the typo
+ * "Sohum Sanu", but NOT "Soham Rege" (a different surname). This is what stops Jarvis from confidently
+ * returning the wrong person who merely shares a first name.
+ */
+function nameMatches(candidate: string, requested: string): boolean {
+  const req = nameTokens(requested);
+  const cand = nameTokens(candidate);
+  if (!req.length || !cand.length) return false;
+  return req.every((rt) => cand.some((ct) => tokenSimilar(rt, ct)));
+}
+
+/**
+ * Pick the ONE result that confidently matches the requested name, or null. It NEVER falls back to
+ * LinkedIn's top result: returning a same-first-name stranger is worse than saying "I could not find
+ * them" and asking. When zero or several results match, return null so the caller surfaces candidates.
  */
 function pickBest(people: LinkedInPerson[], name: string): LinkedInPerson | null {
-  if (!people.length) return null;
-  const target = normName(name);
-  if (!target) return people[0];
-  return (
-    people.find((p) => normName(p.name) === target) ??
-    people.find((p) => normName(p.name).includes(target) || target.includes(normName(p.name))) ??
-    people[0]
-  );
+  if (!people.length || !nameTokens(name).length) return null;
+  const exact = people.filter((p) => normName(p.name) === normName(name));
+  if (exact.length === 1) return exact[0];
+  if (exact.length > 1) return null; // duplicate exact names, ambiguous, ask
+  const matches = people.filter((p) => nameMatches(p.name, name));
+  return matches.length === 1 ? matches[0] : null;
 }
 
 export async function addContact(
@@ -97,6 +143,8 @@ export async function addContact(
 
   // 1, Resolve a LinkedIn URL: the user's, else search for it by name.
   let url = input.linkedinUrl ? normalizeLinkedInProfileUrl(input.linkedinUrl) : null;
+  // Names we found that did NOT confidently match, kept so we can ask rather than guess.
+  let candidates: string[] = [];
 
   if (!url && name) {
     const query = [name, company].filter(Boolean).join(" ");
@@ -111,17 +159,19 @@ export async function addContact(
       if (res.ok) {
         const best = pickBest(res.people, name);
         if (best) url = normalizeLinkedInProfileUrl(best.profileUrl) ?? best.profileUrl;
+        else if (res.people.length) candidates = res.people.slice(0, 5).map((p) => p.name);
       }
     }
 
-    // 1b, Apollo match by name → it carries a linkedin_url we can import (and reveals the work email).
+    // 1b, Apollo match by name → use it only if the name it returns ACTUALLY matches the request.
     if (!url && apolloEnabled()) {
       const ap = await apolloMatchPerson({ name, company: company || undefined });
-      if (ap?.linkedinUrl) {
-        url = normalizeLinkedInProfileUrl(ap.linkedinUrl) ?? ap.linkedinUrl;
+      if (ap?.name && nameMatches(ap.name, name)) {
+        if (ap.linkedinUrl) url = normalizeLinkedInProfileUrl(ap.linkedinUrl) ?? ap.linkedinUrl;
+        else return await insertFromApollo(supabase, userId, ap, input.context);
       } else if (ap?.name) {
-        // Real Apollo data but no LinkedIn URL, save the contact from Apollo alone.
-        return await insertFromApollo(supabase, userId, ap, input.context);
+        // Apollo returned a different person; offer them as a candidate, never add them silently.
+        candidates = [...new Set([...candidates, ap.name])];
       }
     }
   }
@@ -150,6 +200,17 @@ export async function addContact(
   // 3, Couldn't resolve anyone. Say why, honestly.
   if (!name && !input.linkedinUrl) {
     return failResult("Tell me who to add, a name (their company helps) or their LinkedIn profile URL.");
+  }
+  // We found people, but none confidently matched the requested name. Surface them and ASK rather than
+  // adding the wrong person (e.g. a same-first-name stranger). This is where the clarifying question lives.
+  if (candidates.length) {
+    const orgHint = company
+      ? ` Note: "${company}" might be where they studied or where they work, and the people above may only have worked there, tell me which you meant.`
+      : "";
+    return failResult(
+      `I could not confidently find ${name}${company ? ` from ${company}` : ""}. The closest people I found were: ${candidates.join(", ")}. None clearly matched that exact name, so I did not add anyone. Which one did you mean, or paste their LinkedIn URL?${orgHint}`,
+      { candidates },
+    );
   }
   const why =
     !browserEnabled() && !apolloEnabled()
