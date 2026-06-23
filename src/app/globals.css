@@ -83,11 +83,11 @@ body {
     var(--background);
 }
 
-/* The /jarvis hero: a deep green canvas (not black, not blue) so the glowing orb still reads. */
+/* The /jarvis hero: a white canvas with a soft green wash behind the orb (white and green). */
 .home-canvas {
   background:
-    radial-gradient(70rem 50rem at 50% 38%, rgba(34, 197, 94, 0.20), transparent 60%),
-    #04140c;
+    radial-gradient(70rem 50rem at 50% 40%, rgba(34, 197, 94, 0.16), transparent 62%),
+    var(--background);
 }
 
 /* ---- Nav drawer (slide-in) ------------------------------------------------- */
@@ -177,18 +177,18 @@ body {
   filter: blur(22px);
   animation: jarvis-glow calc(var(--orb-morph) * 0.7) ease-in-out infinite;
 }
-/* Two morphing gradient blobs, counter-rotating + drifting, blended for depth. */
+/* Two morphing gradient blobs, counter-rotating + drifting. Multiply so the greens show on white. */
 .jarvis-orb__blob {
   position: absolute;
   inset: 7%;
   background-size: 200% 200%;
-  mix-blend-mode: screen;
+  mix-blend-mode: multiply;
   filter: blur(6px);
   will-change: transform, border-radius;
 }
 .jarvis-orb__blob--a {
-  background: conic-gradient(from 0deg, #22c55e, #16a34a, #86efac, #14532d, #22c55e);
-  opacity: 0.85;
+  background: conic-gradient(from 0deg, #22c55e, #16a34a, #4ade80, #15803d, #22c55e);
+  opacity: 0.9;
   animation:
     jarvis-spin var(--orb-spin) linear infinite,
     jarvis-morph var(--orb-morph) ease-in-out infinite,
@@ -196,8 +196,8 @@ body {
 }
 .jarvis-orb__blob--b {
   inset: 14%;
-  background: conic-gradient(from 180deg, #16a34a, #bbf7d0, #15803d, #22c55e, #16a34a);
-  opacity: 0.6;
+  background: conic-gradient(from 180deg, #16a34a, #86efac, #15803d, #22c55e, #16a34a);
+  opacity: 0.7;
   animation:
     jarvis-spin-r calc(var(--orb-spin) * 1.4) linear infinite,
     jarvis-morph-2 calc(var(--orb-morph) * 1.15) ease-in-out infinite,
@@ -231,8 +231,9 @@ body {
   z-index: 2;
   font-weight: 700;
   letter-spacing: 0.32em;
+  /* White wordmark with a dark-green outline so it reads on the green orb AND the white canvas. */
   color: #ffffff;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.35), 0 0 18px rgba(34,197,94,0.55);
+  text-shadow: 0 0 2px rgba(8,40,24,0.9), 0 1px 2px rgba(8,40,24,0.65), 0 0 16px rgba(34,197,94,0.4);
 }
 
 @media (prefers-reduced-motion: reduce) {
