@@ -44,7 +44,7 @@ export function Card({ title, source, children, reasoning, meta, actions }: Card
         {meta && <div className="shrink-0 text-xs text-muted">{meta}</div>}
       </div>
 
-      {children && <div className="mt-2 text-sm leading-relaxed text-muted-strong">{children}</div>}
+      {children && <div className="mt-2 min-w-0 break-words text-sm leading-relaxed text-muted-strong">{children}</div>}
 
       {reasoning && (
         <p className="mt-2 text-xs italic text-muted">
@@ -53,9 +53,9 @@ export function Card({ title, source, children, reasoning, meta, actions }: Card
         </p>
       )}
 
-      <div className="mt-3 flex items-center justify-between gap-3">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <SourceChip source={source} />
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
     </article>
   );

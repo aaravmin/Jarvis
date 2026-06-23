@@ -147,9 +147,11 @@ export function OpportunitiesWorkspace({ opportunities }: { opportunities: Disco
       persistEdit={persistEdit}
       deleteRow={deleteRow}
       renderGrid={(rows) => (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
           {rows.map((o) => (
-            <OpportunityCard key={o.id} opportunity={o} showActions={false} />
+            <div key={o.id} className="min-w-0">
+              <OpportunityCard opportunity={o} showActions={false} />
+            </div>
           ))}
         </div>
       )}

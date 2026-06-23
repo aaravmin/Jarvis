@@ -215,7 +215,7 @@ export function PersonCard({
   );
 
   const body = (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+    <dl className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm">
       {person.roleTitle && (
         <>
           <dt className="text-muted">Role</dt>
@@ -243,7 +243,7 @@ export function PersonCard({
       {person.channels.length > 0 && (
         <>
           <dt className="text-muted">Contact</dt>
-          <dd className="text-muted-strong">
+          <dd className="min-w-0 break-all text-muted-strong">
             {person.channels.map((c) => `${c.kind}: ${c.value}`).join(" · ")}
           </dd>
         </>
@@ -272,7 +272,7 @@ export function PersonCard({
             {reasoning}
           </p>
         )}
-        {actions && <div className="mt-3 flex items-center justify-end gap-2">{actions}</div>}
+        {actions && <div className="mt-3 flex flex-wrap items-center justify-end gap-2">{actions}</div>}
       </article>
     );
   }

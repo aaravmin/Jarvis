@@ -125,9 +125,11 @@ export function ContactsWorkspace({ people, apolloEnabled }: { people: Discovere
       deleteRow={deleteRow}
       toolbarExtra={people.length > 0 ? <ContactsToolbar apolloEnabled={apolloEnabled} /> : null}
       renderGrid={(rows) => (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
           {rows.map((p) => (
-            <PersonCard key={p.id} person={p} showActions={false} apolloEnabled={apolloEnabled} />
+            <div key={p.id} className="min-w-0">
+              <PersonCard person={p} showActions={false} apolloEnabled={apolloEnabled} />
+            </div>
           ))}
         </div>
       )}
