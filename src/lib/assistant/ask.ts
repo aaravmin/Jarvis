@@ -156,6 +156,35 @@ const ADD_CONTACT_FN = {
   },
 };
 
+const SAVE_BATCH_FN = {
+  name: "save_batch",
+  description:
+    "Save the people you just drafted emails to as a named BATCH, so the user can track and later mark the whole round sent. Call this right after drafting a round of outreach (several draft_email calls). Give the batch a short descriptive name and the list of recipients you drafted to (their names or emails). Each recipient also becomes or updates a contact card automatically.",
+  parameters: {
+    type: "object" as const,
+    properties: {
+      name: { type: "string", description: "A short name for this batch, e.g. 'Brown alumni outreach' or 'YC investors round 1'." },
+      recipients: {
+        type: "array",
+        items: { type: "string" },
+        description: "The people you drafted to, as names or emails (or 'Name <email>').",
+      },
+    },
+    required: ["name", "recipients"],
+  },
+};
+
+const MARK_BATCH_SENT_FN = {
+  name: "mark_batch_sent",
+  description:
+    "Mark a saved batch as sent: advances every contact in that batch to 'emailed'. Use this when the user says they sent a batch, e.g. 'I just sent all the emails in the Brown alumni batch'. Pass the batch name (a partial name is fine).",
+  parameters: {
+    type: "object" as const,
+    properties: { name: { type: "string", description: "The batch name the user said they sent." } },
+    required: ["name"],
+  },
+};
+
 const MAX_TURNS = 8;
 const MAX_TOKENS = 8000;
 
@@ -169,7 +198,9 @@ function systemPrompt(todayISO: string, dataDigest?: string, canAct?: boolean): 
 - draft_email: compose an email and save it as a DRAFT in Gmail (it is never sent, the user reviews and sends it). Write the full body from their intent.
 - save_drive_template: save a Google Doc the user names as a reusable template.
 - list_templates: read the user's saved templates (name, subject, full body). Use it when they ask to draft from a template or to adapt one.
-- add_contact: find a person online and save them to Contacts, Jarvis reads their LinkedIn in a real logged-in browser (role, company, bio) and their work email when available. Give a LinkedIn URL when the user has one, otherwise their name (plus company/org to disambiguate).`
+- add_contact: find a person online and save them to Contacts, Jarvis reads their LinkedIn in a real logged-in browser (role, company, bio) and their work email when available. Give a LinkedIn URL when the user has one, otherwise their name (plus company/org to disambiguate).
+- save_batch: after drafting a round of outreach emails, save those recipients as a named batch so the user can track and later mark them all sent.
+- mark_batch_sent: when the user says they sent a batch, advance every contact in it to "emailed".`
     : "";
   const actRules = canAct
     ? `\n- Taking actions: when the user asks you to schedule something, draft an email, or save a template, actually call the matching tool, don't just describe what you would do. Confirm concretely afterward (what you created and when).
@@ -178,7 +209,8 @@ function systemPrompt(todayISO: string, dataDigest?: string, canAct?: boolean): 
 - Templates: when the user references one of their saved templates ("use my outreach template", "draft from my X template"), call list_templates, pick the one they mean, and MEANINGFULLY adapt it to their request, fill in the {{placeholders}} with the specifics they gave, and change tone, length, or content as asked, then call draft_email with your edited subject and body. Don't just echo the template back unchanged.
 - Adding contacts: when the user asks you to add/create/save a contact, "make a contact card" for someone, or look a person up to keep, call add_contact, pass linkedin_url if they gave a link, otherwise the name (and company/org if they mentioned one). To add several people (e.g. everyone in a spreadsheet, or a named person), call add_contact once per person. Don't refuse before trying: you look people up by reading LinkedIn in a real logged-in browser, which IS Playwright, so if the user says "use Playwright" to research someone, that means add_contact. Call the tool rather than claiming you have no browser or scraping ability. Then RELAY exactly what add_contact returns, if it says the user must log into LinkedIn, tell them to sign into the window that opened and ask again; if it says it needs a LinkedIn URL or a backend that isn't configured, pass that along honestly instead of pretending you saved someone. Afterward, state plainly who you saved and which details you found (role, company, email), and name any detail that wasn't available rather than inventing it.
 - Never add the wrong person. If add_contact reports it could not confidently match the name and lists candidates, do NOT pick one yourself, relay the candidates and ask the user which they meant (or to paste a LinkedIn URL). When the user describes someone with an ambiguous qualifier like "of Brown University", do not assume: ask whether they mean an alum (studied there) or someone who works/worked there, because those are different people, then search with that in mind.
-- Don't abandon a multi-part request because one input is missing. If a referenced document truly is not found after calling read_document, still do every other part you can (research and add any named people with add_contact, use the data you do have), then tell the user exactly which part you could not do and why.`
+- Don't abandon a multi-part request because one input is missing. If a referenced document truly is not found after calling read_document, still do every other part you can (research and add any named people with add_contact, use the data you do have), then tell the user exactly which part you could not do and why.
+- Email batches: when the user asks you to draft a ROUND of emails (several people at once, e.g. "draft outreach to all my Brown contacts"), draft each one with draft_email (each recipient automatically becomes or updates a contact card), then call save_batch once with a short descriptive batch name and the list of everyone you drafted to. Tell the user the batch name. Later, when they say they sent it ("I sent the X batch", "those emails went out"), call mark_batch_sent with that name so their contacts move to "emailed".`
     : "";
   const dataBlock = dataDigest
     ? `\n\nThe user's connected data (your working memory, use it directly for quick questions, and search_my_data for anything more specific):\n${dataDigest}`
@@ -204,7 +236,7 @@ export async function ask(message: string, ctx?: AskDataContext): Promise<AskRes
     WEB_SEARCH_FN,
     ...(ctx?.searchData ? [SEARCH_MY_DATA_FN] : []),
     ...(ctx?.readDocument ? [READ_DOCUMENT_FN] : []),
-    ...(ctx?.actions ? [CREATE_EVENT_FN, DRAFT_EMAIL_FN, SAVE_TEMPLATE_FN, LIST_TEMPLATES_FN, ADD_CONTACT_FN] : []),
+    ...(ctx?.actions ? [CREATE_EVENT_FN, DRAFT_EMAIL_FN, SAVE_TEMPLATE_FN, LIST_TEMPLATES_FN, ADD_CONTACT_FN, SAVE_BATCH_FN, MARK_BATCH_SENT_FN] : []),
     LIST_DIR_FN,
     READ_FILE_FN,
   ];
@@ -281,6 +313,14 @@ export async function ask(message: string, ctx?: AskDataContext): Promise<AskRes
     if (name === "add_contact" && ctx?.actions) {
       const out = await ctx.actions.addContact(args as Parameters<typeof ctx.actions.addContact>[0]);
       if (out.ref) actions.push(out.ref);
+      return { ok: out.ok, result: out.message };
+    }
+    if (name === "save_batch" && ctx?.actions) {
+      const out = await ctx.actions.saveBatch(args as Parameters<typeof ctx.actions.saveBatch>[0]);
+      return { ok: out.ok, result: out.message };
+    }
+    if (name === "mark_batch_sent" && ctx?.actions) {
+      const out = await ctx.actions.markBatchSent(args as Parameters<typeof ctx.actions.markBatchSent>[0]);
       return { ok: out.ok, result: out.message };
     }
     return { ok: false, content: `Unknown tool: ${name || "(unnamed)"}` };

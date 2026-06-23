@@ -8,6 +8,7 @@ import { createDraft } from "@/lib/google/gmail";
 import { extractFileId, findDocsByName, readDocText } from "@/lib/google/drive";
 import { saveDriveTemplate, listTemplates as loadTemplates } from "@/lib/templates/store";
 import { addContact as addContactByQuery } from "@/lib/contacts/add-contact";
+import { upsertContactByRecipient, parseRecipient, saveBatch, markBatchSent } from "@/lib/contacts/batches";
 import { formatWhen } from "@/lib/format";
 import type { AskActionRef } from "@/lib/assistant/types";
 
@@ -39,6 +40,10 @@ export type AskActions = {
   listTemplates: () => Promise<{ ok: boolean; message: string }>;
   /** Find a person online (LinkedIn scrape + Apollo) and save them as a contact. */
   addContact: (a: { name?: string; linkedin_url?: string; company?: string; context?: string }) => Promise<ActionOutcome>;
+  /** Save the people just drafted to as a named batch. */
+  saveBatch: (a: { name?: string; recipients?: string[] }) => Promise<ActionOutcome>;
+  /** Mark a named batch sent: advance its contacts to "emailed". */
+  markBatchSent: (a: { name?: string }) => Promise<ActionOutcome>;
 };
 
 const MAX_DATE_INPUT = 200;
@@ -241,6 +246,13 @@ export function buildAskActions(supabase: SupabaseClient, userId: string): AskAc
 
       try {
         const draft = await createDraft(token, { to: to?.trim() || undefined, subject: subj || "(no subject)", body: text });
+        // Auto-create or update a contact card for whoever this draft is addressed to (best-effort).
+        if (to?.trim()) {
+          const r = parseRecipient(to);
+          if (r.email || r.name) {
+            await upsertContactByRecipient(supabase, userId, r.name, r.email).catch(() => null);
+          }
+        }
         const who = to?.trim() ? ` to ${to.trim()}` : "";
         return {
           ok: true,
@@ -367,6 +379,29 @@ export function buildAskActions(supabase: SupabaseClient, userId: string): AskAc
         };
       } catch {
         return { ok: false, message: "I couldn't add that contact just now, try again, or paste their LinkedIn URL." };
+      }
+    },
+
+    async saveBatch({ name, recipients }) {
+      const list = (recipients ?? []).map((r) => (r ?? "").trim()).filter(Boolean);
+      if (list.length === 0) return { ok: false, message: "Tell me who is in the batch (the people you drafted to)." };
+      try {
+        const { name: saved, count } = await saveBatch(supabase, userId, name ?? "", list);
+        return { ok: true, message: `Saved the batch "${saved}" with ${count} contact${count === 1 ? "" : "s"}. When you send them, tell me "I sent the ${saved} batch" and I will mark them emailed.` };
+      } catch {
+        return { ok: false, message: "I couldn't save that batch just now." };
+      }
+    },
+
+    async markBatchSent({ name }) {
+      const n = (name ?? "").trim();
+      if (!n) return { ok: false, message: "Which batch did you send? Give me its name." };
+      try {
+        const { name: matched, updated, found } = await markBatchSent(supabase, userId, n);
+        if (!found) return { ok: false, message: `I couldn't find a batch named "${n}". Want me to list your batches?` };
+        return { ok: true, message: `Marked ${updated} contact${updated === 1 ? "" : "s"} in "${matched}" as emailed.` };
+      } catch {
+        return { ok: false, message: "I couldn't update that batch just now." };
       }
     },
   };
