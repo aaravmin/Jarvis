@@ -18,11 +18,12 @@ type DocumentRow = {
   mime_type: string | null;
   file_size: number | null;
   extracted_text: string | null;
+  instructions: string | null;
   is_default: boolean;
   created_at: string;
 };
 
-const COLUMNS = "id, name, doc_type, storage_path, mime_type, file_size, extracted_text, is_default, created_at";
+const COLUMNS = "id, name, doc_type, storage_path, mime_type, file_size, extracted_text, instructions, is_default, created_at";
 
 function rowToDocument(r: DocumentRow): AppDocument {
   return {
@@ -33,6 +34,7 @@ function rowToDocument(r: DocumentRow): AppDocument {
     mimeType: r.mime_type ?? undefined,
     fileSize: r.file_size ?? undefined,
     extractedText: r.extracted_text ?? undefined,
+    instructions: r.instructions ?? undefined,
     isDefault: r.is_default ?? false,
     createdAt: r.created_at,
   };
@@ -84,6 +86,7 @@ export type NewDocument = {
   mimeType?: string;
   fileSize?: number;
   extractedText?: string;
+  instructions?: string;
   isDefault?: boolean;
 };
 
@@ -111,6 +114,7 @@ export async function createDocument(
       mime_type: doc.mimeType ?? null,
       file_size: doc.fileSize ?? null,
       extracted_text: doc.extractedText?.trim() || null,
+      instructions: doc.instructions?.trim() || null,
       is_default: doc.isDefault ?? false,
     })
     .select(COLUMNS)

@@ -123,6 +123,7 @@ export async function runOutreach(
       goal: opts.goal,
       senderDigest: profileDigest(profile) || undefined,
       templateText,
+      instructions: template?.instructions,
     });
 
     const { data: updated } = await supabase

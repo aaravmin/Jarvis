@@ -29,6 +29,8 @@ export type EmailTemplate = {
   connectionTypeLabel?: string;
   driveFileId?: string;
   timesUsed: number;
+  /** Freeform user instructions on how to use this template (e.g. how to fill bracketed slots). */
+  instructions?: string;
 };
 
 /** The concrete email written for one specific contact (may include personal specifics). */

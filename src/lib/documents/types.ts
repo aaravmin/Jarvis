@@ -25,6 +25,8 @@ export type AppDocument = {
   mimeType?: string;
   fileSize?: number;
   extractedText?: string;
+  /** Freeform user instructions on how Jarvis should use this document. */
+  instructions?: string;
   isDefault: boolean;
   createdAt: string;
 };

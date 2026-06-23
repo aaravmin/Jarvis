@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, FileText, Link2, Bot, User } from "lucide-react";
+import { Trash2, FileText, Link2, Bot, User, Loader2 } from "lucide-react";
 import type { EmailTemplate, ConnectionType } from "@/lib/templates/types";
 
 /** Lists saved templates + connection types with delete. Optimistic removal, no full reload needed. */
@@ -79,6 +79,7 @@ export function TemplatesManager({
                     ))}
                   </div>
                 )}
+                <TemplateInstructions id={t.id} initial={t.instructions} />
               </div>
             ))}
           </div>
@@ -109,6 +110,52 @@ export function TemplatesManager({
           </div>
         </section>
       )}
+    </div>
+  );
+}
+
+/** Per-template instructions editor: tells Jarvis how to fill this template (saved on the template). */
+function TemplateInstructions({ id, initial }: { id: string; initial?: string }) {
+  const [value, setValue] = useState(initial ?? "");
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function save() {
+    setBusy(true);
+    setSaved(false);
+    try {
+      const res = await fetch(`/api/templates/${id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ instructions: value }),
+      });
+      if (res.ok) {
+        setSaved(true);
+        window.setTimeout(() => setSaved(false), 1500);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 border-t border-border pt-3">
+      <label className="text-[11px] font-medium uppercase tracking-wide text-muted">Instructions for Jarvis</label>
+      <textarea
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={'How should Jarvis fill this template? e.g. bracketed parts like [what they do] are instructions, research the person and fill them in.'}
+        className="mt-1 min-h-[56px] w-full resize-y rounded-lg border border-border bg-surface px-3 py-2 text-xs text-foreground outline-none placeholder:text-muted"
+      />
+      <button
+        type="button"
+        onClick={() => void save()}
+        disabled={busy || value === (initial ?? "")}
+        className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border border-accent/50 px-2.5 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent-soft/40 disabled:opacity-50"
+      >
+        {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+        {saved ? "Saved" : "Save instructions"}
+      </button>
     </div>
   );
 }

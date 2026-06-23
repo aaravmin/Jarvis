@@ -10,6 +10,7 @@ import { loadProfile, profileDigest } from "@/lib/profile";
 import { listDocuments } from "@/lib/documents/store";
 import type { AppDocument } from "@/lib/documents/types";
 import { recentStyleExamples, styleExamplesBlock } from "@/lib/learning/store";
+import { webContextForContact } from "@/lib/contacts/research-web";
 
 /** A short digest of the user's uploaded materials (resume/bio), so the email speaks to real background. */
 function materialsDigest(docs: AppDocument[]): string {
@@ -72,10 +73,20 @@ const SYSTEM = `You write outreach emails AND distill them into reusable, privac
 
 You produce TWO things via the connection_email tool:
 1. The CONCRETE email for this specific contact. Weave in the personal connection naturally and warmly.
-   Fill any base-template placeholders from the provided context. Don't invent facts. Write in the
-   USER'S voice using their profile and materials, and reference their real background, never made-up
-   facts. If past revisions are shown, match the user's revealed style and preferences (tone, length,
-   greeting and sign-off, phrasing, what they add or cut).
+   The base template may contain bracketed slots, e.g. [enter name], [student/alum], [what they do],
+   [something they did/worked on], [create connection to what they do], or conditionals like [if they
+   were a transfer student put it here] or [if someone referred me put it here]. These are INSTRUCTIONS
+   for what to write, NOT literal text. Fill each slot with specific, accurate content from the CONTACT
+   info, the WEB RESEARCH, and the connection detail; you SHOULD infer the contact's role, focus, and a
+   notable thing they worked on from the research to fill "what they do" / "what they worked on", and
+   form a genuine connection to the user's interests, be specific not generic. For a conditional slot,
+   include it only when it is actually true from the facts, otherwise drop it and smooth the sentence.
+   NEVER leave a literal bracket, placeholder, or instruction wording in the final email; if a slot
+   cannot be filled from the facts, rewrite the sentence to flow without it. Don't invent facts the
+   research does not support. Write in the USER'S voice using their profile and materials, and reference
+   their real background, never made-up facts. If past revisions are shown, match the user's revealed
+   style and preferences (tone, length, greeting and sign-off, phrasing, what they add or cut). Follow
+   any explicit INSTRUCTIONS provided for this email.
 2. A GENERALIZED, reusable template + a connection TYPE.
 
 HARD PRIVACY RULE for the generalized outputs (generalized_*, connection_type_*):
@@ -99,6 +110,8 @@ export type ComposeInput = {
   connectionDetail: string;
   context?: string;
   tone?: string;
+  /** Optional user instructions attached to the chosen template (how to fill it). */
+  instructions?: string;
 };
 
 export async function composeConnectionEmail(
@@ -106,14 +119,16 @@ export async function composeConnectionEmail(
   userId: string,
   input: ComposeInput,
 ): Promise<ComposeResult> {
-  // 1. Resolve a base template, if any.
+  // 1. Resolve a base template, if any. A saved template can carry user instructions on how to fill it.
   let baseText = "";
   let baseName: string | undefined;
+  let templateInstructions = input.instructions?.trim() || "";
   if (input.baseTemplateId) {
     const t = await getTemplate(supabase, userId, input.baseTemplateId);
     if (!t) throw new Error("That saved template no longer exists.");
     baseText = `Subject: ${t.subject ?? ""}\n\n${t.body}`;
     baseName = t.name;
+    if (!templateInstructions && t.instructions) templateInstructions = t.instructions.trim();
   } else if (input.driveTemplateRef && input.driveTemplateRef.trim()) {
     const token = await getValidAccessToken(supabase, userId);
     const fileId = extractFileId(input.driveTemplateRef);
@@ -144,11 +159,13 @@ export async function composeConnectionEmail(
     }
   }
 
-  // 3. Ground in the user's own memory (profile + materials) and learn from how they edit past drafts.
-  const [profile, docs, examples] = await Promise.all([
+  // 3. Ground in the user's own memory (profile + materials), research the contact on the web (to fill
+  //    "what they do / worked on" slots), and learn from how they edit past drafts.
+  const [profile, docs, examples, webContext] = await Promise.all([
     loadProfile(supabase),
     listDocuments(supabase, userId),
     recentStyleExamples(supabase, userId, "outreach_email"),
+    webContextForContact(input.contactName, input.context),
   ]);
   const senderDigest = profileDigest(profile);
   const materials = materialsDigest(docs);
@@ -156,8 +173,10 @@ export async function composeConnectionEmail(
 
   const userMsg = [
     `Contact: ${input.contactName}${input.contactEmail ? ` <${input.contactEmail}>` : ""}`,
-    baseText ? `BASE TEMPLATE${baseName ? ` ("${baseName}")` : ""}:\n---\n${baseText}\n---` : "No base template, write from scratch in a warm, concise voice.",
+    baseText ? `BASE TEMPLATE${baseName ? ` ("${baseName}")` : ""} (fill its bracketed slots, leave no brackets):\n---\n${baseText}\n---` : "No base template, write from scratch in a warm, concise voice.",
     `PERSONAL CONNECTION (use ONLY for the concrete email, never put this in the generalized outputs):\n${input.connectionDetail.trim()}`,
+    webContext ? `WEB RESEARCH about ${input.contactName} (use to fill what they do and what they have worked on; do not invent beyond it):\n${webContext}` : "",
+    templateInstructions ? `INSTRUCTIONS for this email (follow them):\n${templateInstructions}` : "",
     typeGuidance,
     senderDigest ? `ABOUT ME (the sender):\n${senderDigest}` : "",
     materials,

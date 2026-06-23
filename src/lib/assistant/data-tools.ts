@@ -360,10 +360,10 @@ export async function searchMyData(supabase: SupabaseClient, q: DataQuery): Prom
 export async function readDocumentTool(supabase: SupabaseClient, q: { name?: string }): Promise<DataSearchResult> {
   const { data } = await supabase
     .from("documents")
-    .select("name, doc_type, extracted_text")
+    .select("name, doc_type, extracted_text, instructions")
     .order("created_at", { ascending: false })
     .limit(50);
-  const docs = (data ?? []) as { name: string; doc_type: string | null; extracted_text: string | null }[];
+  const docs = (data ?? []) as { name: string; doc_type: string | null; extracted_text: string | null; instructions: string | null }[];
   if (!docs.length) {
     return { ok: true, text: "The user has no uploaded documents yet. They can add resumes, spreadsheets, or materials on the Documents page." };
   }
@@ -376,11 +376,16 @@ export async function readDocumentTool(supabase: SupabaseClient, q: { name?: str
   if (!match) {
     return { ok: true, text: `No uploaded document matches "${q.name}". Available: ${docs.map((d) => d.name).join(", ")}.` };
   }
+  const instr = (match.instructions ?? "").trim();
+  const instrBlock = instr ? `Instructions the user attached to this document (follow them):\n${instr}\n\n` : "";
   const text = (match.extracted_text ?? "").trim();
   if (!text) {
-    return { ok: true, text: `"${match.name}" is uploaded but no readable text was extracted (it may be an image-only PDF or an unsupported format). Ask the user to re-upload it.` };
+    return {
+      ok: true,
+      text: `${instrBlock}"${match.name}" is uploaded but no readable text was extracted (it may be an image-only PDF or an unsupported format). Ask the user to re-upload it.`,
+    };
   }
-  return { ok: true, text: `Document "${match.name}":\n${text.slice(0, 15000)}` };
+  return { ok: true, text: `${instrBlock}Document "${match.name}":\n${text.slice(0, 15000)}` };
 }
 
 /** Bundle the digest + search closure + write actions for ask(). One call per assistant request. */

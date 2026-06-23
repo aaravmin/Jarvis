@@ -19,7 +19,7 @@ export function NewTemplateForm() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [f, setF] = useState({ name: "", subject: "", body: "" });
+  const [f, setF] = useState({ name: "", subject: "", body: "", instructions: "" });
   const set =
     (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setF((p) => ({ ...p, [k]: e.target.value }));
@@ -66,7 +66,7 @@ export function NewTemplateForm() {
       const data = await res.json().catch(() => null);
       if (!res.ok) setErr(data?.error ?? "Could not save the template.");
       else {
-        setF({ name: "", subject: "", body: "" });
+        setF({ name: "", subject: "", body: "", instructions: "" });
         setOpen(false);
         router.refresh();
       }
@@ -104,6 +104,12 @@ export function NewTemplateForm() {
           placeholder={"Template body. Use {{placeholders}} for the parts Jarvis should fill in,\ne.g. Hi {{first name}}, …"}
           value={f.body}
           onChange={set("body")}
+        />
+        <textarea
+          className={`${input} min-h-[70px] resize-y`}
+          placeholder={"Instructions (optional). How should Jarvis use this template? e.g. \"Bracketed parts like [what they do] are instructions, not literal text, research the person and fill them in.\""}
+          value={f.instructions}
+          onChange={set("instructions")}
         />
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-2">

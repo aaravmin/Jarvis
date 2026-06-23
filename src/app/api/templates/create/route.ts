@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
-  let body: { name?: string; subject?: string; body?: string };
+  let body: { name?: string; subject?: string; body?: string; instructions?: string };
   try {
     body = await request.json();
   } catch {
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   if (text.length > MAX_BODY) return NextResponse.json({ error: "That template is too large to save." }, { status: 400 });
 
   try {
-    const saved = await saveUserTemplate(supabase, user.id, { name, subject, body: text });
+    const saved = await saveUserTemplate(supabase, user.id, { name, subject, body: text, instructions: body.instructions });
     return NextResponse.json({ ok: true, ...saved });
   } catch (err) {
     return NextResponse.json(

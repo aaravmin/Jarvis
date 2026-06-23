@@ -30,6 +30,7 @@ export async function POST(request: Request) {
     mimeType?: string;
     fileSize?: number;
     extractedText?: string;
+    instructions?: string;
     isDefault?: boolean;
   };
   try {
@@ -78,6 +79,7 @@ export async function POST(request: Request) {
       mimeType: body.mimeType,
       fileSize: typeof body.fileSize === "number" ? body.fileSize : undefined,
       extractedText: resolvedText || undefined,
+      instructions: body.instructions,
       isDefault: Boolean(body.isDefault),
     });
     return NextResponse.json({ ok: true, document: doc, extractedChars: resolvedText.length });

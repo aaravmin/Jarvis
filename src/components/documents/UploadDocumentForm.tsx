@@ -28,15 +28,16 @@ export function UploadDocumentForm() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [f, setF] = useState<{ name: string; docType: DocType; text: string; isDefault: boolean }>({
+  const [f, setF] = useState<{ name: string; docType: DocType; text: string; instructions: string; isDefault: boolean }>({
     name: "",
     docType: "resume",
     text: "",
+    instructions: "",
     isDefault: false,
   });
 
   function reset() {
-    setF({ name: "", docType: "resume", text: "", isDefault: false });
+    setF({ name: "", docType: "resume", text: "", instructions: "", isDefault: false });
     setFile(null);
     if (fileRef.current) fileRef.current.value = "";
   }
@@ -104,6 +105,7 @@ export function UploadDocumentForm() {
           mimeType,
           fileSize,
           extractedText: f.text,
+          instructions: f.instructions,
           isDefault: f.isDefault,
         }),
       });
@@ -172,6 +174,12 @@ export function UploadDocumentForm() {
           }
           value={f.text}
           onChange={(e) => setF((p) => ({ ...p, text: e.target.value.slice(0, MAX_TEXT) }))}
+        />
+        <textarea
+          className={`${input} min-h-[60px] resize-y`}
+          placeholder={"Instructions (optional). How should Jarvis use this document? e.g. \"This is a template, bracketed parts are instructions to research and fill in.\""}
+          value={f.instructions}
+          onChange={(e) => setF((p) => ({ ...p, instructions: e.target.value }))}
         />
       </div>
 

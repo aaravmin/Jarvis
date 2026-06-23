@@ -60,6 +60,7 @@ type TemplateRow = {
   connection_type_id: string | null;
   drive_file_id: string | null;
   times_used: number | null;
+  instructions: string | null;
   // Supabase types a many-to-one embed as an array; normalize either shape.
   connection_types?: { label: string }[] | { label: string } | null;
 };
@@ -77,13 +78,14 @@ function rowToTemplate(r: TemplateRow): EmailTemplate {
     connectionTypeLabel: ct?.label ?? undefined,
     driveFileId: r.drive_file_id ?? undefined,
     timesUsed: r.times_used ?? 0,
+    instructions: r.instructions ?? undefined,
   };
 }
 
 export async function listTemplates(supabase: SupabaseClient, userId: string): Promise<EmailTemplate[]> {
   const { data } = await supabase
     .from("email_templates")
-    .select("id, name, subject, body, placeholders, source, connection_type_id, drive_file_id, times_used, connection_types(label)")
+    .select("id, name, subject, body, placeholders, source, connection_type_id, drive_file_id, times_used, instructions, connection_types(label)")
     .eq("user_id", userId)
     .order("times_used", { ascending: false })
     .order("name", { ascending: true });
@@ -93,7 +95,7 @@ export async function listTemplates(supabase: SupabaseClient, userId: string): P
 export async function getTemplate(supabase: SupabaseClient, userId: string, id: string): Promise<EmailTemplate | null> {
   const { data } = await supabase
     .from("email_templates")
-    .select("id, name, subject, body, placeholders, source, connection_type_id, drive_file_id, times_used, connection_types(label)")
+    .select("id, name, subject, body, placeholders, source, connection_type_id, drive_file_id, times_used, instructions, connection_types(label)")
     .eq("user_id", userId)
     .eq("id", id)
     .maybeSingle();
@@ -238,7 +240,7 @@ export async function saveDriveTemplate(
 export async function saveUserTemplate(
   supabase: SupabaseClient,
   userId: string,
-  args: { name: string; subject?: string; body: string },
+  args: { name: string; subject?: string; body: string; instructions?: string },
 ): Promise<{ templateId: string; name: string }> {
   const body = args.body.trim();
   if (!body) throw new Error("A template needs some body text.");
@@ -253,11 +255,27 @@ export async function saveUserTemplate(
       body,
       placeholders: extractPlaceholders(subject ? `${subject}\n${body}` : body),
       source: "user",
+      instructions: args.instructions?.trim() || null,
     })
     .select("id")
     .single();
   if (error) throw new Error(`Could not save template: ${error.message}`);
   return { templateId: data.id as string, name };
+}
+
+/** Update a template's freeform instructions (how Jarvis should fill it). RLS scopes to the caller. */
+export async function setTemplateInstructions(
+  supabase: SupabaseClient,
+  userId: string,
+  id: string,
+  instructions: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("email_templates")
+    .update({ instructions: instructions.trim() || null })
+    .eq("user_id", userId)
+    .eq("id", id);
+  if (error) throw new Error(`Could not save instructions: ${error.message}`);
 }
 
 export async function deleteTemplate(supabase: SupabaseClient, userId: string, id: string): Promise<void> {
