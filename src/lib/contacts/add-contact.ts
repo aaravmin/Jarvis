@@ -5,6 +5,7 @@ import { normalizeLinkedInProfileUrl, searchLinkedInPeople } from "@/lib/agents/
 import { getCredentialForSite } from "@/lib/credentials/store";
 import { browserEnabled } from "@/lib/agents/application/browser";
 import { apolloEnabled, apolloMatchPerson, type ApolloPerson } from "@/lib/apollo";
+import { webSearch, tavilyEnabled } from "@/lib/search/tavily";
 import type { LinkedInPerson } from "@/lib/agents/linkedin/types";
 
 /**
@@ -165,7 +166,27 @@ export async function addContact(
       }
     }
 
-    // 1b, Apollo match by name → use it only if the name it returns ACTUALLY matches the request.
+    // 1b, Web search for their LinkedIn URL (works even without the browser backend). The /in/ slug must
+    // contain a token of the requested name, so we don't grab a random stranger's profile.
+    if (!url && tavilyEnabled()) {
+      try {
+        const hits = await webSearch(`${name} ${company} LinkedIn`.trim(), { maxResults: 6 });
+        const reqTokens = nameTokens(name);
+        for (const h of hits) {
+          const norm = normalizeLinkedInProfileUrl(h.url || "");
+          if (!norm) continue;
+          const slug = norm.slice(norm.lastIndexOf("/in/") + 4);
+          if (reqTokens.some((t) => slug.includes(t))) {
+            url = norm;
+            break;
+          }
+        }
+      } catch {
+        /* web search is best-effort */
+      }
+    }
+
+    // 1c, Apollo match by name → use it only if the name it returns ACTUALLY matches the request.
     if (!url && apolloEnabled()) {
       const ap = await apolloMatchPerson({ name, company: company || undefined });
       if (ap?.name && nameMatches(ap.name, name)) {
@@ -181,7 +202,7 @@ export async function addContact(
 
   // 2, Have a URL → the full scrape + Apollo importer (handles dedup, provenance, the source chip).
   if (url) {
-    const r = await importContactFromLinkedIn(supabase, userId, url);
+    const r = await importContactFromLinkedIn(supabase, userId, url, name || undefined);
     if (r.ok && r.contactId && !r.alreadyExisted && input.context?.trim()) {
       // Fold the user's "who is this" note into the NEW contact (the importer doesn't take one).
       // Skip when the contact already existed, we'd otherwise overwrite the notes they already have.

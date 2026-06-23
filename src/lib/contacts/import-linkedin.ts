@@ -63,6 +63,8 @@ export async function importContactFromLinkedIn(
   supabase: SupabaseClient,
   userId: string,
   rawUrl: string,
+  /** The name the user gave us, used when the scrape/Apollo can't determine it, so a URL still yields a card. */
+  fallbackName?: string,
 ): Promise<ImportLinkedInResult> {
   const base = (over: Partial<ImportLinkedInResult>): ImportLinkedInResult => ({
     ok: false,
@@ -121,7 +123,8 @@ export async function importContactFromLinkedIn(
     if (apollo) usedApollo = true;
   }
 
-  const fullName = (profile?.name || apollo?.name || "").trim();
+  // Prefer a scraped/Apollo name; fall back to the name the user gave so a known URL always makes a card.
+  const fullName = (profile?.name || apollo?.name || (fallbackName ?? "")).trim();
   if (!fullName) {
     if (needsLogin) {
       return base({ needsLogin: true, message: "Log into LinkedIn in the window Jarvis opened, then import the profile again." });
@@ -239,9 +242,10 @@ export async function importContactFromLinkedIn(
 
   const got = [email && "email", roleTitle && "role", company && "company", background && "bio"].filter(Boolean) as string[];
   const gotStr = got.length ? ` (${got.join(", ")})` : "";
-  const tail =
-    !usedBrowser && !usedApollo
-      ? " I could only save the link, set JARVIS_BROWSER=playwright or APOLLO_API_KEY to auto-fill their details."
+  const tail = needsLogin
+    ? " I saved the link but couldn't read the profile, log into LinkedIn in the window I opened, then ask again to fill in their role and bio."
+    : !usedBrowser && !usedApollo
+      ? " I saved the link; to auto-fill their role, bio, and email, set JARVIS_BROWSER=playwright (and log into LinkedIn) or APOLLO_API_KEY."
       : !email && apolloEnabled()
         ? " No work email was available."
         : !apolloEnabled()
