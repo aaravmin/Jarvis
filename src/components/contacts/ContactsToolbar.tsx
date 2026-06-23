@@ -49,13 +49,15 @@ export function ContactsToolbar({ apolloEnabled = false }: { apolloEnabled?: boo
       const data = await res.json();
       if (!res.ok) {
         setMsg(data?.error ?? "Sync failed.");
+      } else if (data.updated > 0) {
+        setMsg(`Updated ${data.updated} contact${data.updated === 1 ? "" : "s"} to “Spoke”.`);
+        router.refresh();
+      } else if (!data.emailSynced) {
+        setMsg("No email is synced yet. Connect Google and sync your inbox on the Email tab, then try again.");
+      } else if (data.contactsWithEmail === 0) {
+        setMsg("None of your contacts have an email address yet, so there is nothing to match. Add emails, or run Find email / Validate & enrich, first.");
       } else {
-        setMsg(
-          data.updated > 0
-            ? `Updated ${data.updated} contact${data.updated === 1 ? "" : "s"} to “Spoke”.`
-            : "No new correspondence found.",
-        );
-        if (data.updated > 0) router.refresh();
+        setMsg(`Checked ${data.scanned} contacts against your synced email. None of them have emailed you yet, so nothing changed.`);
       }
     } catch {
       setMsg("Network error.");

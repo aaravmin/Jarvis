@@ -2,7 +2,14 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ContactOutreachStatus } from "@/lib/research/types";
 
-export type OutreachSyncResult = { updated: number; scanned: number };
+export type OutreachSyncResult = {
+  updated: number;
+  scanned: number;
+  /** True when any email has been ingested (so there is an inbox to match against). */
+  emailSynced: boolean;
+  /** How many accepted contacts have at least one email address on file. */
+  contactsWithEmail: number;
+};
 
 /**
  * Deterministically advance contact outreach status from ingested inbound email. If a contact's email
@@ -23,7 +30,7 @@ export async function syncOutreachFromEmail(supabase: SupabaseClient): Promise<O
     const e = (s as { from_email: string | null }).from_email;
     if (e) senders.add(e.trim().toLowerCase());
   }
-  if (senders.size === 0) return { updated: 0, scanned: 0 };
+  const emailSynced = senders.size > 0;
 
   // 2. Accepted contacts + their email channels.
   const { data: contacts } = await supabase
@@ -31,7 +38,7 @@ export async function syncOutreachFromEmail(supabase: SupabaseClient): Promise<O
     .select("id, outreach_status")
     .eq("review_status", "accepted");
   const rows = (contacts ?? []) as { id: string; outreach_status: ContactOutreachStatus | null }[];
-  if (rows.length === 0) return { updated: 0, scanned: 0 };
+  if (rows.length === 0) return { updated: 0, scanned: 0, emailSynced, contactsWithEmail: 0 };
 
   const ids = rows.map((r) => r.id);
   const { data: channels } = await supabase
@@ -45,6 +52,12 @@ export async function syncOutreachFromEmail(supabase: SupabaseClient): Promise<O
     const list = emailByContact.get(c.contact_id) ?? [];
     list.push(c.value.trim().toLowerCase());
     emailByContact.set(c.contact_id, list);
+  }
+  const contactsWithEmail = emailByContact.size;
+
+  // Nothing to match on (no inbox ingested, or no contact has an email). Return WHY so the UI can guide.
+  if (!emailSynced || contactsWithEmail === 0) {
+    return { updated: 0, scanned: rows.length, emailSynced, contactsWithEmail };
   }
 
   // 3. Advance matches (monotonic: only not_emailed/emailed → spoke).
@@ -61,5 +74,5 @@ export async function syncOutreachFromEmail(supabase: SupabaseClient): Promise<O
       .eq("id", r.id);
     if (!error) updated++;
   }
-  return { updated, scanned: rows.length };
+  return { updated, scanned: rows.length, emailSynced, contactsWithEmail };
 }
