@@ -3,9 +3,12 @@
 This file is read automatically every session. Follow it exactly.
 
 ## What this project is
-**Jarvis** — a personal command center that reads your email, meetings, and calendar, turns
-commitments into tracked tasks/events **with a source link for each**, proactively surfaces
-follow-ups, and is controllable by voice. See `/docs/PRD.md` and `/docs/ROADMAP.md`.
+**Jarvis** — a goal-grounded attention engine. It reads your email, meeting notes, Notion, and
+calendar, turns commitments into tracked tasks/follow-ups **with a source link for each**, and
+orders everything by importance against the goals and sub-goals you enter. One simple white UI:
+red = overdue/urgent, green = on-track/done. The point is reducing friction. (`/docs/PRD.md` and
+`/docs/ROADMAP.md` describe the original, larger product; the 2026-07-13 simplification in
+`/docs/DECISIONS.md` supersedes their scope.)
 
 ## HARD RULES (never violate these)
 1. **Supabase Postgres is the system of record.** Never store core data in Notion. Notion is, at most,

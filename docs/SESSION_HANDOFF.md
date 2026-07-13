@@ -4,221 +4,86 @@
 > chat. Points to files; does not summarize the whole codebase.
 
 ## What this project is
-**Jarvis** — a personal command center. It reads your email, meetings, and calendar, turns commitments
-into tracked tasks/events **with a source link for each**, proactively surfaces follow-ups, and is
-controllable by voice. Full product definition: `/docs/PRD.md`. Full roadmap: `/docs/ROADMAP.md`
-(canonical copy also at repo root as `jarvis-product-roadmap.md`).
+**Jarvis** — a goal-grounded attention engine.
+It reads your email, meeting notes, Notion, and calendar; turns commitments into tracked
+tasks/follow-ups with a source link for each; and orders everything by importance against the goals
+and sub-goals you enter.
+One simple white UI: red = overdue/urgent, green = on-track/done.
+The point is reducing friction.
+
+`/docs/PRD.md` + `/docs/ROADMAP.md` describe the original larger product; the **2026-07-13
+simplification** (five entries in `/docs/DECISIONS.md`) supersedes their scope.
 
 ## Hard rules (also in `/CLAUDE.md`)
-- Supabase Postgres is the system of record. Notion is only an optional one-way mirror.
-- The LLM never computes dates — use a date-parser library (chrono).
-- Every derived item stores `source_id` + `source_quote` + `confidence`.
-- No UI card renders without a working source chip (enforced by `<Card>`).
-- Ship autonomy L0 (suggest-only) first; narrowest OAuth scopes; tokens server-side.
+- Supabase Postgres is the system of record. Notion is READ-ONLY ingestion, never a store.
+- The LLM never computes dates (chrono in `src/lib/dates.ts`) and never computes priority
+  (`src/lib/priority/score.ts` is pure code).
+- Every derived item stores `source_id` + `source_quote` + `confidence`; no card without a source chip.
+- L0 suggest-only: derived items and their goal links land in Review; one approval accepts both.
+- Read-only narrow OAuth scopes (`gmail.readonly` + `calendar.readonly`); tokens server-side; RLS on.
 
-## Current state
-- ✅ **NEW — white/green theme · spreadsheet Contacts+Opportunities · em-dash-free · onboarding ·
-  encrypted login vault.** A productization batch (7 commits): (1) the whole app is now a light
-  white-and-green theme (`globals.css` tokens; orb recolored green; `/jarvis` hero is deep green).
-  (2) **Contacts and Opportunities open as a spreadsheet** by default: `src/components/data/`
-  (`DataTable` + `Workspace` + `ColumnDef`), with sticky header, group-by, sort, search, inline
-  select-then-edit (save-on-blur, optimistic + toast), row delete, CSV export, and a Grid toggle that
-  reuses the cards 4-wide. Opportunity field edits use a new `PATCH /api/opportunities` (deadline
-  chrono-resolved) + `DELETE`. (3) Em-dashes are gone everywhere and stripped from the assistant's
-  answer + web-search citations (`src/lib/text.ts` `stripDashes`). (4) New `/onboard` first-run
-  checklist (profile → Google → documents); new sign-ups land there; a "Set up" nav item. (5) An
-  **encrypted per-user site-login vault**: migration **0017** `site_credentials` (NOT applied yet),
-  AES-256-GCM (`CREDENTIALS_SECRET`), `/api/credentials`, a Connections "Saved site logins" UI, and the
-  Playwright LinkedIn flow now uses a **per-user** browser profile and **auto-logs-in** from the vault
-  (falls back to manual sign-in on a 2FA/captcha checkpoint). **Verify next:** Contacts/Opportunities
-  show the new table (try inline edit + Export CSV + group-by); Connections shows Saved site logins;
-  a new signup lands on /onboard.
-- ✅ **NEW — the orb assistant can now look people up and make contact cards.** Previously the
-  conversational assistant (`ask.ts`) had no scrape/contact tool, so it correctly said it "couldn't" —
-  the capability lived only on the People tab. Now it has an **`add_contact`** tool
-  (`src/lib/contacts/add-contact.ts` → `addContact`): say "make a contact card for <name> at <org>" or
-  paste a LinkedIn URL, and Jarvis resolves the person (pasted URL → LinkedIn People-search in the user's
-  own logged-in browser → Apollo match-by-name) and saves an enriched contact (role, company, bio, work
-  email when available), straight into People (`created_by='user'`/`accepted`). The orb's reply shows a
-  "Done by Jarvis" receipt (UserPlus icon) linking to their LinkedIn. Wiring: `add_contact` schema + fn
-  list + system-prompt rule + `execute()` in `ask.ts`; `addContact` on `buildAskActions`
-  (`src/lib/assistant/actions.ts`); `AskActionRef.kind += 'contact'` (`types.ts`); receipt in
-  `src/components/JarvisConsole.tsx`. Honest when a backend is off (tells the user to paste a URL / set
-  `JARVIS_BROWSER` / `APOLLO_API_KEY`) and on a LinkedIn login wall (sign into the opened window, ask
-  again). **Verify next:** open the orb, "add a contact for <someone> at <company>" → a contact card
-  appears in People; the reply links to their LinkedIn. Reviewed (3 HIGH findings, all fixed).
-- ✅ **NEW — Add a contact from a pasted LinkedIn URL (+ removed the manual Calendar-event tool).**
-  On the People tab, paste someone's `linkedin.com/in/…` link → `AddFromLinkedIn`
-  (`src/components/contacts/AddFromLinkedIn.tsx`) → `POST /api/contacts/import-linkedin` →
-  `importContactFromLinkedIn` (`src/lib/contacts/import-linkedin.ts`). Two best-effort enrichment tiers,
-  merged: **(A)** read the profile page via the user's own logged-in Chromium (`scrapeLinkedInProfile`,
-  new in `src/lib/agents/linkedin/search.ts`) → name, headline, role/company, location, About bio;
-  **(B)** Apollo by LinkedIn URL → the work email + a clean title/org. The contact lands **straight in
-  People** (`created_by='user'`, `review_status='accepted'` — it's an explicit single-person user action,
-  like the manual "Add a contact" form, so NOT Review). Dedups by `/in/<slug>`. **No `sources` row, no
-  migration** — provenance lives in `field_sources` (LinkedIn URL primary, `apollo.io` for the email) +
-  `source_quote` (headline) so the card's source chip works (rule #4). Degrades: Apollo-only (no
-  browser) gets the email; browser-only fills role/company/bio with no email; neither configured returns
-  an honest message naming `JARVIS_BROWSER=playwright` / `APOLLO_API_KEY`. **Also removed** the manual
-  "add a Google Calendar event" tool from the Connections tab (redundant — the assistant already creates
-  events); the `calendar.events` scope stays. **Verify next:** People → paste a LinkedIn URL → Import →
-  the new card appears (with email if Apollo is on; needs a one-time LinkedIn login in the opened window
-  for page details). Reviewed: 4-dimension adversarial pass, 7 distinct findings fixed + re-verified.
-- ✅ **Contacts: discover MANY · import a Sheet · validate + enrich.** Three things the user asked for,
-  three states: (1) **Discover many** — `runPeopleSearch` (`src/lib/research/run.ts`) already loops over
-  ALL validated candidates; the discovery prompt (`src/lib/research/extract.ts`) is now tuned for
-  **recall** ("find as many Brown alumni in X as you can" — exhaustive within what's citable, several
-  search angles, `MAX_TURNS` 12). (2) **Import a Sheet** — `importContactsFromSheet`
-  (`src/lib/google/import-contacts.ts`) lands each row in Review with the row as provenance. (3) **NEW:
-  validate + enrich** — `src/lib/contacts/validate-enrich.ts` + `POST /api/contacts/validate`:
-  Tier-1 format-checks the existing email/LinkedIn (no key needed) and, when `APOLLO_API_KEY` is set,
-  Tier-2 cross-checks the sheet's email against Apollo (verified/mismatch/unconfirmed/invalid) and fills
-  missing email/company/title/LinkedIn. **No migration** — verdicts live in `contacts.field_sources`
-  jsonb (`FieldSource` gained an optional `status`); rows stay in Review (L0); RLS-scoped; channel fills
-  are dedup-safe in code. UI: auto-runs after a Sheet import; "Validate & enrich" button on each Review
-  people-run (`ResearchRunCard`) and on the People toolbar (`ContactsToolbar`); coloured verdict badges
-  on `PersonCard`. **Verify next:** Connections → import a Sheets link → watch it import + validate, then
-  Review shows badges. Or People → "Validate & enrich". With no `APOLLO_API_KEY` it's format-only (the
-  button tooltips + response message say so). **Suggested follow-up migration for Aarav:** a
-  UNIQUE(contact_id, kind, value) on `contact_channels` (airtight dup-channel guard), and persisting
-  channel `sourceUrl`/`confidence` (today they're lost on reload — pre-existing).
-- ✅ **ONE LLM provider now — everything runs on xAI Grok.** `src/lib/llm/grok.ts` is the only real LLM
-  client (`grokStructured` / `grokToolLoop` / `grokText`, OpenAI-compatible, `XAI_API_KEY` + optional
-  `XAI_MODEL`, default grok-4.3). `src/lib/llm/gemini.ts` is now a thin **adapter**: it keeps the old
-  `gemini*` export names + Gemini `contents`/`parts` request shape (so the ~10 call sites are unchanged)
-  but translates every call into Grok's `messages` API and delegates. No call hits Google anymore
-  (`GEMINI_API_KEY` / Vertex are dead). `@anthropic-ai/sdk` is still installed but imported nowhere.
-- ✅ **Email + meetings → items extraction engine is LIVE (the keystone).** Ingested sources become
-  sourced, reviewable `items`. `src/lib/google/extract-items.ts` mines any text source (a `SourceKind`
-  swaps the prompt noun for email vs. meeting transcript) for tasks/events/follow-ups; provenance is
-  enforced in CODE after the model call: keep a candidate only if `backs(corpus, source_quote)` (rule
-  #3), resolve its `raw_due` phrase with chrono anchored to the source's `occurred_at` (rule #2), drop
-  confidence < 0.35, insert at `status='review'` (rule #5). Gmail ingest reads the FULL body
-  (`gmail.ts` `format=full` + MIME-tree parser). The Review queue (`src/lib/items/review.ts` +
-  `src/components/items/ReviewItemCard.tsx`) shows each item through `<Card>` with Accept/Dismiss →
-  `PATCH /api/items`. A **"Scan past emails"** button (`BackfillButton` → `POST /api/items/backfill` →
-  `src/lib/items/backfill.ts`) mines already-synced mail that predates the extractor. Meetings tab has a
-  paste→extract box. **Verify next: Sync email, watch items land in Review.**
-- ✅ **Task loop + unified action surface.** `/api/tasks` has POST/PATCH (complete · edit · chrono-re-
-  resolved due)/DELETE; `src/components/tasks/TaskItem.tsx` gives each item a complete checkbox, inline
-  edit, and delete. The Tasks page now shows ALL accepted derived types — `task`, `event`, AND
-  `follow_up` — with a type pill (events/follow-ups previously vanished after Review). PATCH/DELETE
-  accept all three types.
-- ✅ **Multi-agent system**: intent **router** (`POST /api/agent`) → exactly ONE agent. Live set:
-  **opportunity · contact · application · email · meeting · assistant** (the `calendar` agent was
-  removed — the assistant already reads Calendar and creates real events / drafts mail via its write
-  tools, so it was redundant). The **email** agent is now LIVE: it dispatches the backfill engine, so
-  "turn my inbox into tasks" actually mines synced mail into Review. Calendar/draft requests route to
-  the assistant. **Opportunity** + **People** research agents run two-phase (Tavily search → validated
-  structured report); deadlines resolved by `chrono-node`.
-- ✅ **Application & Outreach agent — runtime-unblocked (migration 0016 is applied).** (1) **Documents**
-  tab/store — resumes & grant materials in a private Supabase Storage bucket = the agent's memory
-  (PDF/DOCX text-extracted server-side on upload, `src/lib/documents/extract-text.ts`); (2) **Application
-  agent** (`src/lib/agents/application/*`) — reads a form (static parser + a `JARVIS_BROWSER=playwright`
-  rendered-DOM path), grounds a reviewable **field plan**, and can **fill the live form in a headed
-  browser** (`autofill.ts`) — attaches the resume, leaves the window open, **never submits**; surfaces on
-  the `Apply` tab + "Prepare with Jarvis" on Opportunity cards; (3) **Outreach agent**
-  (`src/lib/agents/outreach/*`) — per-contact `OutreachButton`, audience-tailored draft into **Gmail
-  Drafts**, **never sends**. Provenance enforced in code via the `backs()` gate.
-- ✅ **NEW — LinkedIn contact-sourcing (Playwright).** A **"Find LinkedIn contacts"** button on the Apply
-  card (`ApplicationRunCard`) and Opportunity card (`OpportunityCard`) → `POST /api/linkedin/contacts` →
-  `src/lib/agents/linkedin/{run,search,types}.ts`. It drives the user's OWN logged-in LinkedIn (a
-  persistent on-disk Chromium profile kept alive on `globalThis`; `browser.ts` `launchPersistentContext`)
-  to a People search scoped to the linked org + a role hint (recruiter for jobs, program officer for
-  grants), reads the result cards (anchored on `/in/` links via an IIFE reader like the Apply
-  `DOM_READER`), and lands people in **Review** as suggested contacts. **Reuses** the `research_runs →
-  sources → contacts → contact_channels → Review → People` pipeline (same as the Sheets importer) — **no
-  migration**. Read-only (never logs in / connects / messages); autonomy L0 (`review_status='review'`);
-  provenance per rule #3 (each contact gets `source_id` + a non-empty `source_quote` = on-page
-  headline+location, falling back to the profile URL, + `confidence`). Once accepted, the existing
-  Outreach "draft an email" button works on them for free. First run opens a window to log in once
-  (`needsLogin`), then the session persists (`LINKEDIN_USER_DATA_DIR`, default `~/.jarvis-browser/linkedin`).
-- ✅ **Playwright is installed, proven, and ENABLED.** playwright 1.61 + chromium-1228 are present;
-  `JARVIS_BROWSER=playwright` is now set in `.env.local`, so BOTH the headed Apply autofill
-  (`autofill.ts`, types grounded values into the live form, never submits) AND LinkedIn sourcing are
-  live. Unset, Apply falls back to the static-HTML reader (copy-from-plan) and LinkedIn sourcing reports
-  it's unavailable.
-- ✅ **Web search is Tavily** (`src/lib/search/tavily.ts` `webSearch()`), used by the orb assistant and
-  both research agents. The citation gate (rule #3) holds against Tavily page text. **No `TAVILY_API_KEY`
-  ⇒ the orb SAYS it can't web-search** (it no longer answers from memory silently).
-- ✅ **Jarvis has a voice (ElevenLabs).** `src/lib/voice/elevenlabs.ts` + `POST /api/voice`; client
-  playback in `JarvisConsole`. Silent until `ELEVENLABS_API_KEY` is set (text still works).
-- ✅ **Immersive home + hamburger-only nav.** `/jarvis` is a bare particle sphere (`JarvisSphere`) +
-  military clock on pure black; nav lives in the `NavDrawer` hamburger. The `/dev` Component Lab is now
-  gated out of production (server-side `notFound()` layout + hidden nav link).
-- ✅ Migrations `0001→0015` applied via the Supabase MCP; **`0016` applied via the dashboard SQL editor**
-  (absent from `list_migrations` but all objects verified live this session). `npm run build` + `tsc` +
-  `eslint` green.
+## Current state (all shipped to main, 2026-07-13)
+The app was **simplified extremely heavily** in one session (6 pushed commits, net ~-19k lines):
+1. `249e07b` — teardown: removed voice, the orb homepage + conversational assistant, the job applier
+   (autofill/documents/credentials vault), LinkedIn + Apollo, people/opportunity research, outreach +
+   templates, Tavily, Drive/Sheets extras. DB schema untouched.
+2. `5c924a5` — deterministic priority engine (`src/lib/priority/`): due-date proximity + goal-link
+   boost -> red/green buckets; extractor proposes per-item goal links, code verifies the quote
+   (`backs()`), one approval accepts item + link; the LLM day-planner is gone.
+3. `cfc00db` — read-only Notion connector (`src/lib/notion/`, `POST /api/notion/sync`,
+   migration 0021): recent pages -> sources -> same extraction engine.
+4. `a66a8c5` — UI: Today attention surface (server-rendered buckets, inline complete), goals with
+   one-level sub-goals (migration 0022, graceful 42703 degrade), AI generate-goals removed.
+5. `3e97b31` — 3-critic panel (friction/design + target-user + compromise broker) produced 10 fixes,
+   all applied: goal chips in Review, first sync in the OAuth callback + Sync all on Today, neutral
+   ink chrome (red/green are the only status colors), goal filter scoped to /tasks, dead contacts
+   writes cut, Notion backfill, persona copy + goal descriptions in triage, dead affordances removed,
+   delete confirms, persistent desktop nav rail.
 
-## ⚠ The roadblocks to clear next
-**1. Re-run Email sync, then exercise the engine.** Triage + extraction read the full message body
-(`format=full`, inside the existing `gmail.readonly` scope — no new consent). Hit Sync on the Email tab
-to (re)ingest bodies and trigger extraction; or use **Scan past emails** in Review to mine already-synced
-mail. Accept a few items → confirm they land on the Tasks page.
+**Verified:** tsc + eslint + `next build` green; dev-server smoke: every page 307 -> /login unauthed,
+`/login` 200, APIs 401 with correct verb semantics.
 
-**2. LinkedIn sourcing needs a one-time login.** `JARVIS_BROWSER=playwright` is now set, so the first
-"Find LinkedIn contacts" click opens a real Chromium window on LinkedIn's login (the button reports
-"log in, then click again"). Sign in once — the session persists in `~/.jarvis-browser/linkedin` — then
-click again and people land in Review.
-
-**3. Optional env to light up more.** `JARVIS_BROWSER=playwright` is already set (enables headed Apply
-autofill + LinkedIn sourcing). `TAVILY_API_KEY` enables web search. `ELEVENLABS_API_KEY` enables the
-voice. Write features (Gmail **drafts** for Outreach, calendar events) need `gmail.compose` /
-`calendar.events` consent if not already granted — reconnect Google on the Connections tab.
+## What we need from the user (roadblocks)
+1. **Apply migrations `0021_notion_sources.sql` and `0022_goal_hierarchy.sql`** (Supabase dashboard SQL
+   editor, same as 0016). Until then: Notion sync returns an actionable error; sub-goals save flat
+   (graceful degrade, app still runs).
+2. **Set `NOTION_API_KEY`** in `.env.local` (Notion internal integration; share the pages/DBs with the
+   integration) to light up the Notion connector.
+3. **Reconnect Google once** — scopes narrowed to `gmail.readonly` + `calendar.readonly`; the callback
+   now runs a first sync automatically.
+4. Enter your goals + sub-goals on /goals (the grounding for all prioritization).
 
 ## How to run
 ```
-npm install          # if node_modules is missing
-npm run dev          # http://localhost:3000  (redirects to /login until signed in)
+npm install
+npm run dev          # http://localhost:3000 (redirects to /login until signed in)
 npm run build        # production build / typecheck
 ```
 
 ## Files that matter
-- `/CLAUDE.md` — how to work here (auto-read each session). `/docs/PROGRESS.md` — **read first**.
-- `/docs/DATA_MODEL.md` — schema + migration order + changelog. `/docs/DECISIONS.md` — why (newest
-  entries: single-provider Grok consolidation, phantom-agent fix, source→items engine, web_search honesty).
-- **LLM provider:** `src/lib/llm/grok.ts` — the only real client (xAI, OpenAI-compatible, three
-  primitives). `src/lib/llm/gemini.ts` — thin adapter that routes the `gemini*` API to Grok (keep the
-  name; it's documented in the file header). Every feature calls through one of these.
-- **Email/meeting → items engine:** `src/lib/google/extract-items.ts` (the extractor; `SourceKind`),
-  `src/lib/google/gmail.ts` (full-body fetch), `src/lib/google/ingest.ts` (wires extraction into sync),
-  `src/lib/items/{review,backfill}.ts` + `src/components/items/{ReviewItemCard,BackfillButton}.tsx`,
-  `src/app/api/items/{route,backfill/route}.ts`, `src/app/api/meetings/extract/route.ts`. Citation gate:
-  `src/lib/agents/citation-gate.ts`.
-- **Task loop:** `src/app/api/tasks/route.ts` (POST/PATCH/DELETE, all three action-item types) +
-  `src/components/tasks/TaskItem.tsx` + `src/app/(app)/tasks/page.tsx` (the unified surface).
-- **Apply autofill:** `src/lib/agents/application/{browser,autofill,scrape}.ts` +
-  `src/app/api/applications/[id]/autofill/route.ts`; resume text: `src/lib/documents/extract-text.ts`.
-- **Application & Outreach agent:** `src/lib/documents/store.ts`, `src/lib/agents/application/*`
-  (`scrape.ts`, `resolve.ts` grounder + `backs()` gate, `run.ts`), `src/lib/agents/outreach/*`. UI:
-  `src/app/(app)/{apply,documents}/page.tsx`, `src/components/apply/*`,
-  `src/components/outreach/OutreachButton.tsx`. Migration `0016` (applied).
-- **Multi-agent:** `src/lib/agents/{types,registry,router,citation-gate}.ts` + `src/app/api/agent/route.ts`.
-- **Web search:** `src/lib/search/tavily.ts`. **Voice:** `src/lib/voice/elevenlabs.ts` +
-  `src/app/api/voice/route.ts`; client playback in `src/components/JarvisConsole.tsx`.
-- **Orb assistant:** `src/lib/assistant/{ask,data-tools,fs-tools,actions}.ts` + `src/app/api/ask/route.ts`.
-  Its write tools (create event, draft email, save/list templates, **add_contact**) are in `actions.ts`;
-  `add_contact` finds + saves a person via `src/lib/contacts/add-contact.ts` (LinkedIn scrape + Apollo).
-- **Research agents:** `src/lib/research/*` (people) and `src/lib/agents/opportunity/*` (`deadline.ts` is
-  the hard-rule-#2 chrono boundary).
-- **Home/nav:** `src/components/{JarvisSphere,JarvisConsole,LiveClock,NavDrawer,Topbar,AppBackground}.tsx`.
+- Engine: `src/lib/priority/{types,score,load}.ts` (deterministic scoring + the Today feed),
+  `src/lib/google/extract-items.ts` (extraction + quote-gated goal linking),
+  `src/lib/dates.ts` (chrono, hard rule #2), `src/lib/agents/citation-gate.ts` (rule #3),
+  `src/lib/items/{review,backfill}.ts`, `src/app/api/items/route.ts` (one-approval flow).
+- Connectors: `src/lib/google/{oauth,store,gmail,calendar,ingest}.ts`,
+  `src/lib/notion/{client,ingest}.ts`, `src/app/api/notion/sync`, `src/app/api/connect/google/**`.
+- UI: `src/components/today/{TodayView,SyncAllButton}.tsx`, `src/components/items/ReviewItemCard.tsx`,
+  `src/components/goals/GoalsManager.tsx` (sub-goals), `src/components/{DesktopRail,Topbar,NavDrawer,
+  Card,SourceChip,GoalChip}.tsx`, `src/lib/nav.ts`, `src/app/globals.css` (neutral ink + red/green).
+- LLM: `src/lib/llm/grok.ts` behind the `src/lib/llm/gemini.ts` adapter (single provider, xAI).
+- Docs: `/docs/PROGRESS.md` (read first), `/docs/DECISIONS.md` (why), `/docs/DATA_MODEL.md`.
 
-## What we need from the user
-1. **Connect Google + Sync email** (Connections → Email tab), then **Scan past emails** in Review — to
-   exercise the now-live email→items engine and see items appear; accept a few and confirm on Tasks.
-2. **Optional env** to light up more: `JARVIS_BROWSER=playwright` (Apply autofill — chromium already
-   installed), `TAVILY_API_KEY` (web search), `ELEVENLABS_API_KEY` (voice).
-3. Keys already in place (per the user): `XAI_API_KEY` (the single LLM provider), `TAVILY_API_KEY`,
-   `ELEVENLABS_API_KEY`, Supabase anon/URL, Google OAuth client. (`GEMINI_*` and `ANTHROPIC_*` are
-   retired — safe to delete from `.env.local`.)
-4. Later: a Vercel login if/when we deploy; `gmail.send` write scope only when we add send-from-Jarvis.
-5. **Apply migration `0017_site_credentials.sql`** (Supabase dashboard SQL editor, like 0016) to turn on
-   the saved-login vault. Until applied, the Connections "Saved site logins" form will error on save.
-6. **Set `CREDENTIALS_SECRET`** in `.env.local` to enable the encrypted vault: run `openssl rand -base64 32`
-   and paste the result. With it unset, the vault UI shows a clear "off" notice and auto-login is skipped
-   (the LinkedIn flow still works with a manual one-time sign-in).
-7. **Apply migration `0018_style_examples.sql`** (Supabase SQL editor) so the email composer can learn
-   from your edits. Until applied, the learn-from-edits capture silently no-ops (composing still works).
-8. **Enable Google sign-on:** in the Supabase dashboard, Auth > Providers > Google, add an OAuth client
-   whose authorized redirect is `<your-supabase-url>/auth/v1/callback` and set the app redirect to
-   `<origin>/auth/callback`. Until enabled, the "Continue with Google" button returns a provider error.
+## The single next task
+Exercise the loop live: connect Google (auto-syncs), set a goal with a sub-goal, confirm extracted
+items land in Review **with goal chips**, accept one, and confirm it appears on Today in the right
+bucket with a working source chip. Then apply 0021 + set `NOTION_API_KEY` and sync Notion.
+
+## Deferred backlog (from the critic panel, in priority order)
+1. Reply-state verification from Sent mail ("did they reply?" per hard rule #7) -> follow-up items.
+2. "Important new first-contact sender" as a lightweight follow_up item in Review.
+3. Wire `?goal=` filtering into Today/Review/Email/Calendar/Meetings.
+4. Review bulk accept/dismiss.
+5. Triage drop-recovery (store kept=false classifications for audit).
+6. Group Meetings by recurring series.
+7. Reconsider folding Tasks into a Today toggle.
+8. Scheduled auto-sync (Supabase Edge Function cron).

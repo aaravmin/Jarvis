@@ -4,41 +4,54 @@
 > Read this file (plus `/CLAUDE.md` and `/docs/SESSION_HANDOFF.md`) at the start of every session.
 
 ## Current phase
-**Phase 1 (task loop) and Phase 2 (source→items extraction) are now functional**, on top of a
-code-complete Phase 0 and the research/agent stack. The keystone — turning ingested email/meeting
-sources into sourced, reviewable items — is built and live (no migration gate). **Migration 0016 is
-now applied** (via the dashboard SQL editor — so it does NOT appear in `list_migrations`, but all its
-objects are verified live), which runtime-unblocks the **Apply/Outreach/Documents** arc. **Apply
-autofill and Outreach drafts are proven end-to-end, and a new Playwright LinkedIn contact-sourcing
-feature** lands relevant people from a linked job/grant into Review (no migration — reuses the
-research→contacts pipeline). The browser backend is now enabled locally (`JARVIS_BROWSER=playwright`).
+**The product was simplified extremely heavily (2026-07-13) into a goal-grounded attention engine.**
+Jarvis now does one thing: it checks email, meeting notes, Notion, and calendar; derives sourced
+tasks/follow-ups with code-resolved due dates; and orders everything by importance against the user's
+goals and sub-goals. Voice, the orb assistant, the job applier, and all people/opportunity
+research/outreach machinery are REMOVED (code only; the DB schema is untouched). See the five
+2026-07-13 entries in `/docs/DECISIONS.md` and the task log below.
 
 ## Status summary
-Phase 0 is code-complete: app shell, provenance `<Card>`, **auth (P0-T3)**, and the **core +
-People + research schema migrations (P0-T4 and forward)** are all written and compile/build clean.
-On top of that, the **Auto-Populate cohort research agent** is built end-to-end (the "find me Brown
-alumni at a YC biotech startup" feature). A design workflow shaped it and a 4-dimension adversarial
-review found **12 real defects — all fixed and re-verified**.
-
-On top of that, a **multi-agent system** is now built: an intent **router** (`POST /api/agent`) sends
-each request to exactly one agent, and a full **Opportunity agent** (programs/jobs/hackathons) mirrors
-the people agent with chrono-resolved deadlines. Tabs were renamed to mirror the agents.
-
-Most recently, an **Application & Outreach agent** (the "apply for me" layer, powered by **Grok**) is
-built end-to-end: a `Documents` store (the agent's memory), an Application agent that reads a form and
-grounds a reviewable field plan from your documents (never submits), and an Outreach agent that drafts
-audience-tailored emails into Gmail Drafts (never sends). Its migration (**0016**) is written but **not
-yet applied to the live project** — see the task log.
-
-**Migrations `0001→0015` are APPLIED to the live project** (via the Supabase MCP); **`0016` is also
-applied** (run through the dashboard SQL editor, so absent from `list_migrations`, but its tables,
-bucket, column, and RLS policies are verified present). RLS is on for every table,
-both provenance CHECKs exist, `review_feed` is `security_invoker`, and the security advisor is clean.
-People / Opportunities / Review / Auto-Populate / Goals / Calendar / Email triage **and now the
-email+meeting→items extraction engine and the task loop** are live. The **Google connector** activates
-once the user connects Google on the Connections tab.
+Six commits shipped to `main` on 2026-07-13, each tsc + eslint + build green, net ~-19k lines:
+teardown (`249e07b`), deterministic priority engine + quote-gated goal linking (`5c924a5`), read-only
+Notion connector (`cfc00db`), Today/goals/sub-goals UI (`a66a8c5`), and the 3-critic panel's 10
+reconciled fixes (`3e97b31`). Surfaces: Today (the home; red overdue / green done), Review, Goals
+(with sub-goals), Tasks, Meetings, Email, Calendar, Connections (Google + Notion), Set up. Every
+derived item still carries source_id + source_quote + confidence and lands in Review first (L0).
 
 ## Task log (most recent first)
+- **SIMPLIFICATION: Jarvis -> a goal-grounded attention engine** — ✅ shipped to `main` (6 commits:
+  `249e07b`, `5c924a5`, `cfc00db`, `a66a8c5`, `3e97b31` + docs), each tsc + eslint + build green;
+  dev-server smoke: all pages 307 -> /login unauthed, APIs 401 with correct verbs. Driven by the
+  user's directive: "simplify extremely heavily... take out all voice functionality, the homepage,
+  the job applier... check my email, my meeting notes, my notion, and my calendar... grounded in
+  goals and sub goals... bring your attention to things in order of most importance... white with
+  simple colors like red and green." Executed as: Fable planned + stitched shared files; 3 parallel
+  sonnet teardown agents on disjoint file sets; an opus engine agent + sonnet Notion agent in
+  parallel; a sonnet UI agent; then a 3-sonnet critic panel (friction/design, target-user,
+  compromise broker) whose 10 reconciled fixes were all applied.
+  1. **Teardown** (-19,960 lines): voice (ElevenLabs), orb home + assistant (+/api/ask,/api/agent),
+     applier (autofill/documents/vault), LinkedIn + Apollo, research agents, outreach + templates +
+     learning, Tavily, Drive/Sheets extras, spreadsheet workspace. OAuth narrowed to gmail.readonly +
+     calendar.readonly. Deps pruned (playwright, @anthropic-ai/sdk, exceljs, mammoth, unpdf,
+     google-auth-library). chrono resolution relocated to `src/lib/dates.ts`.
+  2. **Priority engine** (`src/lib/priority/`): pure-code scoring (due proximity, accepted-goal-link
+     boost, follow_up nudge, confidence tiebreak) into buckets (overdue=red ... done=green);
+     `loadAttention()` feeds Today server-side; deterministic meeting topics via token overlap; the
+     LLM day-planner is deleted. Extractor now proposes per-item `goal_index`/`goal_quote`, kept only
+     when `backs(corpus, goal_quote)` verifies; links land review-status and flip WITH the item in
+     PATCH /api/items (one-approval flow).
+  3. **Notion connector** (read-only, `NOTION_API_KEY`, no new deps): 14-day recent pages -> sources
+     (`source_type='notion'`, migration **0021 NOT applied**) -> same extractor; constraint violation
+     returns an actionable "apply 0021" message. Backfill also mines notion sources.
+  4. **UI**: Today attention surface (inline complete, goal chips, likely meeting topics, Sync all);
+     goals with one-level sub-goals (migration **0022 NOT applied**; graceful 42703 degrade); neutral
+     ink chrome so red/green are the only status colors; persistent desktop rail; goal filter scoped
+     to /tasks; delete confirms; first sync fires in the Google OAuth callback.
+  - **Critic backlog (DO-NEXT, deferred deliberately):** reply-state verification from Sent mail
+    (rule #7) -> follow-ups; first-contact-sender follow_up items; ?goal= filtering across pages;
+    Review bulk accept/dismiss; triage drop-recovery; recurring-meeting grouping; Tasks-into-Today
+    toggle; scheduled auto-sync (Edge Function).
 - **Google sign-on · grounded, self-learning email composer · copy trims** — ✅ shipped to `main`
   (3 commits), tsc + eslint + build green. Driven by: "add sign on with google", "remove unnecessary
   explanations", "operate using memory it has access to and ground follow-ups in it", "apply to
@@ -473,57 +486,38 @@ once the user connects Google on the Connections tab.
 - **P0-T5 / P0-T2 / P0-T1** — ✅ done in prior sessions (see git log).
 
 ## Verified working
-- `npx tsc --noEmit` — clean. `npx eslint src` — clean.
-- Live dev server compiles every new route through Turbopack: `POST /api/agent` and
-  `POST /api/opportunities` → 401 JSON unauthed; `/opportunities` + `/review` → 307 `/login`.
-  (Full `npm run build` deferred to avoid clobbering the running dev server's `.next` cache.)
-- Runtime auth gate: protected routes redirect to `/login`; APIs self-enforce auth with 401 JSON.
+- `npx tsc --noEmit` clean; `npx eslint src` clean; `npm run build` green (2026-07-13, post-critique).
+- Dev-server smoke: /, /today, /review, /goals, /tasks, /meetings, /email, /calendar, /connections,
+  /onboard all 307 -> /login unauthed; /login 200; GET /api/today/plan, PATCH /api/items,
+  POST /api/{notion/sync,tasks,goals} all 401 unauthed (correct verb semantics).
 
 ## The single next task
-**Verify the email→items engine end-to-end against live Gmail.** It's now runtime-functional (no
-migration gate — the `items`/`sources` tables are live). Connect Google on the Connections tab, hit
-**Sync** on the Email tab, and confirm: the sync summary reports "N to review"; the `Review` tab shows
-the extracted tasks/events/follow-ups each with a working source chip (click it → the exact email line
-+ Gmail link); Accept moves a task to the `Tasks` page, Dismiss clears it. Then paste a transcript on
-the `Meetings` tab and confirm its action items land in Review the same way. Watch for date correctness
-(a "by Friday" in an email from last week must resolve to the right Friday — chrono is anchored to the
-email's `occurred_at`, not today).
-
-Then, once **migration 0016 is applied** (see roadblocks), verify the Apply autofill: set
-`JARVIS_BROWSER=playwright` + `npx playwright install chromium`, upload a PDF resume (confirm it
-extracts text), "Prepare with Jarvis" on an opportunity, then "Fill in browser" — a headed window
-should open with the grounded fields typed in and the resume attached, left open for you to submit.
+Exercise the simplified loop live end-to-end: connect Google (the callback now auto-syncs), set a
+goal + sub-goal on /goals, confirm extracted items land in Review **with goal chips**, accept one
+(item + goal link flip together), and confirm it appears on Today in the right bucket with a working
+source chip. Then apply migration 0021 + set `NOTION_API_KEY`, hit Sync all on Today, and confirm a
+Notion meeting-notes page produces reviewable items. Apply 0022 and confirm sub-goals nest.
 
 ## Known roadblocks / waiting on the user
-- **Migration `0016` is APPLIED — no longer a roadblock.** Aarav ran it through the dashboard SQL
-  editor, so it does NOT appear in `list_migrations`, but all of its objects are verified live (the
-  `documents` table + private Storage bucket, `application_runs`, `outreach_runs`, `contacts.current_work`,
-  and 8 RLS policies). The Apply/Outreach/Documents arc is now runtime-unblocked. (If you ever re-point
-  at a fresh project, re-run `supabase/migrations/0016_application_outreach.sql`.)
-- **Reconnect Google after the gmail body change.** Triage + extraction now read the full message body
-  (`format=full`) — still within the existing `gmail.readonly` scope, so no NEW consent is needed, but
-  the user should re-run Email sync to (re)ingest bodies and trigger extraction. Write features
-  (calendar events, Gmail drafts) still need `calendar.events` + `gmail.compose` consent if not already
-  granted.
-- **`TAVILY_API_KEY` (optional but recommended).** Unset = the orb now says it can't web-search (no
-  more silent from-memory answers), and the research/opportunity agents get no recall seed. Set it to
-  enable web search end-to-end. Never affects provenance.
-- **`ELEVENLABS_API_KEY` (optional).** Unset = the orb stays silent (text still works). Set it to speak.
-- **`JARVIS_BROWSER=playwright` (for Apply autofill).** Playwright 1.61 + chromium-1228 are already
-  installed and smoke-tested (a headed browser reads + fills forms end-to-end). The ONE missing piece is
-  this env var — until it's set, Apply uses the static-HTML form reader and degrades autofill to "open
-  the application + copy from the plan". Set `JARVIS_BROWSER=playwright` in `.env.local` to turn on the
-  browser.
-- **LLM key:** **one provider now — xAI Grok** powers EVERY model call (`XAI_API_KEY`, optional
-  `XAI_MODEL`, default grok-4.3). `lib/llm/gemini.ts` is a thin adapter that routes to `grok.ts`;
-  GEMINI_API_KEY / Vertex are no longer used. Set per the user.
+- **Migrations `0021_notion_sources.sql` + `0022_goal_hierarchy.sql` are written, NOT applied.**
+  Apply both in the Supabase dashboard SQL editor (like 0016). Until then: Notion sync returns an
+  actionable error; sub-goals save flat (the app degrades gracefully, nothing crashes).
+- **`NOTION_API_KEY` unset** = Notion connector off (Connections card says so). Create a Notion
+  internal integration, share the relevant pages/databases with it, paste the token in `.env.local`.
+- **Reconnect Google once** — scopes were narrowed to `gmail.readonly` + `calendar.readonly`;
+  existing broader grants keep working, but a fresh consent matches the new minimal ask and the
+  callback now runs a first sync automatically.
+- **LLM key:** one provider — xAI Grok (`XAI_API_KEY`, default model grok-4.3). `lib/llm/gemini.ts`
+  is a thin adapter over `grok.ts` (kept to avoid churn at 4 call sites; collapsing it is optional
+  cleanup). ELEVENLABS_*/TAVILY_*/APOLLO_*/JARVIS_BROWSER/CREDENTIALS_SECRET are all dead — safe to
+  delete from `.env.local`.
 
 ## Stack as built
 Next.js 15.5.19 · React 19.1 · Tailwind v4 · TypeScript · lucide-react · Turbopack ·
 `@supabase/ssr` + `@supabase/supabase-js` · **xAI Grok** (single LLM provider, `lib/llm/grok.ts` +
-the `gemini.ts` adapter) · Tavily (`lib/search/tavily.ts`, web search) · Playwright (Apply autofill) ·
-`chrono-node` (date resolver). App at repo root; docs in `/docs`; SQL in `/supabase/migrations`.
-(`@anthropic-ai/sdk` is still an installed dependency but no longer imported anywhere — retired.)
+the `gemini.ts` adapter) · `chrono-node` (`src/lib/dates.ts`, the rule-#2 boundary) · Notion REST
+(fetch-based, no SDK). App at repo root; docs in `/docs`; SQL in `/supabase/migrations` (0021 + 0022
+pending apply).
 
 ## Notes
 - The model's self-reported URLs/quotes are **never trusted** — see `src/lib/research/extract.ts`
