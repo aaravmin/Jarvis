@@ -54,7 +54,7 @@ calendar, and Notion current from one button; connecting Google runs a first syn
 
 | Step | What happens | Built with |
 |------|--------------|------------|
-| **1 · Ingest** | Gmail, Calendar, and recently edited Notion pages are stored as `sources` — raw text, when it occurred, a permalink home. | Google OAuth (read-only) · Notion internal integration (read-only) |
+| **1 · Ingest** | Gmail, Calendar, and recently edited Notion pages are stored as `sources` — raw text, when it occurred, a permalink home. | Google OAuth (read-only) · Notion OAuth, per-user (read-only) |
 | **2 · Extract** | Jarvis reads a source and proposes items (tasks, events, follow-ups) plus optional goal relevance, as structured JSON — never free text. | xAI Grok · structured output |
 | **3 · Verify** | Every item's `source_quote` and every goal link's `goal_quote` must be a real substring of the source, or it's dropped. | citation gate, in code |
 | **4 · Resolve dates** | The model returns raw phrases ("next Friday"); code resolves real timestamps against the source's date. **The LLM never computes a date.** | chrono-node (`src/lib/dates.ts`) |
@@ -68,7 +68,7 @@ calendar, and Notion current from one button; connecting Google runs a first syn
 | **Supabase** | Postgres + Auth + RLS — the system of record | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Yes** |
 | **xAI Grok** | All LLM calls: inbox triage, item extraction, goal-relevance proposals | `XAI_API_KEY` (+ `XAI_MODEL`) | **Yes** |
 | **Google Workspace** | Read-only Gmail + Calendar connector | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (+ optional `GOOGLE_OAUTH_REDIRECT`) | For email/calendar |
-| **Notion** | Read-only meeting notes / pages connector | `NOTION_API_KEY` | Optional |
+| **Notion** | Read-only meeting notes / pages connector — each user connects their own via OAuth and picks the pages Jarvis may read | `NOTION_CLIENT_ID`, `NOTION_CLIENT_SECRET` (+ optional `NOTION_OAUTH_REDIRECT`; `NOTION_API_KEY` only as a single-person self-host fallback) | Optional |
 
 Each optional service is gated on its key — unset it and the feature says so plainly; the rest of
 the app keeps working.
@@ -97,9 +97,10 @@ npm run dev                     # http://localhost:3000
 ```
 
 Apply the schema by running the files in [`supabase/migrations/`](supabase/migrations/)
-(`0001` → latest, including `0021_notion_sources.sql` and `0022_goal_hierarchy.sql`) in the
-Supabase SQL editor. Then sign in, set your goals, and connect Google (and Notion) from the
-**Connections** tab — the first sync runs automatically.
+(`0001` → latest, including `0021_notion_sources.sql`, `0022_goal_hierarchy.sql`, and
+`0023_notion_provider.sql`) in the Supabase SQL editor. Then sign in, set your goals, and connect
+Google and Notion from the **Connections** tab — each user grants their own accounts, and the first
+sync runs automatically.
 
 ## Project structure
 

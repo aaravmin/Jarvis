@@ -44,11 +44,15 @@ The app was **simplified extremely heavily** in one session (6 pushed commits, n
 `/login` 200, APIs 401 with correct verb semantics.
 
 ## What we need from the user (roadblocks)
-1. **Apply migrations `0021_notion_sources.sql` and `0022_goal_hierarchy.sql`** (Supabase dashboard SQL
-   editor, same as 0016). Until then: Notion sync returns an actionable error; sub-goals save flat
+1. **Apply migrations `0021_notion_sources.sql`, `0022_goal_hierarchy.sql`, and
+   `0023_notion_provider.sql`** (Supabase dashboard SQL editor, same as 0016). Until then: Notion sync
+   returns an actionable error; sub-goals save flat; Connect Notion reports the missing migration
    (graceful degrade, app still runs).
-2. **Set `NOTION_API_KEY`** in `.env.local` (Notion internal integration; share the pages/DBs with the
-   integration) to light up the Notion connector.
+2. **Create a PUBLIC Notion integration** (notion.so/my-integrations -> make public, redirect URI
+   `${NEXT_PUBLIC_SITE_URL}/api/connect/notion/callback`) and set `NOTION_CLIENT_ID` +
+   `NOTION_CLIENT_SECRET` in `.env.local`. Then EVERY user connects their own Notion from the
+   Connections page and picks their pages. (`NOTION_API_KEY` is now only a single-person self-host
+   fallback; leave it unset on a multi-user deployment.)
 3. **Reconnect Google once** — scopes narrowed to `gmail.readonly` + `calendar.readonly`; the callback
    now runs a first sync automatically.
 4. Enter your goals + sub-goals on /goals (the grounding for all prioritization).
@@ -66,7 +70,8 @@ npm run build        # production build / typecheck
   `src/lib/dates.ts` (chrono, hard rule #2), `src/lib/agents/citation-gate.ts` (rule #3),
   `src/lib/items/{review,backfill}.ts`, `src/app/api/items/route.ts` (one-approval flow).
 - Connectors: `src/lib/google/{oauth,store,gmail,calendar,ingest}.ts`,
-  `src/lib/notion/{client,ingest}.ts`, `src/app/api/notion/sync`, `src/app/api/connect/google/**`.
+  `src/lib/notion/{client,oauth,store,ingest}.ts` (per-user OAuth + env fallback),
+  `src/app/api/notion/sync`, `src/app/api/connect/{google,notion}/**`.
 - UI: `src/components/today/{TodayView,SyncAllButton}.tsx`, `src/components/items/ReviewItemCard.tsx`,
   `src/components/goals/GoalsManager.tsx` (sub-goals), `src/components/{DesktopRail,Topbar,NavDrawer,
   Card,SourceChip,GoalChip}.tsx`, `src/lib/nav.ts`, `src/app/globals.css` (neutral ink + red/green).
@@ -76,7 +81,7 @@ npm run build        # production build / typecheck
 ## The single next task
 Exercise the loop live: connect Google (auto-syncs), set a goal with a sub-goal, confirm extracted
 items land in Review **with goal chips**, accept one, and confirm it appears on Today in the right
-bucket with a working source chip. Then apply 0021 + set `NOTION_API_KEY` and sync Notion.
+bucket with a working source chip. Then apply 0021 + 0023, set up the Notion OAuth app, Connect Notion, and sync.
 
 ## Deferred backlog (from the critic panel, in priority order)
 1. Reply-state verification from Sent mail ("did they reply?" per hard rule #7) -> follow-up items.

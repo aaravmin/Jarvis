@@ -19,7 +19,7 @@ export async function POST() {
     if (!result.enabled) {
       return NextResponse.json({
         ...result,
-        message: "Notion isn't connected. Set NOTION_API_KEY (a Notion internal integration token) to enable it.",
+        message: "Notion isn't connected. Connect your Notion on the Connections page.",
       });
     }
     if (result.error) {

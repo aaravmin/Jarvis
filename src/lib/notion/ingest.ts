@@ -1,14 +1,16 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { notionEnabled, searchRecentPages, pageText } from "@/lib/notion/client";
+import { searchRecentPages, pageText } from "@/lib/notion/client";
+import { getNotionToken } from "@/lib/notion/store";
 import { extractItemsFromSources } from "@/lib/google/extract-items";
 
 /**
- * Notion → sources ingestion (read-only connector, T3). Pulls pages the user's integration can see
- * that were edited in the last 14 days, stores each as a `sources` row (the provenance anchor, dedup'd
- * by page id like Gmail/Calendar in lib/google/ingest.ts), and mines the freshly-stored/refreshed pages
- * for action items via the shared extractor (kind='notion'). Notion is NEVER written to (hard rule #1:
- * Supabase is the system of record) — this connector only ever reads.
+ * Notion → sources ingestion (read-only connector). Reads with the USER'S OWN token (their OAuth
+ * connection, or the self-host NOTION_API_KEY fallback; see lib/notion/store.ts). Pulls pages the
+ * grant can see that were edited in the last 14 days, stores each as a `sources` row (the provenance
+ * anchor, dedup'd by page id like Gmail/Calendar in lib/google/ingest.ts), and mines the freshly-
+ * stored/refreshed pages for action items via the shared extractor (kind='notion'). Notion is NEVER
+ * written to (hard rule #1: Supabase is the system of record) — this connector only ever reads.
  */
 
 const LOOKBACK_DAYS = 14;
@@ -22,10 +24,11 @@ export type NotionIngestResult = {
 };
 
 export async function ingestNotion(supabase: SupabaseClient, userId: string): Promise<NotionIngestResult> {
-  if (!notionEnabled()) return { enabled: false, imported: 0, itemsExtracted: 0 };
+  const token = await getNotionToken(supabase, userId);
+  if (!token) return { enabled: false, imported: 0, itemsExtracted: 0 };
 
   const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
-  const pages = await searchRecentPages(since);
+  const pages = await searchRecentPages(token, since);
   if (!pages.length) return { enabled: true, imported: 0, itemsExtracted: 0 };
 
   // Existing Notion sources → dedup by page id, but re-ingest one that was edited since we last stored
@@ -48,7 +51,7 @@ export async function ingestNotion(supabase: SupabaseClient, userId: string): Pr
 
     let text = "";
     try {
-      text = await pageText(page.id);
+      text = await pageText(token, page.id);
     } catch {
       continue; // one bad page (e.g. transient API error) shouldn't fail the whole sync
     }

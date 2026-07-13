@@ -24,11 +24,17 @@ function StatusBanner({ status }: { status?: string }) {
 export function ConnectionsPanel({
   connection,
   status,
-  notionEnabled,
+  notion,
 }: {
   connection: GoogleConnection | null;
   status?: string;
-  notionEnabled: boolean;
+  notion: {
+    connected: boolean;
+    workspaceName?: string;
+    canConnect: boolean;
+    envFallback: boolean;
+    status?: string;
+  };
 }) {
   return (
     <div className="space-y-5">
@@ -89,7 +95,13 @@ export function ConnectionsPanel({
         ) : null}
       </section>
 
-      <NotionCard enabled={notionEnabled} />
+      <NotionCard
+        connected={notion.connected}
+        workspaceName={notion.workspaceName}
+        canConnect={notion.canConnect}
+        envFallback={notion.envFallback}
+        status={notion.status}
+      />
 
       {!connection && (
         <p className="text-sm text-muted">

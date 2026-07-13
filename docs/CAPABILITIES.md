@@ -18,8 +18,10 @@ decision-maker.
   important mail, store each as a source with the full body and a Gmail permalink.
 - Sync Google Calendar: upcoming events with real start/end times and all-day handling; reschedules
   refresh in place.
-- Sync Notion (when `NOTION_API_KEY` is set and migration 0021 is applied): pages edited in the last
-  14 days that are shared with the integration, stored with the page URL; re-edited pages re-ingest.
+- Sync Notion (per-user OAuth: each user clicks Connect Notion and picks their own pages; needs
+  migrations 0021 + 0023 and a public Notion integration's NOTION_CLIENT_ID/SECRET; NOTION_API_KEY
+  works as a single-person self-host fallback): pages edited in the last 14 days, stored with the
+  page URL; re-edited pages re-ingest.
 - Accept pasted meeting transcripts on the Meetings page.
 - Run a first sync automatically when Google is connected; "Sync all" on Today covers all three.
 

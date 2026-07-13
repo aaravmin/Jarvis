@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { loadAttention } from "@/lib/priority/load";
-import { notionEnabled } from "@/lib/notion/client";
+import { notionAvailable } from "@/lib/notion/store";
 import { TodayView } from "@/components/today/TodayView";
 import type { AttentionFeed } from "@/lib/priority/types";
 
@@ -13,11 +13,18 @@ export const dynamic = "force-dynamic";
  */
 export default async function TodayPage() {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   let feed: AttentionFeed | null = null;
   let loadError: string | null = null;
+  let notionOn = false;
   try {
-    feed = await loadAttention(supabase, new Date());
+    [feed, notionOn] = await Promise.all([
+      loadAttention(supabase, new Date()),
+      user ? notionAvailable(supabase, user.id) : Promise.resolve(false),
+    ]);
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Could not build your day.";
   }
@@ -40,7 +47,7 @@ export default async function TodayPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <TodayView key={feed.generatedAt} initialFeed={feed} notionEnabled={notionEnabled()} />
+      <TodayView key={feed.generatedAt} initialFeed={feed} notionEnabled={notionOn} />
     </div>
   );
 }

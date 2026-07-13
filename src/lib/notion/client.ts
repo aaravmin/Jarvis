@@ -1,34 +1,30 @@
 import "server-only";
 
 /**
- * Minimal Notion REST client (read-only, T3). Fetch-based, no SDK dependency. Uses an internal
- * integration token (NOTION_API_KEY) — the user shares specific pages with the integration in Notion;
- * we never write anything back (hard rule #1: Supabase is the system of record, Notion is at most a
- * source we read from).
+ * Minimal Notion REST client (read-only). Fetch-based, no SDK dependency. Every call takes the
+ * caller's token: normally the user's own OAuth token (lib/notion/store.ts), or the deployment-wide
+ * NOTION_API_KEY internal-integration token on a self-host. We never write anything back (hard rule
+ * #1: Supabase is the system of record, Notion is at most a source we read from).
  */
 
 const API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
-export function notionEnabled(): boolean {
-  return !!process.env.NOTION_API_KEY;
-}
-
-function headers(): Record<string, string> {
+function headers(token: string): Record<string, string> {
   return {
-    authorization: `Bearer ${process.env.NOTION_API_KEY ?? ""}`,
+    authorization: `Bearer ${token}`,
     "Notion-Version": NOTION_VERSION,
     "content-type": "application/json",
   };
 }
 
 /** GET/POST a Notion endpoint. Retries once on 429 (rate limited) after Retry-After; else throws readably. */
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  let res = await fetch(url, { ...init, headers: headers() });
+async function request<T>(token: string, url: string, init?: RequestInit): Promise<T> {
+  let res = await fetch(url, { ...init, headers: headers(token) });
   if (res.status === 429) {
     const retryAfter = Number(res.headers.get("retry-after")) || 1;
     await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
-    res = await fetch(url, { ...init, headers: headers() });
+    res = await fetch(url, { ...init, headers: headers(token) });
   }
   if (!res.ok) throw new Error(`Notion request failed (${res.status}): ${await res.text()}`);
   return (await res.json()) as T;
@@ -77,11 +73,11 @@ const SEARCH_PAGE_SIZE = 25;
 const MAX_SEARCH_PAGES = 10; // guard against runaway pagination
 
 /**
- * Pages recently edited, most-recent first, that the integration has been shared with. Stops
- * paginating as soon as it sees a page edited before `sinceISO` (results are sorted descending), or
- * once it has collected ~50 pages.
+ * Pages recently edited, most-recent first, that the token's grant can see. Stops paginating as soon
+ * as it sees a page edited before `sinceISO` (results are sorted descending), or once it has
+ * collected ~50 pages.
  */
-export async function searchRecentPages(sinceISO: string): Promise<NotionPageSummary[]> {
+export async function searchRecentPages(token: string, sinceISO: string): Promise<NotionPageSummary[]> {
   const out: NotionPageSummary[] = [];
   const since = new Date(sinceISO).getTime();
   let cursor: string | undefined;
@@ -96,7 +92,7 @@ export async function searchRecentPages(sinceISO: string): Promise<NotionPageSum
     };
     if (cursor) body.start_cursor = cursor;
 
-    const data = await request<NotionSearchResponse>(`${API}/search`, {
+    const data = await request<NotionSearchResponse>(token, `${API}/search`, {
       method: "POST",
       body: JSON.stringify(body),
     });
@@ -145,7 +141,7 @@ function blockPlainText(block: NotionBlock): string {
   return (body?.rich_text ?? []).map((r) => r.plain_text ?? "").join("");
 }
 
-async function fetchChildren(blockId: string): Promise<NotionBlock[]> {
+async function fetchChildren(token: string, blockId: string): Promise<NotionBlock[]> {
   const out: NotionBlock[] = [];
   let cursor: string | undefined;
   let calls = 0;
@@ -153,7 +149,7 @@ async function fetchChildren(blockId: string): Promise<NotionBlock[]> {
     const url = new URL(`${API}/blocks/${blockId}/children`);
     url.searchParams.set("page_size", String(CHILDREN_PAGE_SIZE));
     if (cursor) url.searchParams.set("start_cursor", cursor);
-    const data = await request<NotionBlockChildrenResponse>(url.toString());
+    const data = await request<NotionBlockChildrenResponse>(token, url.toString());
     out.push(...(data.results ?? []));
     cursor = data.has_more ? (data.next_cursor ?? undefined) : undefined;
     calls++;
@@ -168,8 +164,8 @@ const MAX_TEXT = 20_000;
  * blocks (toggles, bulleted/numbered lists, etc.) that have children, so nested notes are captured
  * without an unbounded recursive crawl. Capped at ~20k chars.
  */
-export async function pageText(pageId: string): Promise<string> {
-  const top = await fetchChildren(pageId);
+export async function pageText(token: string, pageId: string): Promise<string> {
+  const top = await fetchChildren(token, pageId);
   const lines: string[] = [];
 
   for (const block of top) {
@@ -178,7 +174,7 @@ export async function pageText(pageId: string): Promise<string> {
 
     if (block.has_children) {
       try {
-        const kids = await fetchChildren(block.id);
+        const kids = await fetchChildren(token, block.id);
         for (const kid of kids) {
           const kidText = blockPlainText(kid).trim();
           if (kidText) lines.push(`  ${kidText}`);

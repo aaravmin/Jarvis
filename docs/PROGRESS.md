@@ -499,11 +499,14 @@ source chip. Then apply migration 0021 + set `NOTION_API_KEY`, hit Sync all on T
 Notion meeting-notes page produces reviewable items. Apply 0022 and confirm sub-goals nest.
 
 ## Known roadblocks / waiting on the user
-- **Migrations `0021_notion_sources.sql` + `0022_goal_hierarchy.sql` are written, NOT applied.**
-  Apply both in the Supabase dashboard SQL editor (like 0016). Until then: Notion sync returns an
-  actionable error; sub-goals save flat (the app degrades gracefully, nothing crashes).
-- **`NOTION_API_KEY` unset** = Notion connector off (Connections card says so). Create a Notion
-  internal integration, share the relevant pages/databases with it, paste the token in `.env.local`.
+- **Migrations `0021_notion_sources.sql` + `0022_goal_hierarchy.sql` + `0023_notion_provider.sql`
+  are written, NOT applied.** Apply all three in the Supabase dashboard SQL editor (like 0016). Until
+  then: Notion sync returns an actionable error; sub-goals save flat; Connect Notion reports the
+  missing migration (the app degrades gracefully, nothing crashes).
+- **Notion is per-user OAuth now.** Set `NOTION_CLIENT_ID` + `NOTION_CLIENT_SECRET` (a public Notion
+  integration whose redirect URI is `${NEXT_PUBLIC_SITE_URL}/api/connect/notion/callback`); each user
+  clicks Connect Notion and picks their own pages. `NOTION_API_KEY` is only a single-person self-host
+  fallback; leave it unset on a multi-user deployment.
 - **Reconnect Google once** — scopes were narrowed to `gmail.readonly` + `calendar.readonly`;
   existing broader grants keep working, but a fresh consent matches the new minimal ask and the
   callback now runs a first sync automatically.

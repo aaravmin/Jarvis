@@ -508,3 +508,15 @@
   flat goals table can't express it. A self-referencing FK is the smallest schema change; the loaders
   catch Postgres 42703 (column missing) and treat all goals as top-level so the app runs before the
   migration is applied - the same honest-degrade pattern as the Notion connector.
+- **2026-07-13 - Notion is connected PER USER via OAuth; the env key is demoted to a self-host
+  fallback.** Why: the app is multi-tenant, and a deployment-wide NOTION_API_KEY would read the key
+  owner's Notion for every signed-in user - both a privacy hazard and useless to everyone else. Now a
+  public Notion integration (NOTION_CLIENT_ID/SECRET) powers a "Connect Notion" OAuth flow identical
+  in shape to the Google connector: CSRF state cookie, per-user token in connected_accounts
+  (provider 'notion', migration 0023; Notion tokens don't expire so there is no refresh path), RLS-
+  scoped, first sync fired from the callback. Each user picks in Notion's own consent screen exactly
+  which pages Jarvis may read; read-only per hard rule #1. NOTION_API_KEY remains only as a documented
+  single-person fallback used when a user has no connection of their own. (Note: the in-app connector
+  intentionally uses Notion's REST API directly rather than Notion's MCP server - MCP is a protocol
+  wrapper for AI clients like Claude; inside the product, OAuth + REST is the same data with less
+  machinery.)

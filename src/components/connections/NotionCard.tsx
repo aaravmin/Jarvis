@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { NotebookText, RefreshCw, Loader2 } from "lucide-react";
+import { NotebookText, RefreshCw, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 
 type SyncResponse = {
   enabled?: boolean;
@@ -12,17 +12,54 @@ type SyncResponse = {
   error?: string;
 };
 
+function StatusBanner({ status }: { status?: string }) {
+  if (!status) return null;
+  if (status === "connected")
+    return (
+      <p className="mt-3 flex items-center gap-2 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm text-success">
+        <CheckCircle2 className="h-4 w-4" /> Notion connected. Your recent pages are syncing.
+      </p>
+    );
+  if (status === "disconnected")
+    return <p className="mt-3 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-muted">Notion disconnected.</p>;
+  const detail =
+    status === "error:not_configured"
+      ? "This deployment has no Notion OAuth app yet (NOTION_CLIENT_ID / NOTION_CLIENT_SECRET)."
+      : status === "error:migration_0023"
+        ? "Apply migration 0023_notion_provider.sql in the Supabase SQL editor, then connect again."
+        : `Couldn't connect Notion (${status.replace(/^error:/, "")}). Try again.`;
+  return (
+    <p className="mt-3 flex items-center gap-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+      <AlertTriangle className="h-4 w-4 shrink-0" /> {detail}
+    </p>
+  );
+}
+
 /**
- * Notion connector card for the Connections page (T3). Self-contained: fetches nothing on its own,
- * just POSTs /api/notion/sync and shows the result. Read-only — Jarvis never writes back to Notion
- * (hard rule #1: Supabase is the system of record). `enabled` is passed from the server (whether
- * NOTION_API_KEY is set) so the card can render its state without a client round-trip.
+ * Notion connector card for the Connections page. PER-USER: each user connects their own Notion via
+ * OAuth and picks the pages Jarvis may read; the token is stored server-side, RLS-scoped. Read-only,
+ * Jarvis never writes back to Notion (hard rule #1). `envFallback` marks a self-hosted instance
+ * running on a deployment-wide NOTION_API_KEY instead of a per-user connection.
  */
-export function NotionCard({ enabled }: { enabled: boolean }) {
+export function NotionCard({
+  connected,
+  workspaceName,
+  canConnect,
+  envFallback,
+  status,
+}: {
+  connected: boolean;
+  workspaceName?: string;
+  canConnect: boolean;
+  envFallback: boolean;
+  status?: string;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [ok, setOk] = useState<boolean | null>(null);
+
+  const syncable = connected || envFallback;
 
   async function sync() {
     setBusy(true);
@@ -57,19 +94,48 @@ export function NotionCard({ enabled }: { enabled: boolean }) {
           </span>
           <div>
             <p className="text-sm font-semibold text-foreground">Notion</p>
-            <p className="text-xs text-muted">{enabled ? "Configured" : "Not configured"}</p>
+            <p className="text-xs text-muted">
+              {connected
+                ? `Connected${workspaceName ? ` · ${workspaceName}` : ""}`
+                : envFallback
+                  ? "Using this deployment's integration key"
+                  : "Not connected"}
+            </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => void sync()}
-          disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-accent-strong disabled:opacity-50"
-        >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Sync Notion
-        </button>
+        <div className="flex items-center gap-2">
+          {syncable && (
+            <button
+              type="button"
+              onClick={() => void sync()}
+              disabled={busy}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent-soft/40 disabled:opacity-50"
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Sync
+            </button>
+          )}
+          {connected ? (
+            <form action="/api/connect/notion/disconnect" method="post">
+              <button
+                type="submit"
+                className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:border-danger/50 hover:text-danger"
+              >
+                Disconnect
+              </button>
+            </form>
+          ) : canConnect ? (
+            <a
+              href="/api/connect/notion"
+              className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-accent-strong"
+            >
+              Connect Notion
+            </a>
+          ) : null}
+        </div>
       </div>
+
+      <StatusBanner status={status} />
 
       {msg && (
         <p className={`mt-3 text-xs ${ok === false ? "text-danger" : ok === true ? "text-success" : "text-muted"}`}>
@@ -78,7 +144,13 @@ export function NotionCard({ enabled }: { enabled: boolean }) {
       )}
 
       <p className="mt-3 text-[11px] text-muted">
-        Share pages with your integration in Notion, then set NOTION_API_KEY to enable syncing.
+        {connected
+          ? "Jarvis reads only the pages you granted. Manage access from Notion's Connections settings."
+          : canConnect
+            ? "Connecting opens Notion, where you pick exactly which pages Jarvis may read. Read-only."
+            : envFallback
+              ? "Self-hosted mode: pages shared with this deployment's internal integration are synced."
+              : "Notion isn't set up on this deployment yet (needs NOTION_CLIENT_ID / NOTION_CLIENT_SECRET, or NOTION_API_KEY for a personal instance)."}
       </p>
     </section>
   );
