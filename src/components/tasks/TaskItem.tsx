@@ -32,6 +32,9 @@ const input =
 export function TaskItem({ task }: { task: Task }) {
   const router = useRouter();
   const done = task.status === "done";
+  // Display-only comparison against the already-resolved due_at (no date maths on the model, hard
+  // rule #2; this just colors an existing timestamp for the reader).
+  const overdue = !done && Boolean(task.due_at) && new Date(task.due_at as string).getTime() < Date.now();
   const [busy, setBusy] = useState<null | "toggle" | "save" | "delete">(null);
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
@@ -136,7 +139,7 @@ export function TaskItem({ task }: { task: Task }) {
         disabled={busy !== null}
         title={done ? "Mark not done" : "Mark done"}
         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors disabled:opacity-50 ${
-          done ? "border-emerald-500/50 bg-emerald-500/20 text-emerald-400" : "border-border text-transparent hover:border-accent/60"
+          done ? "border-success/50 bg-success/15 text-success" : "border-border text-transparent hover:border-accent/60"
         }`}
       >
         {busy === "toggle" ? <Loader2 className="h-3 w-3 animate-spin text-muted" /> : <Check className="h-3.5 w-3.5" />}
@@ -158,7 +161,11 @@ export function TaskItem({ task }: { task: Task }) {
         {task.reasoning && <p className="truncate text-xs text-muted">{task.reasoning}</p>}
       </div>
 
-      {task.due_at && <span className="shrink-0 text-xs text-muted">{formatDate(task.due_at)}</span>}
+      {task.due_at && (
+        <span className={`shrink-0 text-xs ${overdue ? "font-medium text-danger" : "text-muted"}`}>
+          {formatDate(task.due_at)}
+        </span>
+      )}
 
       <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
         <button

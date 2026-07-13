@@ -474,3 +474,37 @@
   anchored on `/in/<slug>` profile links rather than LinkedIn's churning CSS class names. The whole
   feature is dark unless `JARVIS_BROWSER=playwright` — same gate as Apply autofill — so default installs
   carry no browser-automation surface.
+- **2026-07-13 - Jarvis is simplified to a goal-grounded attention engine; everything else was removed.**
+  Why: the user's directive - "simplify extremely heavily", check only email, meeting notes, Notion, and
+  calendar, derive tasks/follow-ups/due dates, and order them by importance grounded in user-entered
+  goals and sub-goals. Removed in one pass (commit 249e07b, -19,960 lines): voice (ElevenLabs), the orb
+  homepage + conversational assistant (+ its /api/ask, /api/agent router/registry), the job applier
+  (application agent, Playwright autofill, documents store, encrypted credentials vault), LinkedIn +
+  Apollo enrichment, people/opportunity research agents, outreach + templates + style-learning, Tavily
+  web search, Drive/Sheets extras, and the spreadsheet workspace. The DB schema was NOT touched: tables
+  from removed features stay (append-only migrations; data preserved); only code and UI were removed.
+  Google OAuth narrowed to gmail.readonly + calendar.readonly (rule #6).
+- **2026-07-13 - Priority is computed by CODE, never the model; the LLM day-planner was deleted.**
+  Why: ordering by importance is a deterministic question once the inputs exist (due date proximity,
+  goal linkage, item type, confidence), and an LLM call per Today view was cost + latency + a rule-#7
+  hazard. src/lib/priority/score.ts is a pure function (now passed as a parameter); buckets map to the
+  UI colors (overdue=red, done=green). The model's only role stays extraction-side: proposing items and
+  goal relevance, both quote-gated in code.
+- **2026-07-13 - Goal relevance is proposed by the extractor but verified by the citation gate, and a
+  single approval accepts an item together with its goal tag.** Why: goals grounding needs the LLM to
+  spot "this email is about criminal-justice attendance" (semantics), but rule #3 demands evidence - so
+  goal_index/goal_quote are only kept when backs(corpus, goal_quote) passes, and the link lands as a
+  review-status goal_links row. Accepting the item in Review flips its pending links in the same PATCH:
+  L0 is preserved (a human approved it) while halving clicks (friction is the product's enemy).
+- **2026-07-13 - Notion is a READ-ONLY ingestion source via an internal-integration key (NOTION_API_KEY),
+  not OAuth, and not a mirror.** Why: hard rule #1 stands (Supabase is the system of record; we never
+  write to Notion). A per-deployment integration token is the simplest honest connector for a personal
+  tool: pages shared with the integration are searched (14-day lookback), read as text, stored as
+  sources (source_type 'notion', migration 0021), and mined by the same extraction engine (kind
+  'notion'). If the migration isn't applied yet the sync returns an actionable message instead of
+  failing silently.
+- **2026-07-13 - Sub-goals are a parent_goal_id column (migration 0022), one level, with graceful
+  degradation until applied.** Why: the user's grounding model is overarching goal -> sub-goals, and a
+  flat goals table can't express it. A self-referencing FK is the smallest schema change; the loaders
+  catch Postgres 42703 (column missing) and treat all goals as top-level so the app runs before the
+  migration is applied - the same honest-degrade pattern as the Notion connector.

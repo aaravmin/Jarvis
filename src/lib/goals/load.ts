@@ -52,6 +52,39 @@ const EMPTY_COUNTS: Record<GoalEntityType, number> = { contact: 0, opportunity: 
 
 type Ref = { entityType: GoalEntityType; entityId: string };
 
+/** Postgres "undefined column" — migration 0022 (parent_goal_id) not applied yet. */
+const UNDEFINED_COLUMN = "42703";
+
+type GoalRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  created_at: string;
+  review_status: "review" | "accepted" | "dismissed";
+  created_by: "user" | "jarvis";
+  parent_goal_id?: string | null;
+};
+
+/**
+ * Select goals with their parent_goal_id when migration 0022 is applied; degrade to a flat select
+ * (every goal reads as top-level) when the column does not exist yet, the same honest-degrade pattern
+ * `lib/notion/ingest.ts` uses for its own not-yet-applied migration. Never throws for a missing column.
+ */
+async function selectGoalsWithHierarchy(supabase: SupabaseClient): Promise<GoalRow[]> {
+  const withParent = await supabase
+    .from("goals")
+    .select("id, title, description, created_at, review_status, created_by, parent_goal_id")
+    .order("created_at", { ascending: false });
+  if (!withParent.error) return (withParent.data ?? []) as GoalRow[];
+  if (withParent.error.code !== UNDEFINED_COLUMN) return [];
+
+  const flat = await supabase
+    .from("goals")
+    .select("id, title, description, created_at, review_status, created_by")
+    .order("created_at", { ascending: false });
+  return (flat.data ?? []) as GoalRow[];
+}
+
 /** Batch-resolve display labels for a set of polymorphic entity refs (one query per table). */
 async function resolveLabels(
   supabase: SupabaseClient,
@@ -82,10 +115,7 @@ async function resolveLabels(
 
 /** All goals + rolled-up accepted-link counts + intersection counts. */
 export async function loadGoals(supabase: SupabaseClient): Promise<GoalSummary[]> {
-  const { data: goals } = await supabase
-    .from("goals")
-    .select("id, title, description, created_at, review_status, created_by")
-    .order("created_at", { ascending: false });
+  const goals = await selectGoalsWithHierarchy(supabase);
   const { data: links } = await supabase
     .from("goal_links")
     .select("goal_id, entity_type")
@@ -103,13 +133,14 @@ export async function loadGoals(supabase: SupabaseClient): Promise<GoalSummary[]
     for (const gid of (row.goal_ids as string[]) ?? []) interCount.set(gid, (interCount.get(gid) ?? 0) + 1);
   }
 
-  return (goals ?? []).map((g) => {
+  return goals.map((g) => {
     const c = counts.get(g.id) ?? { ...EMPTY_COUNTS };
     return {
       id: g.id,
       title: g.title,
       description: g.description ?? undefined,
       createdAt: g.created_at,
+      parentGoalId: g.parent_goal_id ?? null,
       reviewStatus: g.review_status,
       createdBy: g.created_by,
       linkCount: c.contact + c.opportunity + c.item + c.source,

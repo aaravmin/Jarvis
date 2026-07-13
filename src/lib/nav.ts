@@ -41,6 +41,13 @@ export const NAV_ITEMS: NavItem[] = [
     deliveredBy: "Extraction engine",
   },
   {
+    label: "Goals",
+    href: "/goals",
+    icon: Target,
+    description: "Goals and sub-goals; items relevant to them are prioritized.",
+    deliveredBy: "Goals",
+  },
+  {
     label: "Tasks",
     href: "/tasks",
     icon: CheckSquare,
@@ -48,11 +55,11 @@ export const NAV_ITEMS: NavItem[] = [
     deliveredBy: "Task loop",
   },
   {
-    label: "Goals",
-    href: "/goals",
-    icon: Target,
-    description: "Goals and sub-goals; items relevant to them are prioritized.",
-    deliveredBy: "Goals",
+    label: "Meetings",
+    href: "/meetings",
+    icon: Mic,
+    description: "Meeting notes and transcripts, turned into sourced action items.",
+    deliveredBy: "Extraction engine",
   },
   {
     label: "Email",
@@ -67,13 +74,6 @@ export const NAV_ITEMS: NavItem[] = [
     icon: CalendarDays,
     description: "Events from your calendar, with meeting topics surfaced.",
     deliveredBy: "Google connector",
-  },
-  {
-    label: "Meetings",
-    href: "/meetings",
-    icon: Mic,
-    description: "Meeting notes and transcripts, turned into sourced action items.",
-    deliveredBy: "Extraction engine",
   },
   {
     label: "Connections",

@@ -10,6 +10,11 @@ export type Goal = {
   title: string;
   description?: string;
   createdAt: string;
+  /**
+   * The overarching goal this one nests under, one level deep (migration 0022). Null/undefined for a
+   * top-level goal, or when the migration has not been applied yet (graceful degrade, see load.ts).
+   */
+  parentGoalId?: string | null;
 };
 
 /** Entity kinds that can be anchored to a goal. */

@@ -21,49 +21,7 @@ function clamp01(n: unknown): number | undefined {
 
 export type GoalDigest = { id: string; title: string; description?: string };
 
-// ---- (a) generate goals from freeform context -----------------------------
-export type GeneratedGoal = { title: string; description?: string; rationale?: string; confidence?: number };
-
-export async function generateGoalsFromContext(context: string): Promise<GeneratedGoal[]> {
-  const out = await forceTool<{ goals?: GeneratedGoal[] }>(
-    `You turn a person's freeform context (a note, a paste, a brain-dump) into a small set of clear, durable GOALS, the anchors everything else hangs off. A goal is an outcome they're working toward, e.g. "Build a startup called FinePrint", "Break into quant trading", "Get into a PhD program". Keep them concrete and few (1-6). Never invent goals not implied by the context. No dates.`,
-    `Context:\n${context.slice(0, 8000)}\n\nExtract the goals via the tool.`,
-    {
-      name: "extract_goals",
-      input_schema: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          goals: {
-            type: "array",
-            items: {
-              type: "object",
-              additionalProperties: false,
-              properties: {
-                title: { type: "string", description: "Short goal title." },
-                description: { type: "string", description: "One sentence on what reaching it means." },
-                rationale: { type: "string", description: "Why this is a goal, grounded in the context." },
-                confidence: { type: "number" },
-              },
-              required: ["title"],
-            },
-          },
-        },
-        required: ["goals"],
-      },
-    },
-  );
-  return (out?.goals ?? [])
-    .filter((g) => g.title && g.title.trim())
-    .map((g) => ({
-      title: g.title.trim(),
-      description: g.description?.trim() || undefined,
-      rationale: g.rationale?.trim() || undefined,
-      confidence: clamp01(g.confidence),
-    }));
-}
-
-// ---- (b) auto-link an entity to goals -------------------------------------
+// ---- (a) auto-link an entity to goals -------------------------------------
 export type ProposedLink = { goalId: string; rationale?: string; confidence?: number };
 
 export async function proposeGoalLinks(entityFacts: string, goals: GoalDigest[]): Promise<ProposedLink[]> {
@@ -102,7 +60,7 @@ export async function proposeGoalLinks(entityFacts: string, goals: GoalDigest[])
     .map((l) => ({ goalId: l.goal_id as string, rationale: l.rationale?.trim() || undefined, confidence: clamp01(l.confidence) }));
 }
 
-// ---- (c) combined-ask for an intersection ---------------------------------
+// ---- (b) combined-ask for an intersection ---------------------------------
 export async function generateCombinedAsk(entityFacts: string, goals: GoalDigest[]): Promise<string | null> {
   const digest = goals.map((g) => `- ${g.title}${g.description ? `: ${g.description}` : ""}`).join("\n");
   const out = await forceTool<{ combined_ask?: string }>(
@@ -121,7 +79,7 @@ export async function generateCombinedAsk(entityFacts: string, goals: GoalDigest
   return out?.combined_ask?.trim() || null;
 }
 
-// ---- (d) goal-to-goal connection guidance ---------------------------------
+// ---- (c) goal-to-goal connection guidance ---------------------------------
 export async function generateGoalConnection(
   goalA: GoalDigest,
   goalB: GoalDigest,
