@@ -7,9 +7,9 @@ const input =
   "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted";
 
 /**
- * Compact "about you" editor. This profile (age / level / what you're after) is fed to the
- * auto-population agents so they surface things relevant to you (e.g. internships for a freshman,
- * not senior roles). Collapsed by default.
+ * Compact "about you" editor. This profile (who you are / role / what you're building toward) is fed
+ * to the email triage so Jarvis judges importance relative to YOUR work, not someone else's.
+ * Collapsed by default.
  */
 export function ProfileForm({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {
   const [open, setOpen] = useState(defaultOpen);
@@ -51,7 +51,7 @@ export function ProfileForm({ defaultOpen = false }: { defaultOpen?: boolean } =
         onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-foreground"
       >
-        <UserCog className="h-3.5 w-3.5" /> Edit your profile (makes suggestions relevant)
+        <UserCog className="h-3.5 w-3.5" /> Edit your profile (tells Jarvis whose attention it is managing)
       </button>
     );
 
@@ -61,10 +61,10 @@ export function ProfileForm({ defaultOpen = false }: { defaultOpen?: boolean } =
         <UserCog className="h-4 w-4 text-accent" /> About you
       </p>
       <div className="grid gap-2 sm:grid-cols-2">
-        <input className={`${input} sm:col-span-2`} placeholder="Headline, e.g. CS sophomore, into climate tech" value={f.headline} onChange={set("headline")} />
-        <input className={input} placeholder="Age" value={f.age} onChange={set("age")} inputMode="numeric" />
-        <input className={input} placeholder="Level, e.g. freshman / undergrad" value={f.level} onChange={set("level")} />
-        <input className={`${input} sm:col-span-2`} placeholder="Looking for, e.g. summer internships, startups hiring interns, programs open to undergrads" value={f.lookingFor} onChange={set("lookingFor")} />
+        <input className={`${input} sm:col-span-2`} placeholder="Headline, e.g. Runs an AI x social-impact consortium at Brown" value={f.headline} onChange={set("headline")} />
+        <input className={input} placeholder="Age (optional)" value={f.age} onChange={set("age")} inputMode="numeric" />
+        <input className={input} placeholder="Role, e.g. founder / organizer" value={f.level} onChange={set("level")} />
+        <input className={`${input} sm:col-span-2`} placeholder="What you're building toward, e.g. recruiting criminal-justice-reform members and speakers" value={f.lookingFor} onChange={set("lookingFor")} />
       </div>
       <div className="mt-3 flex items-center gap-2">
         <button

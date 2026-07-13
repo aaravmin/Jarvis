@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CardSource, SourceType } from "@/lib/types";
+import { goalsForEntities } from "@/lib/goals/load";
 
 /**
  * Loads the email-derived action items waiting in the Review queue (roadmap B2). These are the
@@ -18,6 +19,8 @@ export type ReviewItem = {
   reasoning: string | null;
   createdAt: string;
   source: CardSource;
+  /** Goals the extractor proposed for this item (links still in review; approved with the item). */
+  goalTags: { id: string; title: string }[];
 };
 
 type SourceJoin = {
@@ -51,6 +54,14 @@ export async function loadReviewItems(supabase: SupabaseClient): Promise<ReviewI
     .order("created_at", { ascending: false });
 
   const rows = (data ?? []) as Row[];
+  // Goal links proposed for these items are still review-status themselves (one-approval flow), so
+  // fetch with status 'review'; the default 'accepted' filter would return nothing here.
+  const tagsByItem = await goalsForEntities(
+    supabase,
+    "item",
+    rows.map((r) => r.id),
+    "review",
+  );
   const items: ReviewItem[] = [];
   for (const r of rows) {
     // A FK embed comes back as an object; some client versions type it as an array, normalize.
@@ -59,6 +70,7 @@ export async function loadReviewItems(supabase: SupabaseClient): Promise<ReviewI
     // The Card primitive throws without a non-empty quote; an item missing one can't be reviewed safely.
     if (!src || !quote) continue;
     items.push({
+      goalTags: tagsByItem.get(r.id) ?? [],
       id: r.id,
       itemType: (["task", "event", "follow_up"].includes(r.item_type) ? r.item_type : "task") as ReviewItemType,
       title: r.title,

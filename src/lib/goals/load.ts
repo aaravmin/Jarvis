@@ -165,11 +165,16 @@ export async function entityIdsForGoal(
   return (data ?? []).map((r) => r.entity_id as string);
 }
 
-/** Which goals each given entity serves (accepted links), for "serves N goals" badges. */
+/**
+ * Which goals each given entity serves, for "serves N goals" badges. Defaults to accepted links; the
+ * Review queue passes 'review' so a still-pending item shows the goal tag the extractor proposed for it
+ * (the tag is approved together with the item, the one-approval flow).
+ */
 export async function goalsForEntities(
   supabase: SupabaseClient,
   entityType: GoalEntityType,
   entityIds: string[],
+  status: "accepted" | "review" | ("accepted" | "review")[] = "accepted",
 ): Promise<Map<string, { id: string; title: string }[]>> {
   const out = new Map<string, { id: string; title: string }[]>();
   if (!entityIds.length) return out;
@@ -178,7 +183,7 @@ export async function goalsForEntities(
     .select("entity_id, goal_id, goals(title)")
     .eq("entity_type", entityType)
     .in("entity_id", entityIds)
-    .eq("review_status", "accepted");
+    .in("review_status", Array.isArray(status) ? status : [status]);
   for (const r of (data ?? []) as unknown as { entity_id: string; goal_id: string; goals: { title: string } | null }[]) {
     const arr = out.get(r.entity_id) ?? [];
     arr.push({ id: r.goal_id, title: r.goals?.title ?? "Goal" });

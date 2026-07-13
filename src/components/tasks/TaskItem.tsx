@@ -71,6 +71,7 @@ export function TaskItem({ task }: { task: Task }) {
   }
 
   async function remove() {
+    if (!window.confirm("Delete this item? This can't be undone.")) return;
     setBusy("delete");
     const ok = await send("DELETE", {});
     if (ok) router.refresh();

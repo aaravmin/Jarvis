@@ -89,7 +89,7 @@ export function GoalDetailView({ detail }: { detail: GoalDetail }) {
         <h2 className="mb-2 text-sm font-semibold text-foreground">Linked ({accepted.length})</h2>
         {accepted.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border bg-surface/40 px-3 py-4 text-center text-xs text-muted">
-            Nothing linked yet. Use “Add to goal” on a contact or opportunity, or let Jarvis suggest links.
+            Nothing linked yet. Accept a goal-tagged item in Review and it will show up here.
           </p>
         ) : (
           <div className="space-y-1.5">

@@ -20,12 +20,12 @@ const MINE_CAP = 60; // hard cap on how many un-mined sources we actually run th
 export type BackfillResult = { scanned: number; inserted: number; remaining: number };
 
 export async function backfillExtraction(supabase: SupabaseClient, userId: string): Promise<BackfillResult> {
-  // Sources that can carry action items: emails and pasted meeting transcripts.
+  // Sources that can carry action items: emails, pasted meeting transcripts, and Notion pages.
   const { data: srcRows } = await supabase
     .from("sources")
     .select("id, title, raw_text, occurred_at, source_type")
     .eq("user_id", userId)
-    .in("source_type", ["email", "meeting"])
+    .in("source_type", ["email", "meeting", "notion"])
     .order("occurred_at", { ascending: false })
     .limit(SCAN_LIMIT);
   const sources = srcRows ?? [];
@@ -52,10 +52,12 @@ export async function backfillExtraction(supabase: SupabaseClient, userId: strin
   });
   const emails = batch.filter((s) => s.source_type === "email").map(toShape);
   const meetings = batch.filter((s) => s.source_type === "meeting").map(toShape);
+  const notionPages = batch.filter((s) => s.source_type === "notion").map(toShape);
 
   let inserted = 0;
   if (emails.length) inserted += await extractItemsFromSources(supabase, userId, emails, 4, "email");
   if (meetings.length) inserted += await extractItemsFromSources(supabase, userId, meetings, 4, "meeting");
+  if (notionPages.length) inserted += await extractItemsFromSources(supabase, userId, notionPages, 4, "notion");
 
   return { scanned: batch.length, inserted, remaining: Math.max(0, unmined.length - batch.length) };
 }

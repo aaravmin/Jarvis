@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, X, CheckSquare, CalendarClock, Reply } from "lucide-react";
 import { Card } from "@/components/Card";
+import { GoalChip } from "@/components/GoalChip";
 import { formatDate } from "@/lib/format";
 import type { ReviewItem } from "@/lib/items/review";
 
@@ -83,6 +84,14 @@ export function ReviewItemCard({ item }: { item: ReviewItem }) {
           </button>
         </>
       }
-    />
+    >
+      {item.goalTags.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {item.goalTags.map((g) => (
+            <GoalChip key={g.id} title={g.title} />
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }

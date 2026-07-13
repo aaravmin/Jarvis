@@ -24,10 +24,9 @@ const SOURCE_ICONS: Record<SourceType, LucideIcon> = {
   notion: FileText,
 };
 
+/* Two bands only: red and green are the app's whole status vocabulary, no amber in between. */
 function confidenceTone(c: number): string {
-  if (c >= 0.85) return "text-success";
-  if (c >= 0.6) return "text-warning";
-  return "text-danger";
+  return c >= 0.7 ? "text-success" : "text-danger";
 }
 
 /**

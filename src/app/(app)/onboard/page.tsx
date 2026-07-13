@@ -48,14 +48,19 @@ export default async function OnboardPage() {
         <ProfileForm defaultOpen />
       </Step>
 
-      <Step n={2} done={hasGoogle} icon={<Plug className="h-4 w-4" />} title="Connect Google" desc="Let Jarvis read your Gmail and Calendar so it can turn email and meetings into tracked tasks. Read-only.">
-        {hasGoogle ? (
-          <p className="text-sm text-success">Connected{connection?.email ? ` as ${connection.email}` : ""}.</p>
-        ) : (
-          <a href="/api/connect/google" className={btn}>
-            <Plug className="h-4 w-4" /> Connect Google
-          </a>
-        )}
+      <Step n={2} done={hasGoogle} icon={<Plug className="h-4 w-4" />} title="Connect Google (and Notion)" desc="Let Jarvis read your Gmail and Calendar so it can turn email and meetings into tracked tasks. Read-only. Notion meeting notes connect from the same place.">
+        <div className="flex flex-wrap items-center gap-2">
+          {hasGoogle ? (
+            <p className="text-sm text-success">Connected{connection?.email ? ` as ${connection.email}` : ""}.</p>
+          ) : (
+            <a href="/api/connect/google" className={btn}>
+              <Plug className="h-4 w-4" /> Connect Google
+            </a>
+          )}
+          <Link href="/connections" className={linkBtn}>
+            All connections
+          </Link>
+        </div>
       </Step>
 
       <Step n={3} done={hasGoals} icon={<Target className="h-4 w-4" />} title="Set your goals" desc="Your goals and sub-goals are how Jarvis decides what matters. Anything in your email or meetings that advances one gets flagged and prioritized.">

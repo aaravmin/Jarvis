@@ -9,13 +9,12 @@ import { loadProfile, profileDigest } from "@/lib/profile";
 import { extractItemsFromSources } from "@/lib/google/extract-items";
 
 /**
- * Gmail + Calendar ingestion. Gmail is triaged by Gemini relative to the user's goals/profile: only
- * genuinely important mail is kept (spam/promotions/noise dropped entirely), grouped by sender/org,
- * and important senders / opportunity threads add the sender to Contacts (L0 review). Calendar is kept
- * as-is (no filtering). Everything is stored as `sources` (the provenance anchor), deduped by id.
+ * Gmail + Calendar ingestion. Gmail is triaged relative to the user's goals/profile: only genuinely
+ * important mail is kept (spam/promotions/noise dropped entirely), grouped by sender/org. Calendar is
+ * kept as-is (no filtering). Everything is stored as `sources` (the provenance anchor), deduped by id.
  */
 
-type Classification = { idx: number; keep: boolean; category: string; group: string; addContact: boolean };
+type Classification = { idx: number; keep: boolean; category: string; group: string };
 
 const CLASSIFY_SCHEMA = {
   type: "object" as const,
@@ -31,7 +30,6 @@ const CLASSIFY_SCHEMA = {
           keep: { type: "boolean" },
           category: { type: "string", enum: ["opportunity", "person", "update", "other"] },
           group: { type: "string" },
-          add_contact: { type: "boolean" },
         },
         required: ["idx", "keep", "group"],
       },
@@ -43,7 +41,10 @@ const CLASSIFY_SCHEMA = {
 async function relevance(supabase: SupabaseClient): Promise<string> {
   const [profile, goals] = await Promise.all([loadProfile(supabase), loadGoalDigests(supabase)]);
   const parts = [profileDigest(profile)];
-  if (goals.length) parts.push(`Goals:\n${goals.map((g) => `- ${g.title}`).join("\n")}`);
+  // Include descriptions: a sub-goal's specificity ("expand criminal-justice member attendance")
+  // lives there, and it is exactly what makes goal-relevant correspondence stand out in triage.
+  if (goals.length)
+    parts.push(`Goals:\n${goals.map((g) => `- ${g.title}${g.description ? `: ${g.description}` : ""}`).join("\n")}`);
   return parts.filter(Boolean).join("\n\n");
 }
 
@@ -53,7 +54,7 @@ async function classifyEmails(emails: GmailMessage[], who: string): Promise<Map<
     .join("\n");
 
   const out = await geminiStructured<{ items?: Record<string, unknown>[] }>({
-    system: `You triage a person's inbox. KEEP only genuinely important emails; DROP promotions, marketing, newsletters, social notifications, automated noise, and spam (keep=false for those). For kept emails, GROUP by the sender's organization or person (e.g. "Brown University", "Jane Smith", "YC"). Set add_contact=true when the sender is a real person worth tracking, or the email is a real opportunity/intro. Judge importance relative to the user below.${who ? `\n\n${who}` : ""}`,
+    system: `You triage a person's inbox. KEEP only genuinely important emails; DROP promotions, marketing, newsletters, social notifications, automated noise, and spam (keep=false for those). For kept emails, GROUP by the sender's organization or person (e.g. "Brown University", "Jane Smith", "YC"). Judge importance relative to the user below.${who ? `\n\n${who}` : ""}`,
     user: `Triage these inbox emails:\n${list}`,
     schema: CLASSIFY_SCHEMA,
     maxTokens: 4000,
@@ -69,7 +70,6 @@ async function classifyEmails(emails: GmailMessage[], who: string): Promise<Map<
       keep: it.keep !== false,
       category: String(it.category ?? "other"),
       group: String(it.group ?? "").trim() || "Other",
-      addContact: it.add_contact === true,
     });
   }
   return map;
@@ -77,7 +77,6 @@ async function classifyEmails(emails: GmailMessage[], who: string): Promise<Map<
 
 export type GmailIngestResult = {
   imported: number;
-  contactsAdded: number;
   itemsExtracted: number;
   groups: { label: string; count: number }[];
 };
@@ -85,7 +84,7 @@ export type GmailIngestResult = {
 export async function ingestGmail(supabase: SupabaseClient, userId: string): Promise<GmailIngestResult> {
   const token = await getValidAccessToken(supabase, userId);
   const ids = await listMessageIds(token, 40);
-  if (!ids.length) return { imported: 0, contactsAdded: 0, itemsExtracted: 0, groups: [] };
+  if (!ids.length) return { imported: 0, itemsExtracted: 0, groups: [] };
 
   const emails = (await Promise.all(ids.map((m) => getMessage(token, m.id).catch(() => null)))).filter(
     (e): e is GmailMessage => e !== null,
@@ -102,13 +101,8 @@ export async function ingestGmail(supabase: SupabaseClient, userId: string): Pro
     .not("external_id", "is", null);
   const seen = new Set((existing ?? []).map((r) => r.external_id as string));
 
-  // Existing contact emails → don't re-add.
-  const { data: chans } = await supabase.from("contact_channels").select("value").eq("kind", "email");
-  const knownEmails = new Set((chans ?? []).map((c) => (c.value as string).toLowerCase()));
-
   const groups = new Map<string, number>();
   let imported = 0;
-  let contactsAdded = 0;
   // Newly-stored email sources whose body we'll mine for action items after the ingest loop.
   const newSources: { id: string; title: string | null; body: string; occurredAt: string | null }[] = [];
 
@@ -137,29 +131,6 @@ export async function ingestGmail(supabase: SupabaseClient, userId: string): Pro
     imported++;
     newSources.push({ id: src.id, title: e.subject, body: e.body || e.snippet, occurredAt: e.dateISO });
     groups.set(c.group, (groups.get(c.group) ?? 0) + 1);
-
-    // Important person / opportunity sender → add to Contacts (L0 review), deduped by email.
-    // A jarvis contact MUST carry source_id (provenance CHECK), which src guarantees here.
-    if (c.addContact && e.fromEmail && !knownEmails.has(e.fromEmail) && (c.category === "person" || c.category === "opportunity")) {
-      const { data: contact } = await supabase
-        .from("contacts")
-        .insert({
-          user_id: userId,
-          full_name: e.fromName,
-          notes: `From email: ${e.subject}`,
-          source_id: src.id,
-          source_quote: `${e.subject}, ${e.snippet}`.slice(0, 500),
-          review_status: "review",
-          created_by: "jarvis",
-        })
-        .select("id")
-        .single();
-      if (contact) {
-        await supabase.from("contact_channels").insert({ contact_id: contact.id, kind: "email", value: e.fromEmail, is_primary: true });
-        knownEmails.add(e.fromEmail);
-        contactsAdded++;
-      }
-    }
   }
 
   // Mine the freshly-stored emails for action items (L0 → they land in the Review queue, suggest-only).
@@ -175,7 +146,6 @@ export async function ingestGmail(supabase: SupabaseClient, userId: string): Pro
 
   return {
     imported,
-    contactsAdded,
     itemsExtracted,
     groups: [...groups.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count),
   };

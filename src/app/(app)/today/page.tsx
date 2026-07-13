@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { loadAttention } from "@/lib/priority/load";
+import { notionEnabled } from "@/lib/notion/client";
 import { TodayView } from "@/components/today/TodayView";
 import type { AttentionFeed } from "@/lib/priority/types";
 
@@ -39,7 +40,7 @@ export default async function TodayPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <TodayView key={feed.generatedAt} initialFeed={feed} />
+      <TodayView key={feed.generatedAt} initialFeed={feed} notionEnabled={notionEnabled()} />
     </div>
   );
 }

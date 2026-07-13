@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { exchangeCode, fetchUserinfo } from "@/lib/google/oauth";
 import { saveConnection } from "@/lib/google/store";
+import { ingestGmail, ingestCalendar } from "@/lib/google/ingest";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,13 @@ export async function GET(request: NextRequest) {
     const tokens = await exchangeCode(code);
     const identity = await fetchUserinfo(tokens.accessToken);
     await saveConnection(supabase, user.id, tokens, identity);
+    // One-time first sync so the user doesn't land on an empty Today right after connecting.
+    // Best-effort: a slow or failing sync must never block the redirect ("Sync all" is the fallback).
+    try {
+      await Promise.all([ingestGmail(supabase, user.id), ingestCalendar(supabase, user.id)]);
+    } catch {
+      // ignore; the Connections page still reports "connected" and the user can sync manually
+    }
     return back("connected");
   } catch {
     return back("error:exchange_failed");

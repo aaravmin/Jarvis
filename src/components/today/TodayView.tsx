@@ -17,7 +17,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Card } from "@/components/Card";
+import { GoalChip } from "@/components/GoalChip";
 import { SourceChip } from "@/components/SourceChip";
+import { SyncAllButton } from "@/components/today/SyncAllButton";
 import { formatWhen, formatEventTime } from "@/lib/format";
 import { BUCKET_META, BUCKET_ORDER, scoreItem } from "@/lib/priority/score";
 import type { AttentionEntry, AttentionFeed, Bucket } from "@/lib/priority/types";
@@ -68,7 +70,7 @@ function moveEntry(feed: AttentionFeed, fromBucket: Bucket, updated: AttentionEn
   return { ...feed, buckets };
 }
 
-export function TodayView({ initialFeed }: { initialFeed: AttentionFeed }) {
+export function TodayView({ initialFeed, notionEnabled }: { initialFeed: AttentionFeed; notionEnabled: boolean }) {
   const router = useRouter();
   const [feed, setFeed] = useState(initialFeed);
   const [pending, setPending] = useState<Set<string>>(new Set());
@@ -132,9 +134,10 @@ export function TodayView({ initialFeed }: { initialFeed: AttentionFeed }) {
           or two so it knows what matters to you.
         </p>
         <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+          <SyncAllButton notionEnabled={notionEnabled} />
           <Link
             href="/connections"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-strong"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm font-medium text-muted-strong transition-colors hover:bg-surface-3"
           >
             <Plug className="h-4 w-4" /> Connect your accounts
           </Link>
@@ -161,14 +164,17 @@ export function TodayView({ initialFeed }: { initialFeed: AttentionFeed }) {
             Ordered by importance and grounded in your goals. Overdue is red, done is green.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={refresh}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-sm text-muted-strong transition-colors hover:border-accent/50 hover:text-foreground"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={refresh}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-sm text-muted-strong transition-colors hover:border-accent/50 hover:text-foreground"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+          <SyncAllButton notionEnabled={notionEnabled} />
+        </div>
       </header>
 
       {actionError && (
@@ -226,15 +232,6 @@ function KindPill({ kind }: { kind: AttentionEntry["kind"] }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-strong">
       <Icon className="h-2.5 w-2.5 text-accent" /> {meta.label}
-    </span>
-  );
-}
-
-function GoalChip({ title }: { title: string }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-accent/30 bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent-strong">
-      <Target className="h-3 w-3" strokeWidth={2} />
-      {title}
     </span>
   );
 }

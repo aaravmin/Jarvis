@@ -22,7 +22,6 @@ export function SyncButton({ endpoint, label }: { endpoint: string; label: strin
         const bits = [
           typeof d.imported === "number" ? `${d.imported} new` : null,
           d.itemsExtracted ? `${d.itemsExtracted} to review` : null,
-          d.contactsAdded ? `+${d.contactsAdded} contacts` : null,
         ].filter(Boolean);
         setMsg(bits.length ? bits.join(" · ") : "Up to date");
         router.refresh();

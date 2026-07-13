@@ -8,9 +8,9 @@ import { NAV_ITEMS } from "@/lib/nav";
 import { Brand } from "@/components/Brand";
 
 /**
- * The slide-in navigation drawer + its hamburger trigger, the app's ONLY nav surface. There is no
- * always-on rail: the tab list lives behind a left hamburger and overlays on demand at every screen
- * size. Closes on Escape, overlay click, and route change; locks body scroll while open.
+ * The slide-in navigation drawer + its hamburger trigger, the nav surface BELOW md (at md+ the
+ * persistent <DesktopRail> replaces it and the hamburger is hidden by the Topbar). Closes on Escape,
+ * overlay click, and route change; locks body scroll while open.
  */
 export function NavDrawer({ userEmail }: { userEmail?: string }) {
   const [open, setOpen] = useState(false);

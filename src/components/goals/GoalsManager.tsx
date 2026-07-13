@@ -3,12 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Target, Plus, Check, Pencil, Trash2, Loader2, Users, Compass, CheckSquare, Mail, GitMerge } from "lucide-react";
+import { Target, Plus, Check, Pencil, Trash2, Loader2, CheckSquare, Mail, GitMerge } from "lucide-react";
 import { ProfileForm } from "@/components/manual/ProfileForm";
 import type { GoalSummary } from "@/lib/goals/load";
 
-const TYPE_ICON = { contact: Users, opportunity: Compass, item: CheckSquare, source: Mail } as const;
-const TYPE_LABEL = { contact: "contacts", opportunity: "opportunities", item: "tasks/events", source: "messages" } as const;
+const TYPE_ICON = { item: CheckSquare, source: Mail } as const;
+const TYPE_LABEL = { item: "tasks/events", source: "messages" } as const;
 
 const ghostBtn =
   "inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs text-muted transition-colors hover:text-foreground disabled:opacity-50";
@@ -81,6 +81,7 @@ function GoalCard({ goal, subGoals, onChanged }: { goal: GoalSummary; subGoals: 
   const [busy, setBusy] = useState(false);
 
   async function remove() {
+    if (!window.confirm("Delete this goal and its sub-goals? This can't be undone.")) return;
     setBusy(true);
     try {
       await fetch(`/api/goals/${goal.id}`, { method: "DELETE" });
@@ -147,6 +148,7 @@ function SubGoalRow({ goal, onChanged }: { goal: GoalSummary; onChanged: () => v
   const [busy, setBusy] = useState(false);
 
   async function remove() {
+    if (!window.confirm("Delete this sub-goal? This can't be undone.")) return;
     setBusy(true);
     try {
       await fetch(`/api/goals/${goal.id}`, { method: "DELETE" });
@@ -344,7 +346,7 @@ function AddGoal({ onChanged }: { onChanged: () => void }) {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           disabled={busy}
-          placeholder="e.g. Build a startup called FinePrint"
+          placeholder="e.g. Grow a respected AI + social-impact consortium"
           className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted"
         />
         <button

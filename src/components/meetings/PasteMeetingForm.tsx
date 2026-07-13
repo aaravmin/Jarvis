@@ -80,7 +80,7 @@ export function PasteMeetingForm() {
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           Extract action items
         </button>
-        {msg && <span className={`text-xs ${msg.tone === "ok" ? "text-success" : "text-warning"}`}>{msg.text}</span>}
+        {msg && <span className={`text-xs ${msg.tone === "ok" ? "text-success" : "text-danger"}`}>{msg.text}</span>}
       </div>
     </div>
   );
