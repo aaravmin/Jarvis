@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getConnection } from "@/lib/google/store";
+import { notionEnabled } from "@/lib/notion/client";
 import { ConnectionsPanel } from "@/components/ConnectionsPanel";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ export default async function ConnectionsPage({
 
   return (
     <div className="mx-auto max-w-3xl">
-      <ConnectionsPanel connection={connection} status={sp.google} />
+      <ConnectionsPanel connection={connection} status={sp.google} notionEnabled={notionEnabled()} />
     </div>
   );
 }

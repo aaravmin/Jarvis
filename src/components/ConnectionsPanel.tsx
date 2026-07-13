@@ -2,6 +2,7 @@
 
 import { Plug, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
 import type { GoogleConnection } from "@/lib/google/store";
+import { NotionCard } from "@/components/connections/NotionCard";
 
 function StatusBanner({ status }: { status?: string }) {
   if (!status) return null;
@@ -23,16 +24,19 @@ function StatusBanner({ status }: { status?: string }) {
 export function ConnectionsPanel({
   connection,
   status,
+  notionEnabled,
 }: {
   connection: GoogleConnection | null;
   status?: string;
+  notionEnabled: boolean;
 }) {
   return (
     <div className="space-y-5">
       <header>
         <h1 className="text-lg font-semibold text-foreground">Connections</h1>
         <p className="mt-1 text-sm text-muted">
-          Connect Google so Jarvis can read your email and calendar. Everything stays read-only.
+          Connect Google and Notion so Jarvis can read your email, calendar, and notes. Everything
+          stays read-only.
         </p>
       </header>
 
@@ -84,6 +88,8 @@ export function ConnectionsPanel({
           </p>
         ) : null}
       </section>
+
+      <NotionCard enabled={notionEnabled} />
 
       {!connection && (
         <p className="text-sm text-muted">
