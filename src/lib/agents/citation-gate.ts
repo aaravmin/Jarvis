@@ -7,10 +7,6 @@ import "server-only";
  * citations the server-side web_search tool produced (url + cited_text), then any claim a candidate
  * makes is only kept if a real citation backs it. This is what makes provenance verifiable instead of
  * cosmetic.
- *
- * NOTE: src/lib/research/extract.ts (the people agent, shipped + verified earlier) carries an
- * equivalent private copy of these helpers. This module is the canonical version for new agents; the
- * people agent can be migrated onto it later without behavior change.
  */
 
 export type Citation = { url: string; citedText: string };

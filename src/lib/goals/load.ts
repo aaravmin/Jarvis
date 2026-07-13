@@ -63,11 +63,11 @@ async function resolveLabels(
 
   if (byType.contact.length) {
     const { data } = await supabase.from("contacts").select("id, full_name, company").in("id", byType.contact);
-    for (const c of data ?? []) map.set(`contact:${c.id}`, { label: c.full_name, sublabel: c.company ?? undefined, href: "/people" });
+    for (const c of data ?? []) map.set(`contact:${c.id}`, { label: c.full_name, sublabel: c.company ?? undefined });
   }
   if (byType.opportunity.length) {
     const { data } = await supabase.from("opportunities").select("id, title, organization").in("id", byType.opportunity);
-    for (const o of data ?? []) map.set(`opportunity:${o.id}`, { label: o.title, sublabel: o.organization ?? undefined, href: "/opportunities" });
+    for (const o of data ?? []) map.set(`opportunity:${o.id}`, { label: o.title, sublabel: o.organization ?? undefined });
   }
   if (byType.item.length) {
     const { data } = await supabase.from("items").select("id, title, item_type").in("id", byType.item);

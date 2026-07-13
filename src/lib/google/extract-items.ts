@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { geminiStructured } from "@/lib/llm/gemini";
-import { resolveDeadline } from "@/lib/agents/opportunity/deadline";
+import { resolveDeadline } from "@/lib/dates";
 import { backs, clamp01, norm } from "@/lib/agents/citation-gate";
 
 /**

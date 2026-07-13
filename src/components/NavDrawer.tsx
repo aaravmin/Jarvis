@@ -10,8 +10,7 @@ import { Brand } from "@/components/Brand";
 /**
  * The slide-in navigation drawer + its hamburger trigger, the app's ONLY nav surface. There is no
  * always-on rail: the tab list lives behind a left hamburger and overlays on demand at every screen
- * size, so Jarvis opens to just the orb and the clock. Closes on Escape, overlay click, and route
- * change; locks body scroll while open.
+ * size. Closes on Escape, overlay click, and route change; locks body scroll while open.
  */
 export function NavDrawer({ userEmail }: { userEmail?: string }) {
   const [open, setOpen] = useState(false);
@@ -54,7 +53,7 @@ export function NavDrawer({ userEmail }: { userEmail?: string }) {
 
           <aside className="drawer-panel absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-border bg-surface shadow-2xl">
             <div className="flex h-16 items-center justify-between px-5 border-b border-border">
-              <Link href="/jarvis" aria-label="Jarvis home">
+              <Link href="/today" aria-label="Jarvis home">
                 <Brand />
               </Link>
               <button
@@ -125,14 +124,6 @@ export function NavDrawer({ userEmail }: { userEmail?: string }) {
                     </button>
                   </form>
                 </div>
-              )}
-              {process.env.NODE_ENV !== "production" && (
-                <Link
-                  href="/dev"
-                  className="block px-3 text-[11px] text-muted transition-colors hover:text-accent"
-                >
-                  Component lab →
-                </Link>
               )}
             </div>
           </aside>

@@ -2,19 +2,9 @@ import "server-only";
 import * as chrono from "chrono-node";
 
 /**
- * Deterministic date resolution, the hard-rule-#2 boundary.
- *
- * The LLM is forbidden from computing or emitting any resolved date; it returns only the VERBATIM
- * string it found ("Applications due March 15, 2026", "Feb 7-9", "rolling"). These functions turn
- * those strings into timestamps using chrono-node, anchored to the run's reference time, resolving
- * ambiguous dates FORWARD (a deadline with no year is the next occurrence, not a past one).
- *
- * If chrono can't parse it (e.g. "rolling", "ongoing"), we return undefined and the UI falls back to
- * showing the raw string, which is always the source of truth. We never invent a date.
- *
- * Timezone note: when the source text names a zone ("11:59pm ET") chrono honors it; otherwise the
- * value is interpreted in the server's local zone. The raw string is displayed as the authority, so
- * this only affects sorting/reminder convenience, never what the user sees as the actual deadline.
+ * Deterministic date resolution (HARD RULE #2): the LLM never computes dates. It returns verbatim
+ * phrases ("by Friday", "next week"); this module resolves them with chrono against the source's
+ * occurred_at (refISO) so a "by Friday" in last week's email resolves to the right Friday.
  */
 
 const MAX_INPUT = 200; // guard against pathological inputs; real date phrases are short

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { resolveDeadline } from "@/lib/agents/opportunity/deadline";
+import { resolveDeadline } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** The command center opens on the Jarvis assistant (the orb). */
+/** Jarvis opens on Today: everything on your plate, in order of importance. */
 export default function Home() {
-  redirect("/jarvis");
+  redirect("/today");
 }

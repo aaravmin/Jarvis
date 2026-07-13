@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CheckCircle2, Circle, Plug, FolderOpen, ArrowRight } from "lucide-react";
+import { CheckCircle2, Circle, Plug, Target, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { loadProfile } from "@/lib/profile";
 import { getConnection } from "@/lib/google/store";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * First-run setup. Jarvis is multi-tenant: every account gets its own data (RLS), its own Google
- * connection, its own profile and documents. This checklist walks a brand-new user through the three
+ * connection, its own profile and goals. This checklist walks a brand-new user through the three
  * things that make Jarvis theirs. New sign-ups land here; anyone can return via the Set up nav item.
  */
 export default async function OnboardPage() {
@@ -20,17 +20,17 @@ export default async function OnboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [profile, connection, docs] = await Promise.all([
+  const [profile, connection, goals] = await Promise.all([
     loadProfile(supabase),
     getConnection(supabase, user.id),
-    supabase.from("documents").select("id", { count: "exact", head: true }),
+    supabase.from("goals").select("id", { count: "exact", head: true }),
   ]);
 
   const hasProfile = Boolean(profile?.headline || profile?.lookingFor || profile?.level);
   const hasGoogle = Boolean(connection);
-  const docCount = docs.count ?? 0;
-  const hasDocs = docCount > 0;
-  const done = [hasProfile, hasGoogle, hasDocs].filter(Boolean).length;
+  const goalCount = goals.count ?? 0;
+  const hasGoals = goalCount > 0;
+  const done = [hasProfile, hasGoogle, hasGoals].filter(Boolean).length;
 
   const btn = "inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-strong";
   const linkBtn = "inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-strong transition-colors hover:bg-surface-3";
@@ -48,7 +48,7 @@ export default async function OnboardPage() {
         <ProfileForm defaultOpen />
       </Step>
 
-      <Step n={2} done={hasGoogle} icon={<Plug className="h-4 w-4" />} title="Connect Google" desc="Let Jarvis read your Gmail and Calendar so it can turn email and meetings into tracked tasks. Read-only first; you grant write access later if you want it.">
+      <Step n={2} done={hasGoogle} icon={<Plug className="h-4 w-4" />} title="Connect Google" desc="Let Jarvis read your Gmail and Calendar so it can turn email and meetings into tracked tasks. Read-only.">
         {hasGoogle ? (
           <p className="text-sm text-success">Connected{connection?.email ? ` as ${connection.email}` : ""}.</p>
         ) : (
@@ -58,9 +58,9 @@ export default async function OnboardPage() {
         )}
       </Step>
 
-      <Step n={3} done={hasDocs} icon={<FolderOpen className="h-4 w-4" />} title="Add your resume or documents" desc="Upload a resume, bio, or grant materials. Jarvis reads them to fill application forms and write outreach in your voice.">
-        <Link href="/documents" className={linkBtn}>
-          <FolderOpen className="h-4 w-4" /> {hasDocs ? `${docCount} uploaded, add more` : "Upload a document"}
+      <Step n={3} done={hasGoals} icon={<Target className="h-4 w-4" />} title="Set your goals" desc="Your goals and sub-goals are how Jarvis decides what matters. Anything in your email or meetings that advances one gets flagged and prioritized.">
+        <Link href="/goals" className={linkBtn}>
+          <Target className="h-4 w-4" /> {hasGoals ? `${goalCount} goal${goalCount === 1 ? "" : "s"} set, add more` : "Add your first goal"}
         </Link>
       </Step>
 
