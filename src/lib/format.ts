@@ -85,6 +85,7 @@ const SOURCE_LABELS: Record<string, string> = {
   calendar: "Calendar",
   manual: "Manual",
   research: "Web research",
+  notion: "Notion",
 };
 
 export function sourceLabel(type: string): string {

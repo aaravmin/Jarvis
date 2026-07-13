@@ -7,6 +7,7 @@ import {
   CalendarDays,
   PenLine,
   Globe,
+  FileText,
   ExternalLink,
   X,
   type LucideIcon,
@@ -20,6 +21,7 @@ const SOURCE_ICONS: Record<SourceType, LucideIcon> = {
   calendar: CalendarDays,
   manual: PenLine,
   research: Globe,
+  notion: FileText,
 };
 
 function confidenceTone(c: number): string {

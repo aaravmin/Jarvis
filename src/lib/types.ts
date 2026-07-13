@@ -3,7 +3,7 @@
  * The DB is the system of record; these are the in-app shapes used by the UI.
  */
 
-export type SourceType = "email" | "meeting" | "calendar" | "manual" | "research";
+export type SourceType = "email" | "meeting" | "calendar" | "manual" | "research" | "notion";
 
 /**
  * Everything the provenance "source chip" needs to prove where an item came from.

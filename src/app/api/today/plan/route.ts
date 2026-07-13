@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { buildDayPlan } from "@/lib/agents/today/plan";
+import { loadAttention } from "@/lib/priority/load";
 
-// Builds the plan with one Claude call over the day's real data, give it room.
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
 
-/** GET /api/today/plan → a prioritized, time-ordered plan for today (ephemeral; nothing persisted). */
+/**
+ * GET /api/today/plan → the Today "attention" feed: the user's accepted items + upcoming calendar
+ * events, scored and bucketed deterministically (no LLM, no date maths in a model). Returns an
+ * AttentionFeed. Nothing is persisted; `now` is anchored server-side so scoring is reproducible.
+ */
 export async function GET() {
   const supabase = await createClient();
   const {
@@ -15,10 +17,10 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
 
   try {
-    const plan = await buildDayPlan(supabase);
-    return NextResponse.json(plan);
+    const feed = await loadAttention(supabase, new Date());
+    return NextResponse.json(feed);
   } catch (err) {
-    const m = err instanceof Error ? err.message : "Could not build your plan.";
+    const m = err instanceof Error ? err.message : "Could not build your feed.";
     return NextResponse.json({ error: m }, { status: 500 });
   }
 }
