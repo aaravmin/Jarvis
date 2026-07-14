@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -13,6 +13,8 @@ import {
   CheckSquare,
   CalendarClock,
   Reply,
+  Hourglass,
+  ArrowUpRight,
   Plug,
   type LucideIcon,
 } from "lucide-react";
@@ -20,6 +22,7 @@ import { Card } from "@/components/Card";
 import { GoalChip } from "@/components/GoalChip";
 import { SourceChip } from "@/components/SourceChip";
 import { SyncAllButton } from "@/components/today/SyncAllButton";
+import { syncAllAccounts } from "@/components/today/sync-all";
 import { formatWhen, formatEventTime } from "@/lib/format";
 import { BUCKET_META, BUCKET_ORDER, scoreItem } from "@/lib/priority/score";
 import type { AttentionEntry, AttentionFeed, Bucket } from "@/lib/priority/types";
@@ -32,13 +35,40 @@ import type { AttentionEntry, AttentionFeed, Bucket } from "@/lib/priority/types
  * red and green are the only loud colors (per the product's design brief).
  */
 
-const KIND_META: Record<AttentionEntry["kind"], { label: string; icon: LucideIcon }> = {
+const KIND_META: Record<AttentionEntry["kind"], { label: string; icon: LucideIcon; pill?: "reply" | "nudge" }> = {
   task: { label: "Task", icon: CheckSquare },
   follow_up: { label: "Follow-up", icon: Reply },
   event: { label: "Event", icon: CalendarClock },
+  needs_reply: { label: "Needs reply", icon: Reply, pill: "reply" },
+  waiting_on: { label: "Waiting on them", icon: Hourglass, pill: "nudge" },
 };
 
 const DONE_DISPLAY_CAP = 8;
+
+// Auto-sync-on-open fires at most once per browser session, and only when our newest data is this old.
+const AUTOSYNC_STALE_MS = 6 * 60 * 60 * 1000; // 6h
+const AUTOSYNC_GUARD = "jarvis-autosync";
+const SYNCED_SUFFIX = "auto-syncs when you open Jarvis";
+
+/** Plain-code relative age (display only; not a provenance date computation). */
+function relativeAgo(ms: number): string {
+  const min = Math.floor(ms / 60000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min} min`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} hour${hr === 1 ? "" : "s"}`;
+  const d = Math.floor(hr / 24);
+  return `${d} day${d === 1 ? "" : "s"}`;
+}
+
+/** The header's freshness line, computed from the newest source time with plain code. */
+function syncedAgoLabel(newestSourceAt: string | null): string {
+  if (!newestSourceAt) return SYNCED_SUFFIX;
+  const ms = Date.now() - new Date(newestSourceAt).getTime();
+  if (Number.isNaN(ms)) return SYNCED_SUFFIX;
+  const rel = relativeAgo(ms);
+  return rel === "just now" ? `Synced just now · ${SYNCED_SUFFIX}` : `Synced ${rel} ago · ${SYNCED_SUFFIX}`;
+}
 
 type Tone = "danger" | "success" | "neutral";
 const TONE_CLASS: Record<Tone, string> = {
@@ -49,6 +79,14 @@ const TONE_CLASS: Record<Tone, string> = {
 
 function dueLabel(entry: AttentionEntry): { text: string; tone: Tone } | null {
   if (entry.status === "done") return { text: "Done", tone: "success" };
+  if (entry.kind === "needs_reply") {
+    const d = entry.waitingDays ?? 0;
+    return { text: `Waiting on you - ${d} day${d === 1 ? "" : "s"}`, tone: entry.bucket === "overdue" ? "danger" : "neutral" };
+  }
+  if (entry.kind === "waiting_on") {
+    const d = entry.waitingDays ?? 0;
+    return { text: `Sent ${d} day${d === 1 ? "" : "s"} ago`, tone: "neutral" };
+  }
   if (entry.origin === "calendar") {
     const text = formatEventTime(entry.startsAt ?? undefined, entry.endsAt ?? undefined, entry.allDay);
     return text ? { text, tone: entry.bucket === "overdue" ? "danger" : "neutral" } : null;
@@ -70,14 +108,44 @@ function moveEntry(feed: AttentionFeed, fromBucket: Bucket, updated: AttentionEn
   return { ...feed, buckets };
 }
 
-export function TodayView({ initialFeed, notionEnabled }: { initialFeed: AttentionFeed; notionEnabled: boolean }) {
+export function TodayView({
+  initialFeed,
+  notionEnabled,
+  newestSourceAt,
+}: {
+  initialFeed: AttentionFeed;
+  notionEnabled: boolean;
+  newestSourceAt: string | null;
+}) {
   const router = useRouter();
   const [feed, setFeed] = useState(initialFeed);
   const [pending, setPending] = useState<Set<string>>(new Set());
   const [actionError, setActionError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [autoSyncing, setAutoSyncing] = useState(false);
+  // Rendered on the client only (avoids an SSR/CSR hydration mismatch on the relative time).
+  const [syncedLabel, setSyncedLabel] = useState<string>(SYNCED_SUFFIX);
 
   const total = useMemo(() => BUCKET_ORDER.reduce((n, b) => n + feed.buckets[b].length, 0), [feed]);
+
+  useEffect(() => {
+    setSyncedLabel(syncedAgoLabel(newestSourceAt));
+  }, [newestSourceAt]);
+
+  // Auto-sync when the newest data we hold is stale (or absent), at most once per browser session.
+  // The guard is set BEFORE the async call so a fast second mount can't double-fire it.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (sessionStorage.getItem(AUTOSYNC_GUARD)) return;
+    const stale = !newestSourceAt || Date.now() - new Date(newestSourceAt).getTime() > AUTOSYNC_STALE_MS;
+    if (!stale) return;
+    sessionStorage.setItem(AUTOSYNC_GUARD, "1");
+    setAutoSyncing(true);
+    void syncAllAccounts(notionEnabled).finally(() => {
+      setAutoSyncing(false);
+      router.refresh();
+    });
+  }, [newestSourceAt, notionEnabled, router]);
 
   const refresh = useCallback(() => {
     setRefreshing(true);
@@ -164,16 +232,19 @@ export function TodayView({ initialFeed, notionEnabled }: { initialFeed: Attenti
             Ordered by importance and grounded in your goals. Overdue is red, done is green.
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={refresh}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-sm text-muted-strong transition-colors hover:border-accent/50 hover:text-foreground"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
-          <SyncAllButton notionEnabled={notionEnabled} />
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={refresh}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-sm text-muted-strong transition-colors hover:border-accent/50 hover:text-foreground"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+            <SyncAllButton notionEnabled={notionEnabled} />
+          </div>
+          <p className="text-[11px] text-muted">{autoSyncing ? "Syncing your accounts..." : syncedLabel}</p>
         </div>
       </header>
 
@@ -229,9 +300,17 @@ export function TodayView({ initialFeed, notionEnabled }: { initialFeed: Attenti
 function KindPill({ kind }: { kind: AttentionEntry["kind"] }) {
   const meta = KIND_META[kind];
   const Icon = meta.icon;
+  // needs_reply is red-tinted (you owe a reply); waiting_on is a neutral "the ball is in their court".
+  const shell =
+    meta.pill === "reply"
+      ? "border-danger/35 bg-danger/5 text-danger"
+      : meta.pill === "nudge"
+        ? "border-border-strong bg-surface-3 text-muted-strong"
+        : "border-border text-muted-strong";
+  const iconColor = meta.pill === "reply" ? "text-danger" : "text-accent";
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-strong">
-      <Icon className="h-2.5 w-2.5 text-accent" /> {meta.label}
+    <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] ${shell}`}>
+      <Icon className={`h-2.5 w-2.5 ${iconColor}`} /> {meta.label}
     </span>
   );
 }
@@ -254,11 +333,14 @@ function CompleteCheckbox({ checked, busy, onClick }: { checked: boolean; busy: 
 
 function EntryRow({ entry, busy, onToggle }: { entry: AttentionEntry; busy: boolean; onToggle: () => void }) {
   const due = dueLabel(entry);
+  const isReply = entry.origin === "reply";
+  const hasBody = isReply || entry.goalTags.length > 0 || entry.meetingTopics.length > 0;
   return (
     <div className="flex items-start gap-2.5">
       {entry.origin === "item" ? (
         <CompleteCheckbox checked={entry.status === "done"} busy={busy} onClick={onToggle} />
       ) : (
+        // Reply entries and calendar events aren't checkable — they clear themselves. Keep the spacer.
         <span className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
       )}
       <div className="min-w-0 flex-1">
@@ -272,9 +354,13 @@ function EntryRow({ entry, busy, onToggle }: { entry: AttentionEntry; busy: bool
               {due && <span className={TONE_CLASS[due.tone]}>{due.text}</span>}
             </span>
           }
+          actions={entry.threadLink ? <ReplyAction entry={entry} /> : undefined}
         >
-          {(entry.goalTags.length > 0 || entry.meetingTopics.length > 0) && (
+          {hasBody && (
             <div className="space-y-1.5">
+              {isReply && entry.source.quote && (
+                <p className="text-xs italic leading-relaxed text-muted">&ldquo;{entry.source.quote}&rdquo;</p>
+              )}
               {entry.goalTags.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5">
                   {entry.goalTags.map((g) => (
@@ -296,6 +382,21 @@ function EntryRow({ entry, busy, onToggle }: { entry: AttentionEntry; busy: bool
         </Card>
       </div>
     </div>
+  );
+}
+
+/** One-click deep link into the Gmail thread. Jarvis never drafts or sends — the user replies in Gmail. */
+function ReplyAction({ entry }: { entry: AttentionEntry }) {
+  const label = entry.kind === "waiting_on" ? "Nudge in Gmail" : "Reply in Gmail";
+  return (
+    <a
+      href={entry.threadLink}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 rounded-lg border border-accent/30 bg-surface-2 px-2.5 py-1 text-xs font-semibold text-accent transition-colors hover:bg-surface-3"
+    >
+      {label} <ArrowUpRight className="h-3.5 w-3.5" />
+    </a>
   );
 }
 

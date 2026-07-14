@@ -17,7 +17,9 @@ import { extractItemsFromSources } from "@/lib/google/extract-items";
 const SCAN_LIMIT = 200; // newest sources to consider per click
 const MINE_CAP = 60; // hard cap on how many un-mined sources we actually run the model over per click
 
-export type BackfillResult = { scanned: number; inserted: number; remaining: number };
+/** `candidates` = everything the extractor proposed (candidatesFound); `inserted` = what survived the
+ *  citation gate + confidence floor (itemsKept). The gap between them is honest signal, not failure. */
+export type BackfillResult = { scanned: number; inserted: number; candidates: number; remaining: number };
 
 export async function backfillExtraction(supabase: SupabaseClient, userId: string): Promise<BackfillResult> {
   // Sources that can carry action items: emails, pasted meeting transcripts, and Notion pages.
@@ -29,7 +31,7 @@ export async function backfillExtraction(supabase: SupabaseClient, userId: strin
     .order("occurred_at", { ascending: false })
     .limit(SCAN_LIMIT);
   const sources = srcRows ?? [];
-  if (!sources.length) return { scanned: 0, inserted: 0, remaining: 0 };
+  if (!sources.length) return { scanned: 0, inserted: 0, candidates: 0, remaining: 0 };
 
   // Which sources already produced items? Skip them, never mine the same source twice.
   const { data: itemRows } = await supabase
@@ -41,7 +43,7 @@ export async function backfillExtraction(supabase: SupabaseClient, userId: strin
 
   const unmined = sources.filter((s) => !mined.has(s.id as string));
   const batch = unmined.slice(0, MINE_CAP);
-  if (!batch.length) return { scanned: 0, inserted: 0, remaining: 0 };
+  if (!batch.length) return { scanned: 0, inserted: 0, candidates: 0, remaining: 0 };
 
   // The extractor's prompt differs for an email vs a meeting transcript, so split by kind.
   const toShape = (s: (typeof batch)[number]) => ({
@@ -55,9 +57,22 @@ export async function backfillExtraction(supabase: SupabaseClient, userId: strin
   const notionPages = batch.filter((s) => s.source_type === "notion").map(toShape);
 
   let inserted = 0;
-  if (emails.length) inserted += await extractItemsFromSources(supabase, userId, emails, 4, "email");
-  if (meetings.length) inserted += await extractItemsFromSources(supabase, userId, meetings, 4, "meeting");
-  if (notionPages.length) inserted += await extractItemsFromSources(supabase, userId, notionPages, 4, "notion");
+  let candidates = 0;
+  if (emails.length) {
+    const r = await extractItemsFromSources(supabase, userId, emails, 4, "email");
+    inserted += r.inserted;
+    candidates += r.considered;
+  }
+  if (meetings.length) {
+    const r = await extractItemsFromSources(supabase, userId, meetings, 4, "meeting");
+    inserted += r.inserted;
+    candidates += r.considered;
+  }
+  if (notionPages.length) {
+    const r = await extractItemsFromSources(supabase, userId, notionPages, 4, "notion");
+    inserted += r.inserted;
+    candidates += r.considered;
+  }
 
-  return { scanned: batch.length, inserted, remaining: Math.max(0, unmined.length - batch.length) };
+  return { scanned: batch.length, inserted, candidates, remaining: Math.max(0, unmined.length - batch.length) };
 }

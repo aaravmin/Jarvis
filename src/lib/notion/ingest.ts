@@ -110,7 +110,8 @@ export async function ingestNotion(supabase: SupabaseClient, userId: string): Pr
   let itemsExtracted = 0;
   if (forExtraction.length) {
     try {
-      itemsExtracted = await extractItemsFromSources(supabase, userId, forExtraction, 4, "notion");
+      const r = await extractItemsFromSources(supabase, userId, forExtraction, 4, "notion");
+      itemsExtracted = r.inserted;
     } catch {
       itemsExtracted = 0;
     }

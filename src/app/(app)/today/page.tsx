@@ -29,6 +29,21 @@ export default async function TodayPage() {
     loadError = err instanceof Error ? err.message : "Could not build your day.";
   }
 
+  // Newest source we hold whose content is not in the future (calendar events can be) — a cheap proxy
+  // for data freshness that drives the "Synced X ago" line and auto-sync-on-open. Best-effort.
+  let newestSourceAt: string | null = null;
+  if (user) {
+    const { data: newest } = await supabase
+      .from("sources")
+      .select("occurred_at")
+      .not("occurred_at", "is", null)
+      .lte("occurred_at", new Date().toISOString())
+      .order("occurred_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    newestSourceAt = (newest?.occurred_at as string | null) ?? null;
+  }
+
   if (!feed) {
     return (
       <div className="mx-auto max-w-3xl space-y-3">
@@ -47,7 +62,7 @@ export default async function TodayPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <TodayView key={feed.generatedAt} initialFeed={feed} notionEnabled={notionOn} />
+      <TodayView key={feed.generatedAt} initialFeed={feed} notionEnabled={notionOn} newestSourceAt={newestSourceAt} />
     </div>
   );
 }

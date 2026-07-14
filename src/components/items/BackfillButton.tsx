@@ -25,13 +25,20 @@ export function BackfillButton() {
       }
       const scanned = Number(data?.scanned ?? 0);
       const inserted = Number(data?.inserted ?? 0);
+      const candidates = Number(data?.candidates ?? 0);
       const remaining = Number(data?.remaining ?? 0);
-      if (inserted > 0) {
-        setMsg(`Found ${inserted} action item${inserted === 1 ? "" : "s"} in ${scanned} message${scanned === 1 ? "" : "s"}.${remaining ? ` ${remaining} more to scan, click again.` : ""}`);
-      } else if (scanned > 0) {
-        setMsg(`Scanned ${scanned} message${scanned === 1 ? "" : "s"}, nothing actionable.${remaining ? ` ${remaining} more to scan, click again.` : ""}`);
-      } else {
+      const hint = remaining ? ` ${remaining} more to scan, click again.` : "";
+      if (scanned === 0) {
         setMsg("No un-scanned messages left. Sync new email to find more.");
+      } else if (candidates > 0) {
+        // Honest phrasing: `candidates` is everything the extractor proposed, `inserted` is what
+        // survived the source-quote + confidence checks. The gap is candidates that didn't make the
+        // cut, not items that "failed to verify".
+        setMsg(
+          `${scanned} message${scanned === 1 ? "" : "s"} scanned · ${candidates} candidate${candidates === 1 ? "" : "s"} found, ${inserted} kept.${hint}`,
+        );
+      } else {
+        setMsg(`Scanned ${scanned} message${scanned === 1 ? "" : "s"}, nothing actionable.${hint}`);
       }
       router.refresh();
     } catch {

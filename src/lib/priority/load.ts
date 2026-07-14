@@ -2,8 +2,9 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CardSource, SourceType } from "@/lib/types";
 import { calendarLocation } from "@/lib/format";
+import { gmailThreadLink } from "@/lib/google/gmail";
 import { goalsForEntities } from "@/lib/goals/load";
-import { scoreItem } from "@/lib/priority/score";
+import { scoreItem, REPLY_OVERDUE_DAYS } from "@/lib/priority/score";
 import type { AttentionEntry, AttentionFeed, Bucket, GoalTag, MeetingTopic } from "@/lib/priority/types";
 
 /**
@@ -14,6 +15,7 @@ import type { AttentionEntry, AttentionFeed, Bucket, GoalTag, MeetingTopic } fro
  */
 
 const DAY_MS = 86_400_000;
+const REPLY_STALE_DAYS = 21; // hide reply entries whose thread has been silent longer than this (noise guard)
 
 const KNOWN_SOURCE_TYPES: SourceType[] = ["email", "meeting", "calendar", "manual", "research", "notion"];
 function toSourceType(s: string | null | undefined): SourceType {
@@ -75,6 +77,20 @@ type CalRow = {
   ends_at: string | null;
   is_all_day: boolean | null;
   raw_text: string | null;
+};
+
+type ReplyRow = {
+  id: string;
+  title: string | null;
+  permalink: string | null;
+  occurred_at: string | null;
+  raw_text: string | null;
+  from_name: string | null;
+  from_email: string | null;
+  group_label: string | null;
+  thread_id: string | null;
+  last_msg_from: "me" | "them" | null;
+  last_msg_at: string | null;
 };
 
 function toGoalTags(list: { id: string; title: string }[] | undefined): GoalTag[] {
@@ -201,7 +217,12 @@ export async function loadAttention(supabase: SupabaseClient, now: Date): Promis
           .filter((x) => x.n > 0)
           .sort((a, b) => b.n - a.n || b.cand.entry.score - a.cand.entry.score)
           .slice(0, 3)
-          .map((x) => ({ id: x.cand.entry.id, title: x.cand.entry.title, itemType: x.cand.entry.kind }))
+          // topicCandidates are only accepted ITEM entries, so kind is always a MeetingTopic itemType.
+          .map((x) => ({
+            id: x.cand.entry.id,
+            title: x.cand.entry.title,
+            itemType: x.cand.entry.kind as MeetingTopic["itemType"],
+          }))
       : [];
 
     calEntries.push({
@@ -230,12 +251,114 @@ export async function loadAttention(supabase: SupabaseClient, now: Date): Promis
     });
   }
 
+  // ---- Email reply entries (needs_reply / waiting_on) ----------------------
+  const replyEntries = await loadReplyEntries(supabase, now);
+
   // ---- Bucket + sort (importance within each tier, stable by title) --------
   const buckets: Record<Bucket, AttentionEntry[]> = { overdue: [], today: [], soon: [], later: [], done: [] };
-  for (const e of [...itemEntries, ...calEntries]) buckets[e.bucket].push(e);
+  for (const e of [...itemEntries, ...calEntries, ...replyEntries]) buckets[e.bucket].push(e);
   for (const key of Object.keys(buckets) as Bucket[]) {
     buckets[key].sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
   }
 
   return { buckets, generatedAt: now.toISOString() };
+}
+
+/**
+ * Build the reply feed from DETERMINISTIC email thread reply-state (migration 0024, computed in
+ * lib/google/ingest.ts, never by the model — hard rule #7):
+ *   last_msg_from='them' -> needs_reply (you owe a reply);
+ *   last_msg_from='me' and silent >= 3 days -> waiting_on (you're awaiting theirs).
+ * One entry per thread (the newest stored message represents it). Threads silent longer than 21 days
+ * are dropped as noise. 42703-tolerant: if the reply-state columns are not migrated yet the select
+ * errors and we return nothing, so the rest of Today renders normally.
+ */
+async function loadReplyEntries(supabase: SupabaseClient, now: Date): Promise<AttentionEntry[]> {
+  const staleISO = new Date(now.getTime() - REPLY_STALE_DAYS * DAY_MS).toISOString();
+  const res = await supabase
+    .from("sources")
+    .select(
+      "id, title, permalink, occurred_at, raw_text, from_name, from_email, group_label, thread_id, last_msg_from, last_msg_at",
+    )
+    .eq("source_type", "email")
+    .not("last_msg_from", "is", null)
+    .gte("last_msg_at", staleISO)
+    .order("occurred_at", { ascending: false })
+    .limit(200);
+  if (res.error) return []; // columns missing (42703) or any read error: reply feed simply stays empty
+
+  const rows = (res.data ?? []) as ReplyRow[];
+  // Collapse to one row per thread — newest stored message wins (rows are already occurred_at desc).
+  const seenThreads = new Set<string>();
+  const chosen: ReplyRow[] = [];
+  for (const r of rows) {
+    const tid = r.thread_id ?? "";
+    if (!tid || seenThreads.has(tid)) continue;
+    seenThreads.add(tid);
+    chosen.push(r);
+  }
+  if (!chosen.length) return [];
+
+  const goalsBySource = await goalsForEntities(
+    supabase,
+    "source",
+    chosen.map((r) => r.id),
+  );
+
+  const entries: AttentionEntry[] = [];
+  for (const r of chosen) {
+    const lastMsgAtMs = r.last_msg_at ? new Date(r.last_msg_at).getTime() : null;
+    if (lastMsgAtMs === null || !r.thread_id) continue;
+    const waitingDays = Math.max(0, Math.floor((now.getTime() - lastMsgAtMs) / DAY_MS));
+    const isNeedsReply = r.last_msg_from === "them";
+    // A reply you're waiting on is only worth surfacing after a few days of silence.
+    if (!isNeedsReply && waitingDays < REPLY_OVERDUE_DAYS) continue;
+
+    const kind: "needs_reply" | "waiting_on" = isNeedsReply ? "needs_reply" : "waiting_on";
+    const subject = (r.title ?? "").trim();
+    const who = (r.from_name ?? "").trim() || (r.group_label ?? "").trim() || (r.from_email ?? "").trim() || "them";
+    const label = (r.group_label ?? "").trim() || (r.from_name ?? "").trim() || (r.from_email ?? "").trim() || "them";
+    const title = isNeedsReply
+      ? `Reply to ${who}${subject ? ` - ${subject}` : ""}`
+      : `Nudge ${label} - sent ${waitingDays} day${waitingDays === 1 ? "" : "s"} ago`;
+
+    // The source IS the provenance: quote the first ~140 chars of the thread's stored message.
+    const quote = (r.raw_text ?? "").trim().slice(0, 140) || subject || title;
+    const threadLink = gmailThreadLink(r.thread_id);
+    const goalTags = toGoalTags(goalsBySource.get(r.id));
+
+    const { score, bucket } = scoreItem(
+      { kind, dueAt: null, status: "accepted", goalCount: goalTags.length, confidence: null, ageDays: waitingDays },
+      now,
+    );
+
+    entries.push({
+      id: `reply:${r.thread_id}`,
+      origin: "reply",
+      kind,
+      title,
+      bucket,
+      score,
+      status: "accepted",
+      dueAt: null,
+      startsAt: null,
+      endsAt: null,
+      allDay: false,
+      reasoning: null,
+      confidence: null,
+      goalTags,
+      meetingTopics: [],
+      threadLink,
+      waitingDays,
+      source: {
+        type: "email",
+        quote,
+        title: subject || undefined,
+        permalink: threadLink,
+        occurredAt: r.last_msg_at ?? r.occurred_at ?? undefined,
+        rawText: r.raw_text ?? undefined,
+      },
+    });
+  }
+  return entries;
 }

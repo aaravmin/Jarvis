@@ -30,10 +30,18 @@ export type MeetingTopic = { id: string; title: string; itemType: "task" | "foll
  * (hard rule #4) and its goal tags so importance is visible.
  */
 export type AttentionEntry = {
-  /** Item id, or `cal:<sourceId>` for a calendar event (kept distinct so ids never collide). */
+  /**
+   * Item id, `cal:<sourceId>` for a calendar event, or `reply:<threadId>` for a reply entry
+   * (kept distinct so ids never collide across origins).
+   */
   id: string;
-  origin: "item" | "calendar";
-  kind: "task" | "follow_up" | "event";
+  origin: "item" | "calendar" | "reply";
+  /**
+   * task / follow_up / event come from action items or the calendar. needs_reply / waiting_on come
+   * from DETERMINISTIC email thread reply-state (who sent the newest message): needs_reply = they
+   * replied last and you owe a reply; waiting_on = you replied last and are awaiting theirs.
+   */
+  kind: "task" | "follow_up" | "event" | "needs_reply" | "waiting_on";
   title: string;
   /** The temporal tier (grouping + red/green tone come from BUCKET_META in ./score.ts). */
   bucket: Bucket;
@@ -53,6 +61,10 @@ export type AttentionEntry = {
   goalTags: GoalTag[];
   /** Populated only for calendar events: up to 3 open items that look related. */
   meetingTopics: MeetingTopic[];
+  /** Reply entries only: the Gmail deep link to reply/nudge in the thread (target _blank). */
+  threadLink?: string;
+  /** Reply entries only: whole days since the thread's newest message (drives the due label). */
+  waitingDays?: number;
   source: CardSource;
 };
 

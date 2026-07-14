@@ -38,9 +38,14 @@ const TEMPORAL_BASE: Record<Bucket, number> = {
   done: 0,
 };
 
+/** A reply you owe becomes "overdue" (red) once it has waited this many whole days. */
+export const REPLY_OVERDUE_DAYS = 3;
+const REPLY_AGE_STEP = 8; // per-day escalation for a waiting reply
+const REPLY_AGE_CAP = 60; // bounded so an ancient thread can't dwarf goal linkage
+
 export type ScoreInput = {
-  kind: "task" | "follow_up" | "event";
-  /** Resolved deadline (ISO) for items; null for calendar events and undated items. */
+  kind: "task" | "follow_up" | "event" | "needs_reply" | "waiting_on";
+  /** Resolved deadline (ISO) for items; null for calendar events, reply entries, and undated items. */
   dueAt: string | null;
   /** Start time (ISO) for calendar events; drives the tier + intra-day ordering when present. */
   startsAt?: string | null;
@@ -49,6 +54,8 @@ export type ScoreInput = {
   goalCount: number;
   /** 0..1 extractor confidence; only a weak tiebreaker. */
   confidence?: number | null;
+  /** Reply entries only: whole days since the thread's newest message (drives tier + escalation). */
+  ageDays?: number | null;
 };
 
 export type Scored = { score: number; bucket: Bucket };
@@ -73,6 +80,9 @@ function parseMs(iso: string | null | undefined): number | null {
 /** The temporal tier for an entry. Calendar events anchor on start time; items on their due date. */
 export function bucketFor(input: ScoreInput, now: Date): Bucket {
   if (input.status === "done") return "done";
+  // Reply entries have no clock deadline; their tier comes from how long the thread has waited.
+  if (input.kind === "needs_reply") return (input.ageDays ?? 0) >= REPLY_OVERDUE_DAYS ? "overdue" : "today";
+  if (input.kind === "waiting_on") return "today"; // only surfaced once >= 3 days (see load.ts)
   const anchorMs = parseMs(input.startsAt ?? null) ?? parseMs(input.dueAt);
   if (anchorMs === null) return "later"; // undated open work lives in 'later'
   const delta = dayDelta(anchorMs, now);
@@ -112,7 +122,15 @@ function goalBoost(goalCount: number): number {
 }
 
 function typeBoost(kind: ScoreInput["kind"]): number {
-  return kind === "follow_up" ? 12 : 0; // an owed reply is a little stickier than a plain task
+  // An owed reply is a little stickier than a plain task; a reply you're waiting on is the least sticky
+  // (the ball is in their court).
+  if (kind === "follow_up" || kind === "needs_reply") return 12;
+  return 0;
+}
+
+/** Age escalation for a waiting reply so a thread that has sat longer ranks higher within its tier. */
+function replyAgeRefine(ageDays: number | null | undefined): number {
+  return Math.min(REPLY_AGE_CAP, Math.max(0, ageDays ?? 0) * REPLY_AGE_STEP);
 }
 
 /**
@@ -121,11 +139,12 @@ function typeBoost(kind: ScoreInput["kind"]): number {
  */
 export function scoreItem(input: ScoreInput, now: Date, allDay = false): Scored {
   const bucket = bucketFor(input, now);
+  const isReply = input.kind === "needs_reply" || input.kind === "waiting_on";
   const anchorMs = parseMs(input.startsAt ?? null) ?? parseMs(input.dueAt);
-  const undated = anchorMs === null && bucket !== "done";
+  const undated = anchorMs === null && bucket !== "done" && !isReply;
 
   let score = TEMPORAL_BASE[bucket];
-  score += proximityRefine(anchorMs, bucket, now);
+  score += isReply ? replyAgeRefine(input.ageDays) : proximityRefine(anchorMs, bucket, now);
   score += goalBoost(input.goalCount);
   score += typeBoost(input.kind);
   score += (typeof input.confidence === "number" ? input.confidence : 0.5) * 6; // weak tiebreaker

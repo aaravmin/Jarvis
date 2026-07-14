@@ -83,15 +83,74 @@ function parseFrom(from: string): { name: string; email: string } {
   return { name, email };
 }
 
-/** Recent inbox message ids (Primary-ish: excludes promotions/social/updates spam buckets). */
-export async function listMessageIds(token: string, max = 40): Promise<{ id: string; threadId: string }[]> {
-  const q = "in:inbox -category:promotions -category:social";
-  const res = await fetch(`${API}/messages?maxResults=${max}&q=${encodeURIComponent(q)}`, {
+/** Primary-ish inbox filter: excludes the promotions/social spam buckets. */
+const INBOX_QUERY = "in:inbox -category:promotions -category:social";
+
+/**
+ * Recent inbox message ids, newest first. `afterEpochSec` (Unix seconds) narrows to messages received
+ * after a cursor (`after:` search operator), so an incremental sync fetches only what arrived since the
+ * last one instead of re-listing the whole inbox. Pages through results up to `max` (capped at 100/sync)
+ * so a busy inbox since the cursor is still fully covered.
+ */
+export async function listMessageIds(
+  token: string,
+  max = 40,
+  afterEpochSec?: number,
+): Promise<{ id: string; threadId: string }[]> {
+  const q = afterEpochSec ? `${INBOX_QUERY} after:${Math.floor(afterEpochSec)}` : INBOX_QUERY;
+  const cap = Math.min(100, Math.max(1, max));
+  const out: { id: string; threadId: string }[] = [];
+  let pageToken: string | undefined;
+  do {
+    const params = new URLSearchParams({ q, maxResults: String(Math.min(100, cap - out.length)) });
+    if (pageToken) params.set("pageToken", pageToken);
+    const res = await fetch(`${API}/messages?${params.toString()}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`Gmail list failed (${res.status}): ${await res.text()}`);
+    const data = (await res.json()) as { messages?: { id: string; threadId: string }[]; nextPageToken?: string };
+    out.push(...(data.messages ?? []));
+    pageToken = data.nextPageToken;
+  } while (pageToken && out.length < cap);
+  return out.slice(0, cap);
+}
+
+export type ThreadState = { lastMsgFrom: "me" | "them"; lastMsgAt: string };
+
+/**
+ * DETERMINISTIC reply-state for a thread (hard rule #7: never ask the model "did I reply?"). Reads the
+ * real Gmail thread (metadata only, no bodies — cheap and within gmail.readonly) and finds the newest
+ * message. `lastMsgFrom` is 'me' when that message was sent by the connected account (its From matches
+ * `userEmail`, case-insensitive and angle-bracket tolerant, OR it carries the SENT label); otherwise
+ * 'them'. `lastMsgAt` is that message's internalDate. Best-effort: returns null on any error / rate limit
+ * (429) so one flaky thread never aborts a sync.
+ */
+export async function getThreadState(
+  token: string,
+  threadId: string,
+  userEmail: string,
+): Promise<ThreadState | null> {
+  const res = await fetch(`${API}/threads/${threadId}?format=metadata&metadataHeaders=From`, {
     headers: { authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error(`Gmail list failed (${res.status}): ${await res.text()}`);
-  const data = (await res.json()) as { messages?: { id: string; threadId: string }[] };
-  return data.messages ?? [];
+  if (!res.ok) return null; // 429 / transient errors: skip this thread, keep the sync going
+  const data = (await res.json()) as {
+    messages?: { internalDate?: string; labelIds?: string[]; payload?: { headers?: { name?: string; value?: string }[] } }[];
+  };
+  const msgs = data.messages ?? [];
+  if (!msgs.length) return null;
+
+  // Threads come back oldest-first, but pick the max internalDate defensively rather than trust order.
+  let newest = msgs[0];
+  for (const m of msgs) {
+    if (Number(m.internalDate ?? 0) >= Number(newest.internalDate ?? 0)) newest = m;
+  }
+
+  const fromEmail = parseFrom(header(newest.payload?.headers ?? [], "From")).email;
+  const me = userEmail.trim().toLowerCase();
+  const sentByMe = (!!me && fromEmail === me) || (newest.labelIds ?? []).includes("SENT");
+  const lastMsgAt = newest.internalDate ? new Date(Number(newest.internalDate)).toISOString() : new Date().toISOString();
+  return { lastMsgFrom: sentByMe ? "me" : "them", lastMsgAt };
 }
 
 export async function getMessage(token: string, id: string): Promise<GmailMessage> {
@@ -127,6 +186,11 @@ export async function getMessage(token: string, id: string): Promise<GmailMessag
 /** A web link to open a message in Gmail. */
 export function gmailLink(id: string): string {
   return `https://mail.google.com/mail/u/0/#all/${id}`;
+}
+
+/** A web link to open a whole thread in Gmail (the reply / nudge target on the Today feed). */
+export function gmailThreadLink(threadId: string): string {
+  return `https://mail.google.com/mail/u/0/#all/${threadId}`;
 }
 
 /** Strip CR/LF so a header value can't inject extra headers (header-injection guard). */

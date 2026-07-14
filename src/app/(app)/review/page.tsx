@@ -1,7 +1,7 @@
 import { Inbox } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { loadReviewItems } from "@/lib/items/review";
-import { ReviewItemCard } from "@/components/items/ReviewItemCard";
+import { ReviewList } from "@/components/items/ReviewList";
 import { BackfillButton } from "@/components/items/BackfillButton";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +38,7 @@ export default async function ReviewPage() {
           </p>
         </div>
       ) : (
-        items.map((item) => <ReviewItemCard key={item.id} item={item} />)
+        <ReviewList items={items} />
       )}
     </div>
   );

@@ -273,21 +273,30 @@ export async function extractItemsFromSource(
   return { inserted: prepared.length, considered: candidates.length };
 }
 
-/** Run extraction over many sources with bounded concurrency; returns the total items inserted. */
+/**
+ * Run extraction over many sources with bounded concurrency. Returns aggregate counts: `considered`
+ * is how many candidates the model proposed across all sources, `inserted` is how many survived the
+ * citation gate / confidence floor / dedup and landed in the Review queue. Sync and backfill surface
+ * both so the user sees "N candidates, M kept", not just a silent count.
+ */
 export async function extractItemsFromSources(
   supabase: SupabaseClient,
   userId: string,
   sources: { id: string; title: string | null; body: string; occurredAt: string | null }[],
   concurrency = 4,
   kind: SourceKind = "email",
-): Promise<number> {
+): Promise<ExtractResult> {
   // Load the goal list once for the whole batch rather than per source.
   const goals = await loadGoalDigests(supabase);
-  let total = 0;
+  let inserted = 0;
+  let considered = 0;
   for (let i = 0; i < sources.length; i += concurrency) {
     const batch = sources.slice(i, i + concurrency);
     const results = await Promise.all(batch.map((s) => extractItemsFromSource(supabase, userId, s, kind, goals)));
-    total += results.reduce((sum, r) => sum + r.inserted, 0);
+    for (const r of results) {
+      inserted += r.inserted;
+      considered += r.considered;
+    }
   }
-  return total;
+  return { inserted, considered };
 }

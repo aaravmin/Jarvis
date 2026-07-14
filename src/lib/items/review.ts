@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CardSource, SourceType } from "@/lib/types";
 import { goalsForEntities } from "@/lib/goals/load";
+import { scoreItem } from "@/lib/priority/score";
 
 /**
  * Loads the email-derived action items waiting in the Review queue (roadmap B2). These are the
@@ -88,5 +89,32 @@ export async function loadReviewItems(supabase: SupabaseClient): Promise<ReviewI
       },
     });
   }
-  return items;
+
+  // Order the queue with the same pure scorer Today uses, so "priority" means one thing across the
+  // app: due date first, then goal relevance (goalBoost dominates the temporal tiebreak within a
+  // tier). Review items have no start time, so we score them like accepted work due on `dueAt`.
+  const now = new Date();
+  const scored = items.map((item) => ({
+    item,
+    score: scoreItem(
+      {
+        kind: item.itemType,
+        dueAt: item.dueAt,
+        startsAt: null,
+        status: "accepted",
+        goalCount: item.goalTags.length,
+        confidence: item.source.confidence ?? null,
+      },
+      now,
+    ).score,
+  }));
+  // Stable tiebreak: newest first, then title, so equal-score items don't reshuffle across renders.
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const at = new Date(a.item.createdAt).getTime();
+    const bt = new Date(b.item.createdAt).getTime();
+    if (bt !== at) return bt - at;
+    return a.item.title.localeCompare(b.item.title);
+  });
+  return scored.map((s) => s.item);
 }
