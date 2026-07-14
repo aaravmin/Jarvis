@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
-  Jarvis design tokens.
+  GOTT design tokens.
   Light-first: a white canvas where red means "overdue / urgent" and green means "on track / done".
   ALL chrome (buttons, icons, chips, nav) is neutral ink so the two status colors are the only loud
   colors on the page; attention is carried by them, nothing else.

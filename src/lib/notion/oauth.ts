@@ -3,8 +3,8 @@ import "server-only";
 /**
  * Notion OAuth 2.0 helpers (server-only), mirroring lib/google/oauth.ts. A PUBLIC Notion integration
  * (client id + secret) lets ANY user of this deployment connect their own Notion: the consent screen
- * asks them to pick the pages Jarvis may read, and the resulting token is stored per-user (RLS).
- * Jarvis only ever READS Notion (hard rule #1). Notion access tokens do not expire, so there is no
+ * asks them to pick the pages GOTT may read, and the resulting token is stored per-user (RLS).
+ * GOTT only ever READS Notion (hard rule #1). Notion access tokens do not expire, so there is no
  * refresh flow.
  */
 

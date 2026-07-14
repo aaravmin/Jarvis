@@ -19,7 +19,7 @@ const input =
  * Goals + sub-goals, a simple list (not a tree explorer): each top-level goal nests its sub-goals one
  * level, with an "Add sub-goal" affordance and inline create/edit/delete. Goals are entered by the
  * user only, there is no AI generation step (the LLM day-planner was removed for the same reason:
- * the model should not be doing something a person can just tell Jarvis directly).
+ * the model should not be doing something a person can just tell GOTT directly).
  */
 export function GoalsManager({ initialGoals }: { initialGoals: GoalSummary[] }) {
   const router = useRouter();
@@ -41,7 +41,7 @@ export function GoalsManager({ initialGoals }: { initialGoals: GoalSummary[] }) 
           </span>
           <h2 className="text-sm font-semibold text-foreground">No goals yet</h2>
           <p className="mx-auto mt-1 max-w-sm text-xs text-muted">
-            Add what you are working toward. Jarvis flags anything in your email, meetings, and
+            Add what you are working toward. GOTT flags anything in your email, meetings, and
             calendar that advances a goal.
           </p>
         </div>

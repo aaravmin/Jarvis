@@ -1,0 +1,5 @@
+{
+  "available": false,
+  "note": "Stub manifest. Phase 1 renders stand-ins. Run `node swap-footage.mjs` once demo/footage/footage-manifest.json lands to regenerate this with available:true and real clip durations.",
+  "clips": []
+}

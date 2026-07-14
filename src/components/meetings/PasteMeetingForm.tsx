@@ -8,7 +8,7 @@ const input =
   "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted";
 
 /**
- * Paste a meeting transcript and let Jarvis pull the action items out of it. The transcript is stored
+ * Paste a meeting transcript and let GOTT pull the action items out of it. The transcript is stored
  * as a `meeting` source and mined by the same extractor the inbox uses; results land in the Review
  * queue (suggest-only). Nothing here computes a date or invents a task, that's enforced server-side.
  */
@@ -65,7 +65,7 @@ export function PasteMeetingForm() {
         />
         <textarea
           className={`${input} min-h-[180px] resize-y`}
-          placeholder="Paste the transcript or your notes here. Jarvis reads it and proposes the action items, each with the exact line it came from."
+          placeholder="Paste the transcript or your notes here. GOTT reads it and proposes the action items, each with the exact line it came from."
           value={transcript}
           onChange={(e) => setTranscript(e.target.value)}
         />

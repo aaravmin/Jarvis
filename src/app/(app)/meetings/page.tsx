@@ -43,7 +43,7 @@ export default async function MeetingsPage() {
             <Mic className="h-5 w-5 text-accent" />
           </span>
           <h2 className="text-sm font-semibold text-foreground">No meetings yet</h2>
-          <p className="mt-1 text-xs text-muted">Paste a transcript above and Jarvis pulls the action items.</p>
+          <p className="mt-1 text-xs text-muted">Paste a transcript above and GOTT pulls the action items.</p>
         </div>
       ) : (
         <ul className="space-y-1.5">

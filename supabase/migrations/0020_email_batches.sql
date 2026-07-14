@@ -1,4 +1,4 @@
--- 0020_email_batches.sql, named groups of outreach drafts. When Jarvis drafts a round of emails it can
+-- 0020_email_batches.sql, named groups of outreach drafts. When GOTT drafts a round of emails it can
 -- save them as a named batch (which contacts it drafted to); when the user says they sent the batch, we
 -- flip those contacts to "emailed". Per-user, RLS-scoped. Members are stored as a contact_ids array.
 

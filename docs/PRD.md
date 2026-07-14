@@ -1,4 +1,4 @@
-# PRD — Jarvis, your personal command center
+# PRD — GOTT, your personal command center
 
 > Product definition. Derived from `/docs/ROADMAP.md` Section 2. This is the "what and why."
 

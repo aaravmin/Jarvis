@@ -22,7 +22,7 @@ export type NavItem = {
 };
 
 /**
- * Single source of truth for navigation. Jarvis is a goal-grounded attention engine:
+ * Single source of truth for navigation. GOTT is a goal-grounded attention engine:
  * it checks email, meetings, Notion, and calendar, and surfaces what matters most.
  */
 export const NAV_ITEMS: NavItem[] = [
@@ -79,14 +79,14 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Connections",
     href: "/connections",
     icon: Plug,
-    description: "Connect Google and Notion so Jarvis can read your email, calendar, and notes.",
+    description: "Connect Google and Notion so GOTT can read your email, calendar, and notes.",
     deliveredBy: "Connectors",
   },
   {
     label: "Set up",
     href: "/onboard",
     icon: Rocket,
-    description: "Tell Jarvis who you are, set goals, and connect your accounts.",
+    description: "Tell GOTT who you are, set goals, and connect your accounts.",
     deliveredBy: "Onboarding",
   },
 ];

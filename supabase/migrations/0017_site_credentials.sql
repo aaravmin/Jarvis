@@ -1,4 +1,4 @@
--- 0017_site_credentials.sql, encrypted per-user logins for sites Jarvis can auto-sign-into.
+-- 0017_site_credentials.sql, encrypted per-user logins for sites GOTT can auto-sign-into.
 -- The password is AES-256-GCM encrypted in the APP before insert (key: CREDENTIALS_SECRET, server-only);
 -- the database only ever stores ciphertext, never a plaintext password. RLS scopes every row to its
 -- owner, so on a multi-user deployment one person can never read another's logins, and the browser/anon

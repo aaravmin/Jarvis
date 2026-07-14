@@ -2,7 +2,7 @@ import { Brand } from "@/components/Brand";
 import { LoginForm } from "./LoginForm";
 
 export const metadata = {
-  title: "Sign in, Jarvis",
+  title: "Sign in, GOTT",
 };
 
 export default async function LoginPage({
@@ -18,7 +18,7 @@ export default async function LoginPage({
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <Brand withWordmark={false} />
           <div>
-            <h1 className="text-lg font-semibold text-foreground">Jarvis</h1>
+            <h1 className="text-lg font-semibold text-foreground">GOTT</h1>
             <p className="mt-1 text-sm text-muted">Your private command center.</p>
           </div>
         </div>

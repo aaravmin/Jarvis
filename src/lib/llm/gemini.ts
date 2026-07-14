@@ -10,7 +10,7 @@ import {
 /**
  * The unified LLM provider, routes EVERY call to xAI Grok (see `grok.ts`).
  *
- * Jarvis standardized on a single model provider (xAI Grok) on 2026-06-19. This module keeps the
+ * GOTT standardized on a single model provider (xAI Grok) on 2026-06-19. This module keeps the
  * historical `gemini*` export names and the Gemini `contents`/`parts` request shape because ~10 call
  * sites already speak it (the orb assistant, email extraction, research/opportunity engines, etc.).
  * Rather than rewrite all of them, this file is now a thin ADAPTER: it translates the Gemini-shaped

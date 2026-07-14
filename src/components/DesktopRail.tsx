@@ -15,7 +15,7 @@ export function DesktopRail({ userEmail }: { userEmail?: string }) {
   const pathname = usePathname();
   return (
     <aside className="sticky top-0 hidden h-dvh w-52 shrink-0 flex-col border-r border-border bg-surface px-3 py-5 md:flex">
-      <Link href="/today" aria-label="Jarvis home" className="px-3 pb-5">
+      <Link href="/today" aria-label="GOTT home" className="px-3 pb-5">
         <Brand />
       </Link>
       <nav className="flex-1 overflow-y-auto">

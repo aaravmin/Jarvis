@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   }
   const transcript = (body.transcript ?? "").trim();
   if (transcript.length < 20) {
-    return NextResponse.json({ error: "Paste a longer transcript so Jarvis has something to read." }, { status: 400 });
+    return NextResponse.json({ error: "Paste a longer transcript so GOTT has something to read." }, { status: 400 });
   }
   if (transcript.length > MAX_TRANSCRIPT) {
     return NextResponse.json({ error: "That transcript is too long, trim it under 30k characters." }, { status: 400 });

@@ -1,11 +1,11 @@
-# Jarvis — Your Personal Command Center
+# GOTT — Your Personal Command Center
 ### Product roadmap + Claude Code build plan
 
 Adhere to a Research-First approach: thoroughly analyze the requirements and explore existing code before using any tool. Avoid speculative execution or large sweeping changes. Use Reasoning Loops to map out edge cases. Never reason from assumptions; verify every step against actual data. Provide clear, concise explanations for your actions.
 **Built for:** a job-seeker / knowledge worker who wants one place that tracks job applications, email, meetings, calendar, and goals — and *proactively* tells them what to follow up on, with a clear trail back to where every item came from.
 
 **Assumptions I'm making (change these if wrong):**
-- You're on **macOS** (most "Jarvis" voice/desktop tooling and meeting capture is Mac-first today; Windows notes are flagged where they matter).
+- You're on **macOS** (most "GOTT" voice/desktop tooling and meeting capture is Mac-first today; Windows notes are flagged where they matter).
 - Your email/calendar live in **Google (Gmail + Google Calendar)**. If you're on Outlook/Microsoft 365, the *shape* of the plan is identical — only the connector changes.
 - You're an **intermediate builder**: comfortable running commands and reading code, leaning on Claude Code to do the heavy lifting.
 - You'll build this **in Claude Code, one task at a time**, exactly as you described.
@@ -38,8 +38,8 @@ Huntr and Teal are the leaders (Kanban "command center" + AI resume tailoring + 
 
 **Takeaway for you:** a job-tracker module is achievable and differentiated *if* it (a) auto-detects from email, (b) shows provenance, and (c) graduates from "suggested" to "automatic" as you trust it.
 
-### 1.5 "Jarvis" voice assistants
-There are dozens of open-source "Jarvis" projects. The most relevant to you is **Julian-Ivanov/jarvis-voice-assistant** — *built entirely with Claude Code, no code written by hand* — with this architecture: **browser Web Speech API (voice in) → local FastAPI server → Claude (the brain) → ElevenLabs (voice out) + Playwright (browser control) + screenshot → Claude Vision (sees your screen)**, triggered by a double-clap. That's a working blueprint for your "circle in the middle, talk to it, it does things" layer. Most other Jarvis repos are Python + a wake-word library (Picovoice/Porcupine) + speech-to-text + text-to-speech + app automation.
+### 1.5 "GOTT" voice assistants
+There are dozens of open-source voice assistant projects. The most relevant to you is **Julian-Ivanov/jarvis-voice-assistant** — *built entirely with Claude Code, no code written by hand* — with this architecture: **browser Web Speech API (voice in) → local FastAPI server → Claude (the brain) → ElevenLabs (voice out) + Playwright (browser control) + screenshot → Claude Vision (sees your screen)**, triggered by a double-clap. That's a working blueprint for your "circle in the middle, talk to it, it does things" layer. Most other Jarvis repos are Python + a wake-word library (Picovoice/Porcupine) + speech-to-text + text-to-speech + app automation.
 
 **Takeaway for you:** the voice + computer-control piece is real and has a proven pattern — but it's a **separate subsystem** from your dashboard, and the "control my computer" part ranges from easy (browser automation) to genuinely hard/risky (full OS control). Sequence it late.
 
@@ -265,9 +265,9 @@ create table contact_goals (
   confidence numeric               -- 0..1; the link can be non-obvious
 );
 ```
-**The AI-draft flow (task P6-T5):** the request to *your* Claude API gets (1) the contact's `background` + `role_title` + `company`, (2) the chosen template body, and (3) any `relationship_note` you typed or already have on file. Claude fills the placeholders **and** tailors tone and content to that person and the job they have, working the connection in naturally ("Sarah suggested I reach out…"). The draft returns fully editable, and the UI shows exactly which template, fields, and connection note were used — so, like everything else in Jarvis, you can see where it came from.
+**The AI-draft flow (task P6-T5):** the request to *your* Claude API gets (1) the contact's `background` + `role_title` + `company`, (2) the chosen template body, and (3) any `relationship_note` you typed or already have on file. Claude fills the placeholders **and** tailors tone and content to that person and the job they have, working the connection in naturally ("Sarah suggested I reach out…"). The draft returns fully editable, and the UI shows exactly which template, fields, and connection note were used - so, like everything else in GOTT, you can see where it came from.
 
-**The enrichment flow (tasks P6-T8 / P6-T9):** seed a contact with **just a name** (e.g., "Christopher Edley") and the AI calls your Claude API **with web search** to fill `background`, `company`, `role_title`, and `contact_channels`, storing a **source URL + confidence per field** in `field_sources`. When it can't confirm something — or several people share the name — it writes a plain-language caveat into `notes` ("couldn't verify this email; multiple people match this name — confirm before sending") instead of pretending to be sure. Then, given your **goals from the Goals tab**, it proposes `relevance`, `the_ask`, and one or more `contact_goals` links each with a rationale — including non-obvious ones (a "tech for social good" role → your social-good goal; a Microsoft PM → your "big tech" goal). You confirm or edit everything; **nothing about a person is treated as fact just because the AI wrote it** — that's the whole point of `field_sources`, `confidence`, and the notes caveats.
+**The enrichment flow (tasks P6-T8 / P6-T9):** seed a contact with **just a name** (e.g., "Christopher Edley") and the AI calls your Claude API **with web search** to fill `background`, `company`, `role_title`, and `contact_channels`, storing a **source URL + confidence per field** in `field_sources`. When it can't confirm something - or several people share the name - it writes a plain-language caveat into `notes` ("couldn't verify this email; multiple people match this name - confirm before sending") instead of pretending to be sure. Then, given your **goals from the Goals tab**, it proposes `relevance`, `the_ask`, and one or more `contact_goals` links each with a rationale - including non-obvious ones (a "tech for social good" role → your social-good goal; a Microsoft PM → your "big tech" goal). You confirm or edit everything; **nothing about a person is treated as fact just because the AI wrote it** - that's the whole point of `field_sources`, `confidence`, and the notes caveats.
 
 ---
 
@@ -359,25 +359,25 @@ Each phase ends with something **usable**, so you're never building for months w
 | P2-T5 | Suggestions → Review queue | Extracted items land in Review as cards with source chip, quote, confidence, and the resolved date. Accept → becomes a real task/event; dismiss → logged. |
 | P2-T6 | Dropped-thread detector | Flags threads where someone asked you something and you haven't replied in N days → a `follow_up` suggestion with the quoted question. |
 
-### Phase 3 — Calendar *(usable result: "let's meet Sunday" becomes a real event you approve)*
+### Phase 3 - Calendar *(usable result: "let's meet Sunday" becomes a real event you approve)*
 - **P3-T1** Google Calendar read + sync tokens → events show in the dashboard calendar with source = calendar.
 - **P3-T2** Calendar write scope → accepting a `meeting_request` from Phase 2 *creates* the event (with the source email linked).
 - **P3-T3** Conflict check → when proposing an event, warn if it overlaps an existing one.
 - **P3-T4** Two-way sanity → events created by Jarvis are tagged so re-ingestion doesn't loop.
 
-### Phase 4 — Meetings *(usable result: "get this in by July 29th" → a sourced task)*
+### Phase 4 - Meetings *(usable result: "get this in by July 29th" → a sourced task)*
 - **P4-T1** Transcript intake — start with **manual upload / paste** of a transcript (simplest); a `sources` row with `raw_text`. *(Mac note: Granola/Otter export transcripts you can drop in. Live system-audio capture is a later optional task — it's the hardest input and not needed to prove the loop.)*
 - **P4-T2** Action-item extraction — same engine as P2-T3, tuned for spoken language; each action item stores the transcript quote as `source_quote`.
 - **P4-T3** Transcript deep-link — the source chip jumps to the moment/line in the stored transcript with the quote highlighted.
 - **P4-T4** (Optional, advanced) Live capture — local system-audio recording → transcription → P4-T2. Only if you want real-time; otherwise upload is fine.
 
-### Phase 5 — The intelligence layer *(usable result: it proactively tells you what to do)*
+### Phase 5 - The intelligence layer *(usable result: it proactively tells you what to do)*
 - **P5-T1** Daily Brief — a generated "here's your day + what to follow up on + what's overdue," each line sourced. (This is the alfred_/Superhuman "morning brief" — your unified version.)
 - **P5-T2** Follow-up prioritizer — rank suggested follow-ups by urgency/importance using sender, recency, and whether you committed to something.
 - **P5-T3** Semantic search — `pgvector` embeddings over `sources` so you can ask "what did I commit to with the recruiter at Acme?" and get sourced answers.
 - **P5-T4** Autonomy L1 — auto-accept items above a confidence threshold (with undo); everything else stays in Review. Tune the threshold from your real accept/dismiss data.
 
-### Phase 6 — People & Outreach (contacts CRM + AI-personalized email) *(usable result: a list of people to follow up with, saved templates, and one-click AI drafts that know who they are and how you met)*
+### Phase 6 - People & Outreach (contacts CRM + AI-personalized email) *(usable result: a list of people to follow up with, saved templates, and one-click AI drafts that know who they are and how you met)*
 | ID | Task | Acceptance criteria |
 |---|---|---|
 | P6-T1 | Contacts schema + CRUD | New **People** tab. Add/edit/delete a contact; **name is the only required field** — everything else is optional and AI-fillable. The contact detail view has clear sections: **Contact info**, **Relevance (why they matter to my goals)**, **The ask (what I need from them)**, and **Notes**, plus `company`, `role/title`, and a factual `background`; a `follow_up_status` (to-reach-out / waiting / done) and optional `next_follow_up_at`. RLS-scoped. Contacts can be `created_by='user'` or auto-created from email/meetings (carry `source_id` for provenance). |
@@ -391,20 +391,20 @@ Each phase ends with something **usable**, so you're never building for months w
 | P6-T9 | Relevance, the ask & goal-linking | A server action sends the enriched profile **plus your goals (Goals tab)** to your Claude API and proposes `relevance` (why they matter), `the_ask` (what you need), and one or more `contact_goals` links to **existing** goals — each with a short rationale + confidence, including non-obvious links (a Microsoft PM → your "big tech" goal; a social-good org → your "tech for social good" goal). All editable; you approve each link. If nothing fits, it returns "no clear goal match" rather than forcing one. **Out of scope:** creating new goals (you add those in the Goals tab). |
 | P6-T10 | Relevance-gated auto-capture from email & meetings | When a name/email appears in an ingested email (Phase 2) or transcript (Phase 4), the extraction engine judges whether the person is **worth tracking** (recruiter, hiring manager, an intro, a real relationship) vs. noise (no-reply, mass CC, marketing). If relevant, it creates a **suggested contact** in the Review queue, pre-seeded from the source with the quote that justifies it, and can kick off enrichment (P6-T8). If not relevant, it does nothing. You approve before it becomes a real contact. |
 
-### Phase 7 — Job-application tracker *(usable result: applications track themselves)*
+### Phase 7 - Job-application tracker *(usable result: applications track themselves)*
 - **P7-T1** Applications schema + Kanban (Wishlist → Applied → Interview → Offer/Rejected), each card sourced.
 - **P7-T2** Auto-detect from email — classify application-related emails (confirmations, recruiter replies, interview invites) and propose status changes *with the quote* (beating Huntr/Teal's manual-drag model); recruiter senders can auto-create or link a contact in the People module (Phase 6).
 - **P7-T3** Interview events — an interview invite email → a proposed calendar event + a "prep" task, both linked to the thread.
 - **P7-T4** Pipeline analytics — response rate, time-in-stage, follow-ups due — all from your real data.
 
-### Phase 8 — Voice ("the orb") *(usable result: talk to it, it acts)*
+### Phase 8 - Voice ("the orb") *(usable result: talk to it, it acts)*
 - **P8-T1** Voice orb UI — an animated center orb (Framer Motion / canvas) that reacts to mic amplitude; push-to-talk first.
 - **P8-T2** Speech-to-text — browser Web Speech API (free, Chrome) → text command. Upgrade path: Whisper / realtime voice API.
 - **P8-T3** Command router — map intents to actions you already built ("what's due today", "add a task", "draft an email to Sarah", "what did Acme say"). Reuses the dashboard's logic — no new backend.
 - **P8-T4** Text-to-speech — spoken responses via browser TTS or ElevenLabs.
 - **P8-T5** Wake word — "Hey Jarvis" via Picovoice/Porcupine (offline hotword) so it's hands-free. *(This is where the Julian-Ivanov blueprint is directly useful.)*
 
-### Phase 9 — Computer control *(usable result: it does things on your machine — scoped honestly)*
+### Phase 9 - Computer control *(usable result: it does things on your machine - scoped honestly)*
 > **Read this before building Phase 9.** A Next.js web app **cannot** control your OS — the browser sandbox forbids it. "Control my computer" splits into two very different efforts:
 - **P9-T1 (realistic) Browser automation** — a small local agent (FastAPI/Node) running **Playwright** that opens pages, fills forms, reads content — driven by your voice commands. This covers most of what people mean by "do things for me" (open sites, search, autofill an application). Lower risk because it's scoped to a browser you control.
 - **P9-T2 (advanced, optional) OS-level control** — a desktop shell (Tauri/Electron) plus Claude's **computer-use** capability to click/type across apps, or screen-vision ("what's on my screen?") like the Jarvis blueprint. **Powerful but risky:** an agent that can click anything can also do the wrong thing. Gate it behind explicit per-action confirmation, never let it act on untrusted on-screen instructions, and treat it as the last thing you build, not the first.
@@ -425,13 +425,13 @@ Each phase ends with something **usable**, so you're never building for months w
 
 ## 7. Your first three Claude Code sessions (exact prompts)
 
-**Session 1 — set up the brain of the operating method (do this first):**
-> "Create a new repo for a personal command-center app called Jarvis. Set up `/CLAUDE.md` and a `/docs` folder containing `ROADMAP.md`, `PRD.md`, `DATA_MODEL.md`, `DECISIONS.md`, `PROGRESS.md`. I'll paste the contents. In `CLAUDE.md`, write these hard rules: Supabase Postgres is the system of record; Notion is only an optional one-way mirror; the LLM must NEVER compute dates (use a date-parser library); every derived item must store source_id + source_quote + confidence; no UI card renders without a working source chip; one atomic task per session, commit at the end. Then scaffold a Next.js + Tailwind app that runs locally and shows an empty dashboard with nav: Today, Tasks, Calendar, Goals, People, Jobs, Review. Stop after P0-T1 and P0-T2 and show me. Don't start P0-T3."
+**Session 1 - set up the brain of the operating method (do this first):**
+> "Create a new repo for a personal command-center app called GOTT. Set up `/CLAUDE.md` and a `/docs` folder containing `ROADMAP.md`, `PRD.md`, `DATA_MODEL.md`, `DECISIONS.md`, `PROGRESS.md`. I'll paste the contents. In `CLAUDE.md`, write these hard rules: Supabase Postgres is the system of record; Notion is only an optional one-way mirror; the LLM must NEVER compute dates (use a date-parser library); every derived item must store source_id + source_quote + confidence; no UI card renders without a working source chip; one atomic task per session, commit at the end. Then scaffold a Next.js + Tailwind app that runs locally and shows an empty dashboard with nav: Today, Tasks, Calendar, Goals, People, Jobs, Review. Stop after P0-T1 and P0-T2 and show me. Don't start P0-T3."
 
-**Session 2 — Supabase + the schema:**
+**Session 2 - Supabase + the schema:**
 > "Read `/CLAUDE.md` and `/docs/PROGRESS.md` and confirm state in 3 bullets before coding. Then do tasks P0-T3 and P0-T4 only: connect Supabase, add email/password auth, and create a migration for the `sources` and `items` tables exactly as in `/docs/DATA_MODEL.md`, with RLS policies scoping rows to the signed-in user. Verify by showing me I can sign in and that an inserted test row is only visible to my user. Then run the end-of-session handoff protocol from `/docs/ROADMAP.md` 4.4."
 
-**Session 3 — the provenance primitive (your headline feature):**
+**Session 3 - the provenance primitive (your headline feature):**
 > "Resume from `/docs/SESSION_HANDOFF.md`; confirm state in 3 bullets. Do P0-T5 only: build a reusable `<Card>` component that cannot render without a `source` prop, and a source-chip that opens a modal showing the `source_quote` and a link to `permalink`. Add a Storybook-style demo page with one fake task card so I can click the chip. Acceptance: a card with no source throws a clear dev error; the chip opens the quote. Then run the handoff protocol."
 
 From there you're in the rhythm: read state → confirm → do one task → verify → update docs → commit → next session.
@@ -446,6 +446,6 @@ From there you're in the rhythm: read state → confirm → do one task → veri
 - Job trackers (Huntr/Teal, human-in-loop limitation, the Gmail+Claude auto-tracker build): aitools-directory.com, prentus.com, toolworthy.ai, medium.com/@bangadpurva.
 - Notion API limits & "Notion is not a database for ingestion": fazm.ai, dev.to (Notion API rate-limit pieces), notion.com/help, hackceleration.com.
 - Claude Code + MCP (Google Workspace/Notion connectors, headless mode, OAuth caveat): code.claude.com/docs, mindstudio.ai, composio.dev, github.com/anthropics/claude-code issues.
-- "Jarvis" voice + computer-control blueprint (built with Claude Code: Web Speech → FastAPI → Claude → ElevenLabs + Playwright + Claude Vision): github.com/Julian-Ivanov/jarvis-voice-assistant, github.com topics (jarvis / jarvis-assistant).
+- Voice + computer-control blueprint (built with Claude Code: Web Speech → FastAPI → Claude → ElevenLabs + Playwright + Claude Vision): github.com/Julian-Ivanov/jarvis-voice-assistant, github.com topics (jarvis / jarvis-assistant).
 
 *Tools and pricing referenced were current as of mid-2026 and change fast — re-check before relying on any specific number.*

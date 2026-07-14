@@ -1,0 +1,6 @@
+node_modules/
+out/
+video/node_modules/
+video/public/footage/
+footage/*.webm
+.DS_Store

@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/connect/notion, start the OAuth flow. Requires a signed-in user (so the callback knows
  * whose token to store). Sets a short-lived httpOnly state cookie for CSRF, then redirects to
- * Notion's consent screen where the user picks the pages Jarvis may read.
+ * Notion's consent screen where the user picks the pages GOTT may read.
  */
 export async function GET(request: Request) {
   const supabase = await createClient();

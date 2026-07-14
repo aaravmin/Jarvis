@@ -5,7 +5,7 @@
 
 ## Current phase
 **The product was simplified extremely heavily (2026-07-13) into a goal-grounded attention engine.**
-Jarvis now does one thing: it checks email, meeting notes, Notion, and calendar; derives sourced
+GOTT now does one thing: it checks email, meeting notes, Notion, and calendar; derives sourced
 tasks/follow-ups with code-resolved due dates; and orders everything by importance against the user's
 goals and sub-goals. Voice, the orb assistant, the job applier, and all people/opportunity
 research/outreach machinery are REMOVED (code only; the DB schema is untouched). See the five

@@ -8,7 +8,7 @@ const input =
 
 /**
  * Compact "about you" editor. This profile (who you are / role / what you're building toward) is fed
- * to the email triage so Jarvis judges importance relative to YOUR work, not someone else's.
+ * to the email triage so GOTT judges importance relative to YOUR work, not someone else's.
  * Collapsed by default.
  */
 export function ProfileForm({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {
@@ -51,7 +51,7 @@ export function ProfileForm({ defaultOpen = false }: { defaultOpen?: boolean } =
         onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-foreground"
       >
-        <UserCog className="h-3.5 w-3.5" /> Edit your profile (tells Jarvis whose attention it is managing)
+        <UserCog className="h-3.5 w-3.5" /> Edit your profile (tells GOTT whose attention it is managing)
       </button>
     );
 

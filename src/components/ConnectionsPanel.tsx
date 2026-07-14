@@ -41,7 +41,7 @@ export function ConnectionsPanel({
       <header>
         <h1 className="text-lg font-semibold text-foreground">Connections</h1>
         <p className="mt-1 text-sm text-muted">
-          Connect Google and Notion so Jarvis can read your email, calendar, and notes. Everything
+          Connect Google and Notion so GOTT can read your email, calendar, and notes. Everything
           stays read-only.
         </p>
       </header>
@@ -105,7 +105,7 @@ export function ConnectionsPanel({
 
       {!connection && (
         <p className="text-sm text-muted">
-          Once connected, sync your email and calendar from the Email and Calendar tabs; Jarvis turns
+          Once connected, sync your email and calendar from the Email and Calendar tabs; GOTT turns
           them into sourced tasks and follow-ups in Review.
         </p>
       )}

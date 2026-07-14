@@ -37,8 +37,8 @@ function StatusBanner({ status }: { status?: string }) {
 
 /**
  * Notion connector card for the Connections page. PER-USER: each user connects their own Notion via
- * OAuth and picks the pages Jarvis may read; the token is stored server-side, RLS-scoped. Read-only,
- * Jarvis never writes back to Notion (hard rule #1). `envFallback` marks a self-hosted instance
+ * OAuth and picks the pages GOTT may read; the token is stored server-side, RLS-scoped. Read-only,
+ * GOTT never writes back to Notion (hard rule #1). `envFallback` marks a self-hosted instance
  * running on a deployment-wide NOTION_API_KEY instead of a per-user connection.
  */
 export function NotionCard({
@@ -145,9 +145,9 @@ export function NotionCard({
 
       <p className="mt-3 text-[11px] text-muted">
         {connected
-          ? "Jarvis reads only the pages you granted. Manage access from Notion's Connections settings."
+          ? "GOTT reads only the pages you granted. Manage access from Notion's Connections settings."
           : canConnect
-            ? "Connecting opens Notion, where you pick exactly which pages Jarvis may read. Read-only."
+            ? "Connecting opens Notion, where you pick exactly which pages GOTT may read. Read-only."
             : envFallback
               ? "Self-hosted mode: pages shared with this deployment's internal integration are synced."
               : "Notion isn't set up on this deployment yet (needs NOTION_CLIENT_ID / NOTION_CLIENT_SECRET, or NOTION_API_KEY for a personal instance)."}

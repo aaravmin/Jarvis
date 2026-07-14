@@ -9,9 +9,9 @@ import { ProfileForm } from "@/components/manual/ProfileForm";
 export const dynamic = "force-dynamic";
 
 /**
- * First-run setup. Jarvis is multi-tenant: every account gets its own data (RLS), its own Google
+ * First-run setup. GOTT is multi-tenant: every account gets its own data (RLS), its own Google
  * connection, its own profile and goals. This checklist walks a brand-new user through the three
- * things that make Jarvis theirs. New sign-ups land here; anyone can return via the Set up nav item.
+ * things that make GOTT theirs. New sign-ups land here; anyone can return via the Set up nav item.
  */
 export default async function OnboardPage() {
   const supabase = await createClient();
@@ -38,17 +38,17 @@ export default async function OnboardPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <header>
-        <h1 className="text-xl font-semibold text-foreground">Set up Jarvis</h1>
+        <h1 className="text-xl font-semibold text-foreground">Set up GOTT</h1>
         <p className="mt-1 text-sm text-muted">
-          Three quick steps so Jarvis works for you. Your data stays private to your account. {done} of 3 done.
+          Three quick steps so GOTT works for you. Your data stays private to your account. {done} of 3 done.
         </p>
       </header>
 
-      <Step n={1} done={hasProfile} title="Tell Jarvis about you" desc="A line or two about who you are and what you want. Jarvis uses it to make every suggestion relevant to you.">
+      <Step n={1} done={hasProfile} title="Tell GOTT about you" desc="A line or two about who you are and what you want. GOTT uses it to make every suggestion relevant to you.">
         <ProfileForm defaultOpen />
       </Step>
 
-      <Step n={2} done={hasGoogle} icon={<Plug className="h-4 w-4" />} title="Connect Google (and Notion)" desc="Let Jarvis read your Gmail and Calendar so it can turn email and meetings into tracked tasks. Read-only. Notion meeting notes connect from the same place.">
+      <Step n={2} done={hasGoogle} icon={<Plug className="h-4 w-4" />} title="Connect Google (and Notion)" desc="Let GOTT read your Gmail and Calendar so it can turn email and meetings into tracked tasks. Read-only. Notion meeting notes connect from the same place.">
         <div className="flex flex-wrap items-center gap-2">
           {hasGoogle ? (
             <p className="text-sm text-success">Connected{connection?.email ? ` as ${connection.email}` : ""}.</p>
@@ -63,7 +63,7 @@ export default async function OnboardPage() {
         </div>
       </Step>
 
-      <Step n={3} done={hasGoals} icon={<Target className="h-4 w-4" />} title="Set your goals" desc="Your goals and sub-goals are how Jarvis decides what matters. Anything in your email or meetings that advances one gets flagged and prioritized.">
+      <Step n={3} done={hasGoals} icon={<Target className="h-4 w-4" />} title="Set your goals" desc="Your goals and sub-goals are how GOTT decides what matters. Anything in your email or meetings that advances one gets flagged and prioritized.">
         <Link href="/goals" className={linkBtn}>
           <Target className="h-4 w-4" /> {hasGoals ? `${goalCount} goal${goalCount === 1 ? "" : "s"} set, add more` : "Add your first goal"}
         </Link>

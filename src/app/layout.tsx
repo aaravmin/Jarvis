@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Jarvis, Personal Command Center",
+  title: "GOTT, Goal Oriented Task Tracker",
   description:
-    "Jarvis reads your email, meeting notes, Notion, and calendar, turns them into tasks and follow-ups with due dates, and orders everything by what matters most to your goals, with a source link for every item.",
+    "GOTT reads your email, meeting notes, Notion, and calendar, turns them into tasks and follow-ups with due dates, and orders everything by what matters most to your goals, with a source link for every item.",
 };
 
 export default function RootLayout({

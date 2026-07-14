@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ReviewPage() {
   const supabase = await createClient();
-  // Everything Jarvis derives from your email, meetings, Notion, and calendar lands here first.
+  // Everything GOTT derives from your email, meetings, Notion, and calendar lands here first.
   const items = await loadReviewItems(supabase);
 
   return (
@@ -19,7 +19,7 @@ export default async function ReviewPage() {
             <Inbox className="h-5 w-5 text-accent" /> Review
           </h1>
           <p className="mt-1 text-sm text-muted">
-            Action items Jarvis found in your email, meetings, and Notion, approve or dismiss each.
+            Action items GOTT found in your email, meetings, and Notion, approve or dismiss each.
             Nothing is auto-accepted.
           </p>
         </div>

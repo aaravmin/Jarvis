@@ -474,7 +474,7 @@
   anchored on `/in/<slug>` profile links rather than LinkedIn's churning CSS class names. The whole
   feature is dark unless `JARVIS_BROWSER=playwright` — same gate as Apply autofill — so default installs
   carry no browser-automation surface.
-- **2026-07-13 - Jarvis is simplified to a goal-grounded attention engine; everything else was removed.**
+- **2026-07-13 - GOTT is simplified to a goal-grounded attention engine; everything else was removed.**
   Why: the user's directive - "simplify extremely heavily", check only email, meeting notes, Notion, and
   calendar, derive tasks/follow-ups/due dates, and order them by importance grounded in user-entered
   goals and sub-goals. Removed in one pass (commit 249e07b, -19,960 lines): voice (ElevenLabs), the orb
