@@ -20,6 +20,28 @@ reconciled fixes (`3e97b31`). Surfaces: Today (the home; red overdue / green don
 derived item still carries source_id + source_quote + confidence and lands in Review first (L0).
 
 ## Task log (most recent first)
+- **Core loop: real reply tracking + incremental sync + bulk Review** — ✅ shipped to `main`
+  (`0104429`), tsc + eslint + build green, dev-server smoke clean. Process: a 4-voice panel
+  (critic / optimist / business / personal) reviewed independently then cross-read each other and
+  converged; design mockups were screenshotted (Playwright) and the USER SIGNED OFF (Today as
+  mocked; one-click Gmail deep-link replies, no write scopes; core-loop scope only). An opus lead
+  built it, delegating the Review UI to a sonnet subagent.
+  1. **Reply tracking (rule #7, deterministic).** Migration **0024_thread_state.sql (NOT applied)**
+     adds sources.thread_id / last_msg_from / last_msg_at; gmail.ts getThreadState computes
+     who-spoke-last from real thread metadata (From + SENT label, still gmail.readonly); Today's one
+     ranked feed gains needs_reply (>=3d -> overdue, red) and waiting_on (>=3d) entries with
+     Reply/Nudge-in-Gmail links; follow-ups SELF-HEAL when the user has replied. 42703-tolerant
+     everywhere until 0024 is applied.
+  2. **Incremental sync.** after: cursor from the newest stored email (1h overlap, cap 100/sync),
+     only NEW mail is classified; sync messages are honest (candidates found vs kept, threads
+     resolved, follow-ups closed).
+  3. **Review clearable.** Queue ordered by the same pure scoreItem as Today; PATCH /api/items
+     accepts {ids, action} batches; ReviewList adds per-card checkboxes + a bulk bar.
+  4. **Seamless.** Auto-sync once per browser session when data is >6h stale; header freshness line.
+  - **Deferred (mocked, awaiting next sign-off):** meeting prep block + Notion notes on Meetings +
+    recurring grouping; goal 30-day momentum / Advancing-Stalled; ?goal= filtering everywhere.
+  - **Pre-hosting gate:** run the security-audit skill before the app is deployed to a domain
+    (touches AI endpoint + schema; flagged by the build lead).
 - **SIMPLIFICATION: Jarvis -> a goal-grounded attention engine** — ✅ shipped to `main` (6 commits:
   `249e07b`, `5c924a5`, `cfc00db`, `a66a8c5`, `3e97b31` + docs), each tsc + eslint + build green;
   dev-server smoke: all pages 307 -> /login unauthed, APIs 401 with correct verbs. Driven by the
@@ -499,8 +521,8 @@ source chip. Then apply migration 0021 + set `NOTION_API_KEY`, hit Sync all on T
 Notion meeting-notes page produces reviewable items. Apply 0022 and confirm sub-goals nest.
 
 ## Known roadblocks / waiting on the user
-- **Migrations `0021_notion_sources.sql` + `0022_goal_hierarchy.sql` + `0023_notion_provider.sql`
-  are written, NOT applied.** Apply all three in the Supabase dashboard SQL editor (like 0016). Until
+- **Migrations `0021` + `0022` + `0023` + `0024_thread_state.sql` are written; apply any not yet
+  run.** Apply all three in the Supabase dashboard SQL editor (like 0016). Until
   then: Notion sync returns an actionable error; sub-goals save flat; Connect Notion reports the
   missing migration (the app degrades gracefully, nothing crashes).
 - **Notion is per-user OAuth now.** Set `NOTION_CLIENT_ID` + `NOTION_CLIENT_SECRET` (a public Notion

@@ -44,8 +44,11 @@ The app was **simplified extremely heavily** in one session (6 pushed commits, n
 `/login` 200, APIs 401 with correct verb semantics.
 
 ## What we need from the user (roadblocks)
+0. **Apply migration `0024_thread_state.sql`** (Supabase SQL editor) to turn on reply tracking
+   (Needs reply / Waiting on them cards + follow-up self-healing). The app runs without it; syncs
+   surface an actionable note until it lands.
 1. **Apply migrations `0021_notion_sources.sql`, `0022_goal_hierarchy.sql`, and
-   `0023_notion_provider.sql`** (Supabase dashboard SQL editor, same as 0016). Until then: Notion sync
+   `0023_notion_provider.sql`** (Supabase dashboard SQL editor, same as 0016) if not already run. Until then: Notion sync
    returns an actionable error; sub-goals save flat; Connect Notion reports the missing migration
    (graceful degrade, app still runs).
 2. **Create a PUBLIC Notion integration** (notion.so/my-integrations -> make public, redirect URI
@@ -82,6 +85,11 @@ npm run build        # production build / typecheck
 Exercise the loop live: connect Google (auto-syncs), set a goal with a sub-goal, confirm extracted
 items land in Review **with goal chips**, accept one, and confirm it appears on Today in the right
 bucket with a working source chip. Then apply 0021 + 0023, set up the Notion OAuth app, Connect Notion, and sync.
+
+## Signed-off but deferred (mocked in scratchpad, next build round)
+Meeting prep (Notion notes on Meetings + recurring grouping + prep block on Today events),
+goal 30-day momentum with Advancing/Stalled, ?goal= filtering across surfaces.
+Run the security-audit skill BEFORE hosting/deploy (user plans a domain after the app is done).
 
 ## Deferred backlog (from the critic panel, in priority order)
 1. Reply-state verification from Sent mail ("did they reply?" per hard rule #7) -> follow-up items.
