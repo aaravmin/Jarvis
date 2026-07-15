@@ -3,6 +3,8 @@
 import { useActionState, useState } from "react";
 import { authenticate, type AuthResult } from "./actions";
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 /** Google's "G" mark. */
 function GoogleG() {
@@ -50,44 +52,44 @@ export function LoginForm({ initialError }: { initialError?: string }) {
 
   return (
     <div className="space-y-4">
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={() => void signInWithGoogle()}
         disabled={googleBusy}
-        className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-3 disabled:opacity-60"
+        className="w-full"
       >
         <GoogleG /> {googleBusy ? "Redirecting…" : "Continue with Google"}
-      </button>
+      </Button>
 
       {googleError && (
-        <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">{googleError}</p>
+        <p className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">{googleError}</p>
       )}
 
-      <div className="flex items-center gap-3 text-[11px] text-muted">
+      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
         <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />
       </div>
 
       <form action={formAction} className="space-y-4">
       <div className="space-y-1.5">
-        <label htmlFor="email" className="block text-xs font-medium text-muted">
+        <label htmlFor="email" className="block text-xs font-medium text-muted-foreground">
           Email
         </label>
-        <input
+        <Input
           id="email"
           name="email"
           type="email"
           autoComplete="email"
           required
           placeholder="you@example.com"
-          className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-accent"
         />
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="password" className="block text-xs font-medium text-muted">
+        <label htmlFor="password" className="block text-xs font-medium text-muted-foreground">
           Password
         </label>
-        <input
+        <Input
           id="password"
           name="password"
           type="password"
@@ -95,40 +97,27 @@ export function LoginForm({ initialError }: { initialError?: string }) {
           required
           minLength={6}
           placeholder="••••••••"
-          className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-accent"
         />
       </div>
 
       {state.error && (
-        <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
+        <p className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
           {state.error}
         </p>
       )}
       {state.notice && (
-        <p className="rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-xs text-success">
+        <p className="rounded-md border border-success/40 bg-success/10 px-3 py-2 text-xs text-success">
           {state.notice}
         </p>
       )}
 
       <div className="flex flex-col gap-2 pt-1">
-        <button
-          type="submit"
-          name="intent"
-          value="signin"
-          disabled={pending}
-          className="w-full rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-strong disabled:opacity-60"
-        >
+        <Button type="submit" name="intent" value="signin" disabled={pending} className="w-full">
           {pending ? "…" : "Sign in"}
-        </button>
-        <button
-          type="submit"
-          name="intent"
-          value="signup"
-          disabled={pending}
-          className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm font-medium text-muted-strong transition-colors hover:border-border-strong hover:text-foreground disabled:opacity-60"
-        >
+        </Button>
+        <Button type="submit" name="intent" value="signup" variant="outline" disabled={pending} className="w-full">
           Create account
-        </button>
+        </Button>
       </div>
       </form>
     </div>

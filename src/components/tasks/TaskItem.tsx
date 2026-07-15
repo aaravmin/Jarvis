@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Pencil, Trash2, CalendarClock, Reply } from "lucide-react";
+import { Check, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TableCell, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/format";
 
 export type Task = {
@@ -14,20 +19,15 @@ export type Task = {
   item_type?: "task" | "event" | "follow_up";
 };
 
-// Events and follow-ups share this list with plain tasks; a small pill keeps them distinct. Tasks get
-// no pill to avoid clutter (they're the default).
-const TYPE_PILL: Record<"event" | "follow_up", { label: string; icon: typeof CalendarClock }> = {
-  event: { label: "Event", icon: CalendarClock },
-  follow_up: { label: "Follow-up", icon: Reply },
-};
-
-const input =
-  "w-full rounded-md border border-border bg-surface px-2 py-1 text-sm text-foreground outline-none placeholder:text-muted";
+// Events and follow-ups share this list with plain tasks; a quiet text tag keeps them distinct. Tasks
+// get no tag to avoid clutter (they're the default).
+const TYPE_LABEL: Record<"event" | "follow_up", string> = { event: "Event", follow_up: "Follow-up" };
 
 /**
- * One task row with the full manual loop the dashboard was missing: check it off (toggles
- * items.status done⇄accepted), edit its title/notes/due, or delete it. The due date is always
- * re-resolved server-side by chrono (hard rule #2), this component only sends the raw phrase.
+ * One task row of the Tasks sheet: check it off (toggles items.status done⇄accepted), edit its
+ * title/notes/due, or delete it. The due date is always re-resolved server-side by chrono (hard rule
+ * #2), this component only sends the raw phrase. Renders as a <TableRow>; editing swaps it for a
+ * single full-width form row so the sheet layout never breaks.
  */
 export function TaskItem({ task }: { task: Task }) {
   const router = useRouter();
@@ -80,114 +80,107 @@ export function TaskItem({ task }: { task: Task }) {
 
   if (editing) {
     return (
-      <li className="rounded-lg border border-accent/40 bg-surface-2 p-3">
-        <div className="space-y-2">
-          <input className={input} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Task title *" />
-          <input
-            className={input}
-            value={rawDue}
-            onChange={(e) => {
-              setRawDue(e.target.value);
-              if (e.target.value) setClearDue(false);
-            }}
-            placeholder={task.due_at ? `When, currently ${formatDate(task.due_at)} (leave blank to keep)` : "When (e.g. Friday 5pm), optional"}
-          />
+      <TableRow className="hover:bg-transparent">
+        <TableCell colSpan={4} className="max-w-0 whitespace-normal bg-secondary/30 p-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Input className="sm:col-span-2" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Task title *" />
+            <Input
+              value={rawDue}
+              onChange={(e) => {
+                setRawDue(e.target.value);
+                if (e.target.value) setClearDue(false);
+              }}
+              placeholder={task.due_at ? `When, currently ${formatDate(task.due_at)} (leave blank to keep)` : "When (e.g. Friday 5pm), optional"}
+            />
+            <Textarea
+              className="min-h-[2.5rem] sm:col-span-2"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Notes (optional)"
+            />
+          </div>
           {task.due_at && (
-            <label className="flex items-center gap-1.5 text-xs text-muted">
-              <input type="checkbox" checked={clearDue} onChange={(e) => setClearDue(e.target.checked)} /> Clear the due date
+            <label className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Checkbox checked={clearDue} onCheckedChange={(v) => setClearDue(v === true)} /> Clear the due date
             </label>
           )}
-          <textarea
-            className={`${input} min-h-[2.5rem] resize-y`}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Notes (optional)"
-          />
-        </div>
-        <div className="mt-2 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => void save()}
-            disabled={busy !== null || title.trim().length < 2}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
-          >
-            {busy === "save" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Save
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEditing(false);
-              setTitle(task.title);
-              setRawDue("");
-              setClearDue(false);
-              setNotes(task.reasoning ?? "");
-            }}
-            disabled={busy !== null}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs text-muted-strong hover:text-foreground disabled:opacity-50"
-          >
-            Cancel
-          </button>
-        </div>
-      </li>
+          <div className="mt-2 flex items-center gap-2">
+            <Button size="sm" onClick={() => void save()} disabled={busy !== null || title.trim().length < 2}>
+              {busy === "save" ? <Loader2 className="animate-spin" /> : <Check />} Save
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy !== null}
+              onClick={() => {
+                setEditing(false);
+                setTitle(task.title);
+                setRawDue("");
+                setClearDue(false);
+                setNotes(task.reasoning ?? "");
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
     );
   }
 
   return (
-    <li className="group flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-2 px-3 py-2.5">
-      <button
-        type="button"
-        onClick={() => void toggle()}
-        disabled={busy !== null}
-        title={done ? "Mark not done" : "Mark done"}
-        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors disabled:opacity-50 ${
-          done ? "border-success/50 bg-success/15 text-success" : "border-border text-transparent hover:border-accent/60"
-        }`}
-      >
-        {busy === "toggle" ? <Loader2 className="h-3 w-3 animate-spin text-muted" /> : <Check className="h-3.5 w-3.5" />}
-      </button>
+    <TableRow>
+      <TableCell>
+        <button
+          type="button"
+          onClick={() => void toggle()}
+          disabled={busy !== null}
+          title={done ? "Mark not done" : "Mark done"}
+          className={`flex size-[18px] shrink-0 items-center justify-center rounded border transition-colors disabled:opacity-50 ${
+            done ? "border-success/50 bg-success/15 text-success" : "border-input text-transparent hover:border-primary/60"
+          }`}
+        >
+          {busy === "toggle" ? <Loader2 className="size-3 animate-spin text-muted-foreground" /> : <Check className="size-3" />}
+        </button>
+      </TableCell>
 
-      <div className="min-w-0 flex-1">
+      <TableCell className="max-w-0 w-full whitespace-normal">
         <div className="flex items-center gap-1.5">
           {task.item_type && task.item_type !== "task" && (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-strong">
-              {(() => {
-                const PillIcon = TYPE_PILL[task.item_type].icon;
-                return <PillIcon className="h-2.5 w-2.5 text-accent" />;
-              })()}
-              {TYPE_PILL[task.item_type].label}
+            <span className="inline-flex shrink-0 items-center rounded border border-border px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              {TYPE_LABEL[task.item_type]}
             </span>
           )}
-          <p className={`truncate text-sm ${done ? "text-muted line-through" : "text-foreground"}`}>{task.title}</p>
+          <p className={`truncate text-sm ${done ? "text-muted-foreground line-through" : "text-foreground"}`}>{task.title}</p>
         </div>
-        {task.reasoning && <p className="truncate text-xs text-muted">{task.reasoning}</p>}
-      </div>
+        {task.reasoning && <p className="mt-0.5 truncate text-xs text-muted-foreground">{task.reasoning}</p>}
+      </TableCell>
 
-      {task.due_at && (
-        <span className={`shrink-0 text-xs ${overdue ? "font-medium text-danger" : "text-muted"}`}>
-          {formatDate(task.due_at)}
-        </span>
-      )}
+      <TableCell>
+        {task.due_at && (
+          <span className={`text-xs ${overdue ? "font-medium text-destructive" : "text-muted-foreground"}`}>
+            {formatDate(task.due_at)}
+          </span>
+        )}
+      </TableCell>
 
-      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          disabled={busy !== null}
-          title="Edit"
-          className="rounded-md p-1.5 text-muted hover:text-foreground disabled:opacity-50"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => void remove()}
-          disabled={busy !== null}
-          title="Delete"
-          className="rounded-md p-1.5 text-muted hover:text-danger disabled:opacity-50"
-        >
-          {busy === "delete" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-        </button>
-      </div>
-    </li>
+      <TableCell className="text-right">
+        <div className="flex items-center justify-end gap-0.5">
+          <Button variant="ghost" size="icon-xs" title="Edit" disabled={busy !== null} onClick={() => setEditing(true)}>
+            <Pencil />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            title="Delete"
+            disabled={busy !== null}
+            onClick={() => void remove()}
+            className="text-muted-foreground hover:text-destructive"
+          >
+            {busy === "delete" ? <Loader2 className="animate-spin" /> : <Trash2 />}
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
   );
 }

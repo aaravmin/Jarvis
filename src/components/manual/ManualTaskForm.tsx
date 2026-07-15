@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Loader2, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-const input =
-  "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted";
-
-/** Manual "add a task" form (collapsible). The due date is chrono-resolved server-side. */
+/** Manual "add a task" form (collapsible), the sheet's add-row bar. The due date is chrono-resolved
+ *  server-side. */
 export function ManualTaskForm() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -39,34 +39,34 @@ export function ManualTaskForm() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-sm text-muted-strong hover:border-accent/50 hover:text-foreground"
+        className="flex w-full items-center gap-1.5 border-b px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary/40 hover:text-foreground"
       >
-        <Plus className="h-4 w-4 text-accent" /> Add a task
+        <Plus className="size-3.5" /> Add a task
       </button>
     );
 
   return (
-    <div className="rounded-xl border border-border bg-surface-2 p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <p className="text-sm font-semibold text-foreground">New task</p>
-        <button type="button" onClick={() => setOpen(false)} className="rounded-md p-1 text-muted hover:text-foreground">
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <input className={`${input} sm:col-span-2`} placeholder="What needs doing? *" value={f.title} onChange={set("title")} />
-        <input className={input} placeholder="Due (e.g. Friday, March 15)" value={f.rawDue} onChange={set("rawDue")} />
-        <input className={input} placeholder="Notes" value={f.notes} onChange={set("notes")} />
-      </div>
-      {err && <p className="mt-2 text-xs text-danger">{err}</p>}
-      <button
-        type="button"
-        onClick={() => void submit()}
-        disabled={busy || f.title.trim().length < 2}
-        className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
+    <div className="border-b bg-secondary/30 p-3">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+        className="grid gap-2 sm:grid-cols-3"
       >
-        {busy && <Loader2 className="h-4 w-4 animate-spin" />} Add task
-      </button>
+        <Input autoFocus placeholder="What needs doing? *" value={f.title} onChange={set("title")} className="sm:col-span-3" />
+        <Input placeholder="Due (e.g. Friday, March 15)" value={f.rawDue} onChange={set("rawDue")} />
+        <Input placeholder="Notes" value={f.notes} onChange={set("notes")} className="sm:col-span-2" />
+      </form>
+      {err && <p className="mt-2 text-xs text-destructive">{err}</p>}
+      <div className="mt-2 flex items-center gap-2">
+        <Button size="sm" onClick={() => void submit()} disabled={busy || f.title.trim().length < 2}>
+          {busy ? <Loader2 className="animate-spin" /> : <Plus />} Add task
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
+          <X /> Cancel
+        </Button>
+      </div>
     </div>
   );
 }

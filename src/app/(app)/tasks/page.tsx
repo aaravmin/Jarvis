@@ -1,17 +1,19 @@
-import { CheckSquare } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { entityIdsForGoal } from "@/lib/goals/load";
 import { ManualTaskForm } from "@/components/manual/ManualTaskForm";
 import { TaskItem, type Task } from "@/components/tasks/TaskItem";
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const dynamic = "force-dynamic";
+
+const HEAD = "h-8 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground";
 
 export default async function TasksPage({ searchParams }: { searchParams: Promise<{ goal?: string }> }) {
   const { goal } = await searchParams;
   const supabase = await createClient();
 
   // One "things on my plate" surface: tasks, follow-ups the user owes, and date-bound events all land
-  // here once accepted (events/follow-ups would otherwise vanish after the Review queue). A type badge
+  // here once accepted (events/follow-ups would otherwise vanish after the Review queue). A type tag
   // keeps them distinct; the date column shows whatever chrono resolved.
   let q = supabase
     .from("items")
@@ -27,23 +29,31 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   const tasks = (data ?? []) as Task[];
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <ManualTaskForm />
+    <div className="mx-auto w-full max-w-6xl space-y-4">
+      <h1 className="text-base font-semibold tracking-tight text-foreground">Tasks</h1>
 
-      {tasks.length === 0 ? (
-        <div className="flex min-h-[40vh] flex-col items-center justify-center text-center">
-          <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-surface-2">
-            <CheckSquare className="h-5 w-5 text-accent" />
-          </span>
-          <h2 className="text-sm font-semibold text-foreground">No tasks yet</h2>
-        </div>
-      ) : (
-        <ul className="space-y-1.5">
-          {tasks.map((t) => (
-            <TaskItem key={t.id} task={t} />
-          ))}
-        </ul>
-      )}
+      <div className="overflow-hidden rounded-md border bg-card">
+        <ManualTaskForm />
+        {tasks.length === 0 ? (
+          <p className="px-3 py-10 text-center text-xs text-muted-foreground">No tasks yet.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className={`${HEAD} w-9`} />
+                <TableHead className={HEAD}>Title</TableHead>
+                <TableHead className={`${HEAD} w-28`}>Due</TableHead>
+                <TableHead className={`${HEAD} w-16 text-right`} />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {tasks.map((t) => (
+                <TaskItem key={t.id} task={t} />
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
     </div>
   );
 }

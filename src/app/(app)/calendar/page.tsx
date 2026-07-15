@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { CalendarDays, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getConnection } from "@/lib/google/store";
 import { formatEventTime, calendarLocation } from "@/lib/format";
+import { Button } from "@/components/ui/button";
 import { SyncButton } from "@/components/google/SyncButton";
 
 export const dynamic = "force-dynamic";
@@ -25,47 +25,47 @@ export default async function CalendarPage() {
   const events = (data ?? []) as EventRow[];
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <div className="flex items-center justify-between gap-3">
+    <div className="mx-auto w-full max-w-6xl space-y-4">
+      <header className="flex items-end justify-between gap-3">
+        <div>
+          <h1 className="text-base font-semibold tracking-tight text-foreground">Calendar</h1>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {events.length > 0 ? `${events.length} upcoming` : "Your synced events"}
+          </p>
+        </div>
         {connection ? (
           <SyncButton endpoint="/api/google/sync-calendar" label="Sync Calendar" />
         ) : (
-          <Link href="/connections" className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent-strong">
-            Connect Google
-          </Link>
+          <Button asChild size="sm">
+            <Link href="/connections">Connect Google</Link>
+          </Button>
         )}
-      </div>
+      </header>
 
       {events.length === 0 ? (
-        <div className="flex min-h-[40vh] flex-col items-center justify-center text-center">
-          <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-surface-2">
-            <CalendarDays className="h-5 w-5 text-accent" />
-          </span>
+        <div className="rounded-md border border-dashed bg-card px-6 py-12 text-center">
           <h2 className="text-sm font-semibold text-foreground">No events yet</h2>
+          <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">Sync Calendar to see what is coming up.</p>
         </div>
       ) : (
-        <ul className="space-y-1.5">
+        <ul className="divide-y overflow-hidden rounded-md border bg-card">
           {events.map((ev) => {
             const location = calendarLocation(ev.raw_text);
             return (
-              <li key={ev.id} className="rounded-lg border border-border bg-surface-2 px-3 py-2.5">
+              <li key={ev.id} className="px-3 py-2 transition-colors hover:bg-secondary/40">
                 <div className="flex items-center justify-between gap-3">
                   {ev.permalink ? (
-                    <a href={ev.permalink} target="_blank" rel="noopener noreferrer" className="truncate text-sm font-medium text-foreground hover:text-accent">
+                    <a href={ev.permalink} target="_blank" rel="noopener noreferrer" className="truncate text-sm font-medium text-foreground hover:text-primary">
                       {ev.title}
                     </a>
                   ) : (
                     <span className="truncate text-sm font-medium text-foreground">{ev.title}</span>
                   )}
                   {ev.occurred_at && (
-                    <span className="shrink-0 text-xs text-muted">{formatEventTime(ev.occurred_at, ev.ends_at ?? undefined, ev.is_all_day ?? false)}</span>
+                    <span className="shrink-0 text-[11px] text-muted-foreground">{formatEventTime(ev.occurred_at, ev.ends_at ?? undefined, ev.is_all_day ?? false)}</span>
                   )}
                 </div>
-                {location && (
-                  <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted">
-                    <MapPin className="h-3 w-3" /> {location}
-                  </p>
-                )}
+                {location && <p className="mt-0.5 truncate text-xs text-muted-foreground">{location}</p>}
               </li>
             );
           })}

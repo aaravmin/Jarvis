@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Mail, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getConnection } from "@/lib/google/store";
 import { formatWhen } from "@/lib/format";
+import { Button } from "@/components/ui/button";
 import { SyncButton } from "@/components/google/SyncButton";
 
 export const dynamic = "force-dynamic";
@@ -46,55 +46,57 @@ export default async function EmailPage() {
   );
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <div className="flex items-center justify-between gap-3">
+    <div className="mx-auto w-full max-w-6xl space-y-4">
+      <header className="flex items-end justify-between gap-3">
+        <div>
+          <h1 className="text-base font-semibold tracking-tight text-foreground">Email</h1>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {emails.length > 0 ? `${emails.length} important` : "Only what matters"}
+          </p>
+        </div>
         {connection ? (
           <SyncButton endpoint="/api/google/sync-email" label="Sync Gmail" />
         ) : (
-          <Link href="/connections" className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent-strong">
-            Connect Google
-          </Link>
+          <Button asChild size="sm">
+            <Link href="/connections">Connect Google</Link>
+          </Button>
         )}
-        {emails.length > 0 && <span className="text-xs text-muted">{emails.length} important · only what matters</span>}
-      </div>
+      </header>
 
       {emails.length === 0 ? (
-        <div className="flex min-h-[40vh] flex-col items-center justify-center text-center">
-          <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-surface-2">
-            <Mail className="h-5 w-5 text-accent" />
-          </span>
+        <div className="rounded-md border border-dashed bg-card px-6 py-12 text-center">
           <h2 className="text-sm font-semibold text-foreground">No emails yet</h2>
+          <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">Sync Gmail and GOTT keeps only what matters.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {ordered.map(([group, rows]) => (
-            <section key={group}>
-              <p className="mb-1.5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted">
-                {group} <span className="rounded-full bg-surface-2 px-1.5 text-[10px] text-muted-strong">{rows.length}</span>
-              </p>
-              <div className="space-y-1">
-                {rows.map((e) => (
-                  <a
-                    key={e.id}
-                    href={e.permalink ?? "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-2 px-3 py-2 transition-colors hover:border-accent/40"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm text-foreground">{e.title}</p>
-                      <p className="truncate text-xs text-muted">
-                        {e.from_name}
-                        {e.raw_text ? `, ${e.raw_text}` : ""}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      {e.occurred_at && <span className="text-[11px] text-muted">{formatWhen(e.occurred_at)}</span>}
-                      <ChevronRight className="h-4 w-4 text-muted opacity-0 transition-opacity group-hover:opacity-100" />
-                    </div>
-                  </a>
-                ))}
+            <section key={group} className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <h2 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{group}</h2>
+                <span className="text-[11px] text-muted-foreground">{rows.length}</span>
               </div>
+              <ul className="divide-y overflow-hidden rounded-md border bg-card">
+                {rows.map((e) => (
+                  <li key={e.id}>
+                    <a
+                      href={e.permalink ?? "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between gap-3 px-3 py-2 transition-colors hover:bg-secondary/40"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-foreground">{e.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {e.from_name}
+                          {e.raw_text ? `, ${e.raw_text}` : ""}
+                        </p>
+                      </div>
+                      {e.occurred_at && <span className="shrink-0 text-[11px] text-muted-foreground">{formatWhen(e.occurred_at)}</span>}
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </section>
           ))}
         </div>

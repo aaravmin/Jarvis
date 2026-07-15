@@ -19,11 +19,11 @@ export default async function LoginPage({
           <Brand withWordmark={false} />
           <div>
             <h1 className="text-lg font-semibold text-foreground">GOTT</h1>
-            <p className="mt-1 text-sm text-muted">Your private command center.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Your private command center.</p>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-surface/80 p-6 shadow-2xl backdrop-blur">
+        <div className="rounded-md border bg-card p-6 shadow-sm">
           <LoginForm initialError={error} />
         </div>
       </div>

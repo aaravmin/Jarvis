@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 /** A small "Sync from Google" button that POSTs to an ingest endpoint and refreshes the page. */
 export function SyncButton({ endpoint, label }: { endpoint: string; label: string }) {
@@ -43,16 +44,11 @@ export function SyncButton({ endpoint, label }: { endpoint: string; label: strin
 
   return (
     <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={() => void go()}
-        disabled={busy}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-accent-strong disabled:opacity-50"
-      >
-        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+      <Button type="button" size="sm" onClick={() => void go()} disabled={busy}>
+        {busy ? <Loader2 className="animate-spin" /> : <RefreshCw />}
         {label}
-      </button>
-      {msg && <span className="text-xs text-muted">{msg}</span>}
+      </Button>
+      {msg && <span className="text-xs text-muted-foreground">{msg}</span>}
     </div>
   );
 }

@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { UserCog, Loader2, Check } from "lucide-react";
-
-const input =
-  "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted";
+import { Loader2, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 /**
  * Compact "about you" editor. This profile (who you are / role / what you're building toward) is fed
@@ -49,36 +48,29 @@ export function ProfileForm({ defaultOpen = false }: { defaultOpen?: boolean } =
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-foreground"
+        className="text-xs text-muted-foreground transition-colors hover:text-foreground"
       >
-        <UserCog className="h-3.5 w-3.5" /> Edit your profile (tells GOTT whose attention it is managing)
+        Edit your profile
       </button>
     );
 
   return (
-    <div className="rounded-xl border border-border bg-surface-2 p-3">
-      <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-foreground">
-        <UserCog className="h-4 w-4 text-accent" /> About you
-      </p>
+    <div className="rounded-md border bg-card p-3">
+      <p className="mb-2 text-sm font-medium text-foreground">About you</p>
       <div className="grid gap-2 sm:grid-cols-2">
-        <input className={`${input} sm:col-span-2`} placeholder="Headline, e.g. Runs an AI x social-impact consortium at Brown" value={f.headline} onChange={set("headline")} />
-        <input className={input} placeholder="Age (optional)" value={f.age} onChange={set("age")} inputMode="numeric" />
-        <input className={input} placeholder="Role, e.g. founder / organizer" value={f.level} onChange={set("level")} />
-        <input className={`${input} sm:col-span-2`} placeholder="What you're building toward, e.g. recruiting criminal-justice-reform members and speakers" value={f.lookingFor} onChange={set("lookingFor")} />
+        <Input className="sm:col-span-2" placeholder="Headline, e.g. Runs an AI x social-impact consortium at Brown" value={f.headline} onChange={set("headline")} />
+        <Input placeholder="Age (optional)" value={f.age} onChange={set("age")} inputMode="numeric" />
+        <Input placeholder="Role, e.g. founder / organizer" value={f.level} onChange={set("level")} />
+        <Input className="sm:col-span-2" placeholder="What you're building toward, e.g. recruiting criminal-justice-reform members and speakers" value={f.lookingFor} onChange={set("lookingFor")} />
       </div>
       <div className="mt-3 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => void save()}
-          disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent-strong disabled:opacity-50"
-        >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <Check className="h-4 w-4" /> : null}
+        <Button type="button" size="sm" onClick={() => void save()} disabled={busy}>
+          {busy ? <Loader2 className="animate-spin" /> : saved ? <Check /> : null}
           {saved ? "Saved" : "Save"}
-        </button>
-        <button type="button" onClick={() => setOpen(false)} className="text-xs text-muted hover:text-foreground">
+        </Button>
+        <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)} className="text-muted-foreground">
           Close
-        </button>
+        </Button>
       </div>
     </div>
   );

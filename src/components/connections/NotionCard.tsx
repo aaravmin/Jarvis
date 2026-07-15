@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { NotebookText, RefreshCw, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
+import { RefreshCw, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type SyncResponse = {
   enabled?: boolean;
@@ -16,30 +17,27 @@ function StatusBanner({ status }: { status?: string }) {
   if (!status) return null;
   if (status === "connected")
     return (
-      <p className="mt-3 flex items-center gap-2 rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm text-success">
-        <CheckCircle2 className="h-4 w-4" /> Notion connected. Your recent pages are syncing.
+      <p className="mt-2 rounded-md border border-success/40 bg-success/10 px-3 py-2 text-xs text-success">
+        Notion connected. Your recent pages are syncing.
       </p>
     );
   if (status === "disconnected")
-    return <p className="mt-3 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-muted">Notion disconnected.</p>;
+    return <p className="mt-2 rounded-md border bg-card px-3 py-2 text-xs text-muted-foreground">Notion disconnected.</p>;
   const detail =
     status === "error:not_configured"
       ? "This deployment has no Notion OAuth app yet (NOTION_CLIENT_ID / NOTION_CLIENT_SECRET)."
       : status === "error:migration_0023"
         ? "Apply migration 0023_notion_provider.sql in the Supabase SQL editor, then connect again."
         : `Couldn't connect Notion (${status.replace(/^error:/, "")}). Try again.`;
-  return (
-    <p className="mt-3 flex items-center gap-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
-      <AlertTriangle className="h-4 w-4 shrink-0" /> {detail}
-    </p>
-  );
+  return <p className="mt-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">{detail}</p>;
 }
 
 /**
- * Notion connector card for the Connections page. PER-USER: each user connects their own Notion via
+ * Notion connector row for the Connections sheet. PER-USER: each user connects their own Notion via
  * OAuth and picks the pages GOTT may read; the token is stored server-side, RLS-scoped. Read-only,
  * GOTT never writes back to Notion (hard rule #1). `envFallback` marks a self-hosted instance
- * running on a deployment-wide NOTION_API_KEY instead of a per-user connection.
+ * running on a deployment-wide NOTION_API_KEY instead of a per-user connection. Renders as a row (no
+ * outer border) so it sits inside ConnectionsPanel's divided sheet, beside the Google row.
  */
 export function NotionCard({
   connected,
@@ -60,6 +58,13 @@ export function NotionCard({
   const [ok, setOk] = useState<boolean | null>(null);
 
   const syncable = connected || envFallback;
+  const note = connected
+    ? "Reads only the pages you've granted access to."
+    : canConnect
+      ? "Opens Notion to pick which pages GOTT can read."
+      : envFallback
+        ? "Pages shared with the integration sync automatically."
+        : "Not configured on this deployment.";
 
   async function sync() {
     setBusy(true);
@@ -86,51 +91,36 @@ export function NotionCard({
   }
 
   return (
-    <section className="rounded-xl border border-border bg-surface-2 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface">
-            <NotebookText className="h-4 w-4 text-accent" />
-          </span>
-          <div>
-            <p className="text-sm font-semibold text-foreground">Notion</p>
-            <p className="text-xs text-muted">
-              {connected
-                ? `Connected${workspaceName ? ` · ${workspaceName}` : ""}`
-                : envFallback
-                  ? "Using this deployment's integration key"
-                  : "Not connected"}
-            </p>
-          </div>
+    <div className="px-3 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground">Notion</p>
+          <p className="text-xs text-muted-foreground">
+            {connected
+              ? `Connected${workspaceName ? ` · ${workspaceName}` : ""}`
+              : envFallback
+                ? "Using this deployment's integration key"
+                : "Not connected"}
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">{note}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {syncable && (
-            <button
-              type="button"
-              onClick={() => void sync()}
-              disabled={busy}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-accent/40 px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent-soft/40 disabled:opacity-50"
-            >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            <Button variant="outline" size="sm" onClick={() => void sync()} disabled={busy}>
+              {busy ? <Loader2 className="animate-spin" /> : <RefreshCw />}
               Sync
-            </button>
+            </Button>
           )}
           {connected ? (
             <form action="/api/connect/notion/disconnect" method="post">
-              <button
-                type="submit"
-                className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:border-danger/50 hover:text-danger"
-              >
+              <Button type="submit" variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive">
                 Disconnect
-              </button>
+              </Button>
             </form>
           ) : canConnect ? (
-            <a
-              href="/api/connect/notion"
-              className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-accent-strong"
-            >
-              Connect Notion
-            </a>
+            <Button asChild size="sm">
+              <a href="/api/connect/notion">Connect Notion</a>
+            </Button>
           ) : null}
         </div>
       </div>
@@ -138,20 +128,10 @@ export function NotionCard({
       <StatusBanner status={status} />
 
       {msg && (
-        <p className={`mt-3 text-xs ${ok === false ? "text-danger" : ok === true ? "text-success" : "text-muted"}`}>
+        <p className={`mt-2 text-xs ${ok === false ? "text-destructive" : ok === true ? "text-success" : "text-muted-foreground"}`}>
           {msg}
         </p>
       )}
-
-      <p className="mt-3 text-[11px] text-muted">
-        {connected
-          ? "GOTT reads only the pages you granted. Manage access from Notion's Connections settings."
-          : canConnect
-            ? "Connecting opens Notion, where you pick exactly which pages GOTT may read. Read-only."
-            : envFallback
-              ? "Self-hosted mode: pages shared with this deployment's internal integration are synced."
-              : "Notion isn't set up on this deployment yet (needs NOTION_CLIENT_ID / NOTION_CLIENT_SECRET, or NOTION_API_KEY for a personal instance)."}
-      </p>
-    </section>
+    </div>
   );
 }

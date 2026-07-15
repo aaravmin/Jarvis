@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mic, Loader2, Sparkles } from "lucide-react";
-
-const input =
-  "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 /**
  * Paste a meeting transcript and let GOTT pull the action items out of it. The transcript is stored
@@ -51,36 +51,23 @@ export function PasteMeetingForm() {
   const canExtract = transcript.trim().length >= 20 && !busy;
 
   return (
-    <div className="rounded-xl border border-border bg-surface-2 p-4">
-      <div className="mb-2 flex items-center gap-2">
-        <Mic className="h-4 w-4 text-accent" />
-        <p className="text-sm font-semibold text-foreground">Pull tasks from a meeting</p>
-      </div>
+    <div className="rounded-md border bg-card p-3">
+      <p className="mb-2 text-sm font-medium text-foreground">Pull tasks from a meeting</p>
       <div className="space-y-2">
-        <input
-          className={input}
-          placeholder="Meeting name (optional), e.g. Advisor sync"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-        <textarea
-          className={`${input} min-h-[180px] resize-y`}
-          placeholder="Paste the transcript or your notes here. GOTT reads it and proposes the action items, each with the exact line it came from."
+        <Input placeholder="Meeting name (optional), e.g. Advisor sync" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <Textarea
+          className="min-h-[160px] resize-y"
+          placeholder="Paste a transcript or notes. GOTT proposes action items, each with the exact line it came from."
           value={transcript}
           onChange={(e) => setTranscript(e.target.value)}
         />
       </div>
       <div className="mt-2 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => void extract()}
-          disabled={!canExtract}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-accent-strong disabled:opacity-50"
-        >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+        <Button type="button" size="sm" onClick={() => void extract()} disabled={!canExtract}>
+          {busy && <Loader2 className="animate-spin" />}
           Extract action items
-        </button>
-        {msg && <span className={`text-xs ${msg.tone === "ok" ? "text-success" : "text-danger"}`}>{msg.text}</span>}
+        </Button>
+        {msg && <span className={`text-xs ${msg.tone === "ok" ? "text-success" : "text-destructive"}`}>{msg.text}</span>}
       </div>
     </div>
   );

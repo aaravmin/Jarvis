@@ -22,7 +22,7 @@ export default async function ConnectionsPage({
   ]);
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto w-full max-w-6xl">
       <ConnectionsPanel
         connection={connection}
         status={sp.google}
