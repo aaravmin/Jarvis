@@ -9,10 +9,13 @@ import { GoalChip } from "@/components/GoalChip";
 import { SourceChip } from "@/components/SourceChip";
 import { Button } from "@/components/ui/button";
 import { SyncAllButton } from "@/components/today/SyncAllButton";
+import { BackfillButton } from "@/components/items/BackfillButton";
+import { ReviewItemCard } from "@/components/items/ReviewItemCard";
 import { syncAllAccounts } from "@/components/today/sync-all";
 import { formatWhen, formatEventTime } from "@/lib/format";
 import { BUCKET_META, BUCKET_ORDER, scoreItem } from "@/lib/priority/score";
 import type { AttentionEntry, AttentionFeed, Bucket } from "@/lib/priority/types";
+import type { ReviewItem } from "@/lib/items/review";
 
 /**
  * The Today "attention" surface, the home page of Otto. `initialFeed` is server-rendered (loaded via
@@ -20,6 +23,10 @@ import type { AttentionEntry, AttentionFeed, Bucket } from "@/lib/priority/types
  * inline complete (optimistic) and a manual refresh. Buckets render as dense sheet rows in BUCKET_ORDER,
  * empty ones skipped. Red is used ONLY for overdue/owed replies and green ONLY for done; everything else
  * stays neutral ink (the product's design brief).
+ *
+ * `reviewItems` are the pending suggestions (status='review'). They render as a "Suggested" section at
+ * the very end of the feed, each with per-item Accept/Dismiss (ReviewItemCard -> PATCH /api/items).
+ * This is the L0 approval gate (hard rule #5): nothing is auto-accepted; the user approves each one.
  */
 
 // Kind is shown as a quiet text tag. `pill: "reply"` tints it red (you owe a reply); everything else
@@ -101,10 +108,12 @@ export function TodayView({
   initialFeed,
   notionEnabled,
   newestSourceAt,
+  reviewItems,
 }: {
   initialFeed: AttentionFeed;
   notionEnabled: boolean;
   newestSourceAt: string | null;
+  reviewItems: ReviewItem[];
 }) {
   const router = useRouter();
   const [feed, setFeed] = useState(initialFeed);
@@ -179,7 +188,7 @@ export function TodayView({
     [],
   );
 
-  if (total === 0) {
+  if (total === 0 && reviewItems.length === 0) {
     return (
       <div className="flex min-h-[55vh] flex-col items-center justify-center gap-2 px-6 text-center">
         <h2 className="text-sm font-semibold text-foreground">Nothing needs your attention</h2>
@@ -209,6 +218,7 @@ export function TodayView({
               <RefreshCw className={refreshing ? "animate-spin" : ""} />
               Refresh
             </Button>
+            <BackfillButton />
             <SyncAllButton notionEnabled={notionEnabled} />
           </div>
           <p className="text-[11px] text-muted-foreground">{autoSyncing ? "Syncing..." : syncedLabel}</p>
@@ -264,6 +274,23 @@ export function TodayView({
           </section>
         );
       })}
+
+      {reviewItems.length > 0 && (
+        <section className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <h2 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Suggested</h2>
+            <span className="text-[11px] text-muted-foreground">{reviewItems.length}</span>
+            <span className="text-[11px] text-muted-foreground">· nothing is auto-accepted</span>
+          </div>
+          <ul className="divide-y overflow-hidden rounded-md border bg-card">
+            {reviewItems.map((item) => (
+              <li key={item.id} className="px-3 py-2 transition-colors hover:bg-secondary/40">
+                <ReviewItemCard item={item} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

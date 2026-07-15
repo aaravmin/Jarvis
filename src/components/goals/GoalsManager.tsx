@@ -29,9 +29,9 @@ function countsText(goal: GoalSummary): string | null {
 }
 
 /**
- * Goals + sub-goals, a simple list (not a tree explorer): each top-level goal nests its sub-goals one
- * level, with an "Add sub-goal" affordance and inline create/edit/delete. Goals are entered by the
- * user only, there is no AI generation step (the LLM day-planner was removed for the same reason:
+ * Goals + weekly goals, a simple list (not a tree explorer): each top-level goal nests its weekly goals
+ * one level, with an "Add weekly goal" affordance and inline create/edit/delete. Goals are entered by
+ * the user only, there is no AI generation step (the LLM day-planner was removed for the same reason:
  * the model should not be doing something a person can just tell Otto directly).
  */
 export function GoalsManager({ initialGoals }: { initialGoals: GoalSummary[] }) {
@@ -74,7 +74,7 @@ function GoalRow({ goal, subGoals, onChanged }: { goal: GoalSummary; subGoals: G
   const meta = countsText(goal);
 
   async function remove() {
-    if (!window.confirm("Delete this goal and its sub-goals? This can't be undone.")) return;
+    if (!window.confirm("Delete this goal and its weekly goals? This can't be undone.")) return;
     setBusy(true);
     try {
       await fetch(`/api/goals/${goal.id}`, { method: "DELETE" });
@@ -97,7 +97,7 @@ function GoalRow({ goal, subGoals, onChanged }: { goal: GoalSummary; subGoals: G
           <div className="flex shrink-0 items-center gap-2">
             {meta && <span className="text-[11px] text-muted-foreground">{meta}</span>}
             <div className="flex items-center gap-0.5">
-              <Button variant="ghost" size="icon-xs" title="Add sub-goal" onClick={() => setAddingSub((v) => !v)}>
+              <Button variant="ghost" size="icon-xs" title="Add weekly goal" onClick={() => setAddingSub((v) => !v)}>
                 <Plus />
               </Button>
               <Button variant="ghost" size="icon-xs" title="Edit" onClick={() => setEditing(true)}>
@@ -140,7 +140,7 @@ function SubGoalRow({ goal, onChanged }: { goal: GoalSummary; onChanged: () => v
   const [busy, setBusy] = useState(false);
 
   async function remove() {
-    if (!window.confirm("Delete this sub-goal? This can't be undone.")) return;
+    if (!window.confirm("Delete this weekly goal? This can't be undone.")) return;
     setBusy(true);
     try {
       await fetch(`/api/goals/${goal.id}`, { method: "DELETE" });
@@ -261,7 +261,7 @@ function AddSubGoalForm({ parentGoalId, onDone }: { parentGoalId: string; onDone
       });
       const data = await res.json();
       if (!res.ok) {
-        setNote(data?.error ?? "Could not add sub-goal.");
+        setNote(data?.error ?? "Could not add weekly goal.");
         return;
       }
       if (data?.warning) setNote(data.warning);
@@ -284,7 +284,7 @@ function AddSubGoalForm({ parentGoalId, onDone }: { parentGoalId: string; onDone
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         disabled={busy}
-        placeholder="Sub-goal title"
+        placeholder="Weekly goal title"
         className="h-8"
       />
       <Button type="submit" size="sm" disabled={busy || title.trim().length < 2}>

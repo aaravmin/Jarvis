@@ -5,7 +5,6 @@ import {
   Mic,
   CheckSquare,
   Target,
-  Inbox,
   Plug,
   Rocket,
   type LucideIcon,
@@ -34,17 +33,10 @@ export const NAV_ITEMS: NavItem[] = [
     deliveredBy: "Priority engine",
   },
   {
-    label: "Review",
-    href: "/review",
-    icon: Inbox,
-    description: "Suggestions awaiting your approval before they become real items.",
-    deliveredBy: "Extraction engine",
-  },
-  {
     label: "Goals",
     href: "/goals",
     icon: Target,
-    description: "Goals and sub-goals; items relevant to them are prioritized.",
+    description: "Goals and weekly goals; items relevant to them are prioritized.",
     deliveredBy: "Goals",
   },
   {

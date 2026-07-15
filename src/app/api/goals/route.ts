@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     // Migration 0022 not applied yet: fall back to a top-level goal instead of failing outright, and
     // say so clearly rather than silently dropping the requested sub-goal relationship.
     warning =
-      "Sub-goals are not enabled yet (migration 0022_goal_hierarchy.sql needs to be applied). Added as a top-level goal instead.";
+      "Weekly goals are not enabled yet (migration 0022_goal_hierarchy.sql needs to be applied). Added as a top-level goal instead.";
     insert = await supabase
       .from("goals")
       .insert({ user_id: user.id, title, description: body.description?.trim() || null })

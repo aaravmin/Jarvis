@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { loadAttention } from "@/lib/priority/load";
+import { loadReviewItems } from "@/lib/items/review";
 import { notionAvailable } from "@/lib/notion/store";
 import { TodayView } from "@/components/today/TodayView";
 import { Button } from "@/components/ui/button";
 import type { AttentionFeed } from "@/lib/priority/types";
+import type { ReviewItem } from "@/lib/items/review";
 
 export const dynamic = "force-dynamic";
 
@@ -21,10 +23,14 @@ export default async function TodayPage() {
   let feed: AttentionFeed | null = null;
   let loadError: string | null = null;
   let notionOn = false;
+  // Pending suggestions (status='review') now surface inline at the end of Today, not on a separate
+  // tab. They still require an explicit Accept/Dismiss (L0 gate, hard rule #5); nothing auto-accepts.
+  let reviewItems: ReviewItem[] = [];
   try {
-    [feed, notionOn] = await Promise.all([
+    [feed, notionOn, reviewItems] = await Promise.all([
       loadAttention(supabase, new Date()),
       user ? notionAvailable(supabase, user.id) : Promise.resolve(false),
+      loadReviewItems(supabase),
     ]);
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Could not build your day.";
@@ -60,7 +66,13 @@ export default async function TodayPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl">
-      <TodayView key={feed.generatedAt} initialFeed={feed} notionEnabled={notionOn} newestSourceAt={newestSourceAt} />
+      <TodayView
+        key={feed.generatedAt}
+        initialFeed={feed}
+        notionEnabled={notionOn}
+        newestSourceAt={newestSourceAt}
+        reviewItems={reviewItems}
+      />
     </div>
   );
 }
