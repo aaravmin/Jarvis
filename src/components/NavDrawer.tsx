@@ -53,7 +53,7 @@ export function NavDrawer({ userEmail }: { userEmail?: string }) {
 
           <aside className="drawer-panel absolute inset-y-0 left-0 flex w-64 max-w-[85vw] flex-col border-r bg-secondary/40 shadow-2xl">
             <div className="flex h-14 items-center justify-between border-b px-4">
-              <Link href="/today" aria-label="GOTT home">
+              <Link href="/today" aria-label="Otto home">
                 <Brand />
               </Link>
               <button

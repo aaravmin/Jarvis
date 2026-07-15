@@ -15,7 +15,7 @@ import { BUCKET_META, BUCKET_ORDER, scoreItem } from "@/lib/priority/score";
 import type { AttentionEntry, AttentionFeed, Bucket } from "@/lib/priority/types";
 
 /**
- * The Today "attention" surface, the home page of GOTT. `initialFeed` is server-rendered (loaded via
+ * The Today "attention" surface, the home page of Otto. `initialFeed` is server-rendered (loaded via
  * loadAttention in the page) for a fast first paint; this component only owns interaction on top of it:
  * inline complete (optimistic) and a manual refresh. Buckets render as dense sheet rows in BUCKET_ORDER,
  * empty ones skipped. Red is used ONLY for overdue/owed replies and green ONLY for done; everything else
@@ -36,7 +36,7 @@ const DONE_DISPLAY_CAP = 8;
 
 // Auto-sync-on-open fires at most once per browser session, and only when our newest data is this old.
 const AUTOSYNC_STALE_MS = 6 * 60 * 60 * 1000; // 6h
-const AUTOSYNC_GUARD = "gott-autosync";
+const AUTOSYNC_GUARD = "otto-autosync";
 const SYNCED_SUFFIX = "auto-syncs on open";
 
 /** Plain-code relative age (display only; not a provenance date computation). */
@@ -184,7 +184,7 @@ export function TodayView({
       <div className="flex min-h-[55vh] flex-col items-center justify-center gap-2 px-6 text-center">
         <h2 className="text-sm font-semibold text-foreground">Nothing needs your attention</h2>
         <p className="max-w-sm text-xs text-muted-foreground">
-          Connect your accounts and set a goal or two so GOTT knows what matters.
+          Connect your accounts and set a goal or two so Otto knows what matters.
         </p>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
           <SyncAllButton notionEnabled={notionEnabled} />
@@ -347,7 +347,7 @@ function EntryRow({ entry, busy, onToggle }: { entry: AttentionEntry; busy: bool
   );
 }
 
-/** One-click deep link into the Gmail thread. GOTT never drafts or sends - the user replies in Gmail. */
+/** One-click deep link into the Gmail thread. Otto never drafts or sends - the user replies in Gmail. */
 function ReplyAction({ entry }: { entry: AttentionEntry }) {
   const label = entry.kind === "waiting_on" ? "Nudge in Gmail" : "Reply in Gmail";
   return (

@@ -1,6 +1,6 @@
 # CONNECTORS — pulling information in from the outside
 
-How GOTT "connects to any website and contributes information." There are two honest classes, and
+How Otto "connects to any website and contributes information." There are two honest classes, and
 they cover everything you described (Gmail, Google Calendar, meeting transcribers, arbitrary pages).
 
 ## Class 1 — Real APIs (Gmail, Calendar, **Drive, Sheets**): OAuth connectors
@@ -25,7 +25,7 @@ Jarvis pulls it into a `source` and derives sourced tasks/events/people into the
 (reusing the extraction engine + provenance model). Sites behind a login need either their official
 API/OAuth (Class 1) or browser automation (the gated Phase-9 path) — we never store your passwords.
 
-**Already live (no setup needed):** the **Ask GOTT** orb (`/jarvis`) can already **search the web**
+**Already live (no setup needed):** the **Ask Otto** orb (`/jarvis`) can already **search the web**
 and **read your local files** (read-only) to answer questions - that's the fastest "pull info from
 anywhere" path for one-off questions.
 
@@ -33,7 +33,7 @@ anywhere" path for one-off questions.
 
 ## Set up the Google OAuth client (do this once; ~10 min)
 
-1. **Google Cloud Console** → https://console.cloud.google.com → create or pick a project (e.g. "GOTT").
+1. **Google Cloud Console** → https://console.cloud.google.com → create or pick a project (e.g. "Otto").
 2. **Enable APIs**: APIs & Services → Library → enable **Gmail API**, **Google Calendar API**,
    **Google Drive API**, and **Google Sheets API**.
 3. **OAuth consent screen**: External; App name "Jarvis"; add your email as a **Test user** (keeps it

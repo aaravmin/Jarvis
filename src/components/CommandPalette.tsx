@@ -14,7 +14,7 @@ import { NAV_ITEMS } from "@/lib/nav";
 
 /**
  * The Cmd-K quick-nav palette (Notion/Linear feel). Opens on Cmd/Ctrl+K, or when any surface fires the
- * `gott:command` window event (the rail and mobile top bar have a search affordance that dispatches it,
+ * `otto:command` window event (the rail and mobile top bar have a search affordance that dispatches it,
  * so no shared state or context is needed). Selecting an entry navigates and closes.
  */
 export function CommandPalette() {
@@ -30,10 +30,10 @@ export function CommandPalette() {
     };
     const onOpen = () => setOpen(true);
     document.addEventListener("keydown", onKey);
-    window.addEventListener("gott:command", onOpen);
+    window.addEventListener("otto:command", onOpen);
     return () => {
       document.removeEventListener("keydown", onKey);
-      window.removeEventListener("gott:command", onOpen);
+      window.removeEventListener("otto:command", onOpen);
     };
   }, []);
 

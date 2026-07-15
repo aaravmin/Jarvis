@@ -1,9 +1,9 @@
 /**
  * Adapted from gaia-ui's raised-button (MIT, Copyright (c) 2026 The Experience Company).
  * See LICENSES/gaia-ui-MIT.txt and /NOTICE. Simplified to be self-contained (the original's
- * dynamic per-color contrast helper was dropped) and mapped onto GOTT's shadcn tokens.
+ * dynamic per-color contrast helper was dropped) and mapped onto Otto's shadcn tokens.
  *
- * GOTT's hero surfaces stay deliberately flat for the Notion/Sheets aesthetic; this raised
+ * Otto's hero surfaces stay deliberately flat for the Notion/Sheets aesthetic; this raised
  * treatment is kept available for CP2 surfaces that want a primary call-to-action with depth.
  */
 "use client";

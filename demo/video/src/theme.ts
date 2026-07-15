@@ -48,18 +48,18 @@ export const shadow = {
 export const fps = 30;
 
 // Absolute scene boundaries (frames @ 30fps). End of last scene = total duration.
-// RAPID 0.7s RE-CUT: every scene is packed with beats <= 21 frames each; no static
-// hold exceeds ~20 frames. Durations below are the sum of those beats, not padded.
+// DEMO v3 (~1 min, product-led): a short branded open, a handful of app surfaces
+// each shown as real footage FILLING a big browser frame with one short caption,
+// then a short branded close. Brisk but NOT frantic - every section breathes 7-16s
+// so the eye can read the real UI. No rapid-cut set-pieces.
 export const SCENES = {
-  intro: { from: 0, duration: 108 },
-  premise: { from: 108, duration: 152 },
-  goals: { from: 260, duration: 140 },
-  ingest: { from: 400, duration: 182 },
-  review: { from: 582, duration: 140 },
-  today: { from: 722, duration: 250 },
-  montage: { from: 972, duration: 112 },
-  rules: { from: 1084, duration: 150 },
-  outro: { from: 1234, duration: 120 },
+  open: { from: 0, duration: 105 }, // 3.5s  GOTT wordmark + tagline
+  today: { from: 105, duration: 360 }, // 12.0s overdue red + Sam needs-reply (the RED highlight)
+  review: { from: 465, duration: 246 }, // 8.2s  approve what it found (suggest-only)
+  tasks: { from: 711, duration: 450 }, // 15.0s the sheet + check-off going green (the GREEN highlight)
+  cmdk: { from: 1161, duration: 180 }, // 6.0s  Cmd-K palette -> highlights Goals (nav into the next scene)
+  goals: { from: 1341, duration: 264 }, // 8.8s  grounded in your goals ("Linked (2)")
+  close: { from: 1605, duration: 126 }, // 4.2s  GOTT wordmark returns
 } as const;
 
-export const TOTAL_FRAMES = SCENES.outro.from + SCENES.outro.duration; // 1354 = 45.1s
+export const TOTAL_FRAMES = SCENES.close.from + SCENES.close.duration; // 1731 = 57.7s

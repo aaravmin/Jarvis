@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ReviewPage() {
   const supabase = await createClient();
-  // Everything GOTT derives from your email, meetings, Notion, and calendar lands here first.
+  // Everything Otto derives from your email, meetings, Notion, and calendar lands here first.
   const items = await loadReviewItems(supabase);
 
   return (
@@ -15,7 +15,7 @@ export default async function ReviewPage() {
       <header className="flex items-end justify-between gap-3">
         <div>
           <h1 className="text-base font-semibold tracking-tight text-foreground">Review</h1>
-          <p className="mt-0.5 text-xs text-muted-foreground">Approve or dismiss what GOTT found. Nothing is auto-accepted.</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Approve or dismiss what Otto found. Nothing is auto-accepted.</p>
         </div>
         <BackfillButton />
       </header>

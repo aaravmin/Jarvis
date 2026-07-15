@@ -10,9 +10,9 @@ import { ProfileForm } from "@/components/manual/ProfileForm";
 export const dynamic = "force-dynamic";
 
 /**
- * First-run setup. GOTT is multi-tenant: every account gets its own data (RLS), its own Google
+ * First-run setup. Otto is multi-tenant: every account gets its own data (RLS), its own Google
  * connection, its own profile and goals. This checklist walks a brand-new user through the three
- * things that make GOTT theirs. New sign-ups land here; anyone can return via the Set up nav item.
+ * things that make Otto theirs. New sign-ups land here; anyone can return via the Set up nav item.
  */
 export default async function OnboardPage() {
   const supabase = await createClient();
@@ -36,15 +36,15 @@ export default async function OnboardPage() {
   return (
     <div className="mx-auto w-full max-w-2xl space-y-4">
       <header>
-        <h1 className="text-base font-semibold tracking-tight text-foreground">Set up GOTT</h1>
+        <h1 className="text-base font-semibold tracking-tight text-foreground">Set up Otto</h1>
         <p className="mt-0.5 text-xs text-muted-foreground">Three quick steps. {done} of 3 complete.</p>
       </header>
 
-      <Step n={1} done={hasProfile} title="Tell GOTT about you" desc="A line or two about who you are and what you want, so every suggestion is relevant to you.">
+      <Step n={1} done={hasProfile} title="Tell Otto about you" desc="A line or two about who you are and what you want, so every suggestion is relevant to you.">
         <ProfileForm defaultOpen />
       </Step>
 
-      <Step n={2} done={hasGoogle} title="Connect Google (and Notion)" desc="Let GOTT read your Gmail and Calendar (read-only) to turn email and meetings into tracked tasks. Notion connects here too.">
+      <Step n={2} done={hasGoogle} title="Connect Google (and Notion)" desc="Let Otto read your Gmail and Calendar (read-only) to turn email and meetings into tracked tasks. Notion connects here too.">
         <div className="flex flex-wrap items-center gap-2">
           {hasGoogle ? (
             <p className="text-sm text-success">Connected{connection?.email ? ` as ${connection.email}` : ""}.</p>
@@ -59,7 +59,7 @@ export default async function OnboardPage() {
         </div>
       </Step>
 
-      <Step n={3} done={hasGoals} title="Set your goals" desc="Your goals are how GOTT decides what matters. Anything in your email or meetings that advances one gets flagged and prioritized.">
+      <Step n={3} done={hasGoals} title="Set your goals" desc="Your goals are how Otto decides what matters. Anything in your email or meetings that advances one gets flagged and prioritized.">
         <Button asChild variant="outline" size="sm">
           <Link href="/goals">{hasGoals ? `${goalCount} goal${goalCount === 1 ? "" : "s"} set, add more` : "Add your first goal"}</Link>
         </Button>

@@ -1,138 +1,117 @@
 {
-  "goals-create": [
+  "today": [
     {
-      "label": "new-goal-input",
-      "x": 717,
-      "y": 71,
-      "w": 639,
-      "h": 20
+      "label": "overdue-invoice-card",
+      "x": 498,
+      "y": 132,
+      "w": 1149,
+      "h": 110
     },
     {
-      "label": "g1-card",
-      "x": 680,
-      "y": 453,
-      "w": 768,
-      "h": 335
+      "label": "goal-chip",
+      "x": 538,
+      "y": 163,
+      "w": 177,
+      "h": 21
     },
     {
-      "label": "subgoal-input",
-      "x": 743,
-      "y": 603,
-      "w": 632,
-      "h": 34
+      "label": "needs-reply-card",
+      "x": 498,
+      "y": 178,
+      "w": 1149,
+      "h": 84
+    },
+    {
+      "label": "reply-in-gmail-link",
+      "x": 1237,
+      "y": 232,
+      "w": 106,
+      "h": 23
     }
   ],
   "review": [
     {
-      "label": "r1-source-chip",
-      "x": 723,
-      "y": 535,
-      "w": 221,
-      "h": 26
+      "label": "review-checkbox",
+      "x": 509,
+      "y": 105,
+      "w": 18,
+      "h": 18
     },
     {
-      "label": "r1-source-modal",
-      "x": 704,
-      "y": 347,
-      "w": 512,
-      "h": 386
+      "label": "bulk-bar",
+      "x": 496,
+      "y": 94,
+      "w": 1152,
+      "h": 46
     },
     {
-      "label": "r1-checkbox",
-      "x": 680,
-      "y": 445,
-      "w": 16,
-      "h": 16
-    },
-    {
-      "label": "r3-checkbox",
-      "x": 680,
-      "y": 341,
-      "w": 16,
-      "h": 16
-    },
-    {
-      "label": "bulk-accept-bar",
-      "x": 680,
-      "y": 140,
-      "w": 768,
-      "h": 44
+      "label": "accept-button",
+      "x": 586,
+      "y": 101,
+      "w": 101,
+      "h": 32
     }
   ],
-  "today-hero": [
-    {
-      "label": "overdue-card-a1",
-      "x": 728,
-      "y": 204,
-      "w": 720,
-      "h": 147
-    },
-    {
-      "label": "needs-reply-card-e1",
-      "x": 728,
-      "y": 272,
-      "w": 720,
-      "h": 138
-    },
-    {
-      "label": "reply-in-gmail-link",
-      "x": 1307,
-      "y": 368,
-      "w": 124,
-      "h": 26
-    },
-    {
-      "label": "goal-chip-a2",
-      "x": 727,
-      "y": 87,
-      "w": 179,
-      "h": 24
-    },
-    {
-      "label": "waiting-on-card-e2",
-      "x": 710,
-      "y": 329,
-      "w": 738,
-      "h": 138
-    },
-    {
-      "label": "a2-checkbox-before-check",
-      "x": 680,
-      "y": 45,
-      "w": 20,
-      "h": 20
-    }
-  ],
-  "montage-tasks": [
+  "tasks": [
     {
       "label": "task-row",
-      "x": 680,
-      "y": 136,
-      "w": 768,
-      "h": 58
+      "x": 497,
+      "y": 345,
+      "w": 1150,
+      "h": 55
     },
     {
-      "label": "task-row-edit-icon",
-      "x": 1381,
-      "y": 152,
-      "w": 26,
-      "h": 26
-    },
-    {
-      "label": "inline-edit-form",
-      "x": 680,
-      "y": 136,
-      "w": 768,
-      "h": 220
+      "label": "task-checkbox-toggle",
+      "x": 505,
+      "y": 364,
+      "w": 18,
+      "h": 18
     }
   ],
-  "goals-after": [
+  "goals": [
     {
-      "label": "g1-card-after",
-      "x": 680,
-      "y": 453,
-      "w": 768,
-      "h": 335
+      "label": "goal-row-with-subgoals",
+      "x": 497,
+      "y": 289,
+      "w": 1150,
+      "h": 229
+    },
+    {
+      "label": "subgoal-row",
+      "x": 529,
+      "y": 458,
+      "w": 1106,
+      "h": 50
+    },
+    {
+      "label": "linked-section",
+      "x": 496,
+      "y": 126,
+      "w": 1152,
+      "h": 20
+    },
+    {
+      "label": "linked-item",
+      "x": 497,
+      "y": 153,
+      "w": 1150,
+      "h": 42
+    }
+  ],
+  "cmdk": [
+    {
+      "label": "command-palette",
+      "x": 709,
+      "y": 368,
+      "w": 502,
+      "h": 343
+    },
+    {
+      "label": "selected-nav-item",
+      "x": 713,
+      "y": 534,
+      "w": 494,
+      "h": 44
     }
   ]
 }

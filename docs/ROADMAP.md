@@ -1,11 +1,11 @@
-# GOTT — Your Personal Command Center
+# Otto — Your Personal Command Center
 ### Product roadmap + Claude Code build plan
 
 Adhere to a Research-First approach: thoroughly analyze the requirements and explore existing code before using any tool. Avoid speculative execution or large sweeping changes. Use Reasoning Loops to map out edge cases. Never reason from assumptions; verify every step against actual data. Provide clear, concise explanations for your actions.
 **Built for:** a job-seeker / knowledge worker who wants one place that tracks job applications, email, meetings, calendar, and goals — and *proactively* tells them what to follow up on, with a clear trail back to where every item came from.
 
 **Assumptions I'm making (change these if wrong):**
-- You're on **macOS** (most "GOTT" voice/desktop tooling and meeting capture is Mac-first today; Windows notes are flagged where they matter).
+- You're on **macOS** (most "Otto" voice/desktop tooling and meeting capture is Mac-first today; Windows notes are flagged where they matter).
 - Your email/calendar live in **Google (Gmail + Google Calendar)**. If you're on Outlook/Microsoft 365, the *shape* of the plan is identical — only the connector changes.
 - You're an **intermediate builder**: comfortable running commands and reading code, leaning on Claude Code to do the heavy lifting.
 - You'll build this **in Claude Code, one task at a time**, exactly as you described.
@@ -38,7 +38,7 @@ Huntr and Teal are the leaders (Kanban "command center" + AI resume tailoring + 
 
 **Takeaway for you:** a job-tracker module is achievable and differentiated *if* it (a) auto-detects from email, (b) shows provenance, and (c) graduates from "suggested" to "automatic" as you trust it.
 
-### 1.5 "GOTT" voice assistants
+### 1.5 "Otto" voice assistants
 There are dozens of open-source voice assistant projects. The most relevant to you is **Julian-Ivanov/jarvis-voice-assistant** — *built entirely with Claude Code, no code written by hand* — with this architecture: **browser Web Speech API (voice in) → local FastAPI server → Claude (the brain) → ElevenLabs (voice out) + Playwright (browser control) + screenshot → Claude Vision (sees your screen)**, triggered by a double-clap. That's a working blueprint for your "circle in the middle, talk to it, it does things" layer. Most other Jarvis repos are Python + a wake-word library (Picovoice/Porcupine) + speech-to-text + text-to-speech + app automation.
 
 **Takeaway for you:** the voice + computer-control piece is real and has a proven pattern — but it's a **separate subsystem** from your dashboard, and the "control my computer" part ranges from easy (browser automation) to genuinely hard/risky (full OS control). Sequence it late.
@@ -265,7 +265,7 @@ create table contact_goals (
   confidence numeric               -- 0..1; the link can be non-obvious
 );
 ```
-**The AI-draft flow (task P6-T5):** the request to *your* Claude API gets (1) the contact's `background` + `role_title` + `company`, (2) the chosen template body, and (3) any `relationship_note` you typed or already have on file. Claude fills the placeholders **and** tailors tone and content to that person and the job they have, working the connection in naturally ("Sarah suggested I reach out…"). The draft returns fully editable, and the UI shows exactly which template, fields, and connection note were used - so, like everything else in GOTT, you can see where it came from.
+**The AI-draft flow (task P6-T5):** the request to *your* Claude API gets (1) the contact's `background` + `role_title` + `company`, (2) the chosen template body, and (3) any `relationship_note` you typed or already have on file. Claude fills the placeholders **and** tailors tone and content to that person and the job they have, working the connection in naturally ("Sarah suggested I reach out…"). The draft returns fully editable, and the UI shows exactly which template, fields, and connection note were used - so, like everything else in Otto, you can see where it came from.
 
 **The enrichment flow (tasks P6-T8 / P6-T9):** seed a contact with **just a name** (e.g., "Christopher Edley") and the AI calls your Claude API **with web search** to fill `background`, `company`, `role_title`, and `contact_channels`, storing a **source URL + confidence per field** in `field_sources`. When it can't confirm something - or several people share the name - it writes a plain-language caveat into `notes` ("couldn't verify this email; multiple people match this name - confirm before sending") instead of pretending to be sure. Then, given your **goals from the Goals tab**, it proposes `relevance`, `the_ask`, and one or more `contact_goals` links each with a rationale - including non-obvious ones (a "tech for social good" role → your social-good goal; a Microsoft PM → your "big tech" goal). You confirm or edit everything; **nothing about a person is treated as fact just because the AI wrote it** - that's the whole point of `field_sources`, `confidence`, and the notes caveats.
 
@@ -426,7 +426,7 @@ Each phase ends with something **usable**, so you're never building for months w
 ## 7. Your first three Claude Code sessions (exact prompts)
 
 **Session 1 - set up the brain of the operating method (do this first):**
-> "Create a new repo for a personal command-center app called GOTT. Set up `/CLAUDE.md` and a `/docs` folder containing `ROADMAP.md`, `PRD.md`, `DATA_MODEL.md`, `DECISIONS.md`, `PROGRESS.md`. I'll paste the contents. In `CLAUDE.md`, write these hard rules: Supabase Postgres is the system of record; Notion is only an optional one-way mirror; the LLM must NEVER compute dates (use a date-parser library); every derived item must store source_id + source_quote + confidence; no UI card renders without a working source chip; one atomic task per session, commit at the end. Then scaffold a Next.js + Tailwind app that runs locally and shows an empty dashboard with nav: Today, Tasks, Calendar, Goals, People, Jobs, Review. Stop after P0-T1 and P0-T2 and show me. Don't start P0-T3."
+> "Create a new repo for a personal command-center app called Otto. Set up `/CLAUDE.md` and a `/docs` folder containing `ROADMAP.md`, `PRD.md`, `DATA_MODEL.md`, `DECISIONS.md`, `PROGRESS.md`. I'll paste the contents. In `CLAUDE.md`, write these hard rules: Supabase Postgres is the system of record; Notion is only an optional one-way mirror; the LLM must NEVER compute dates (use a date-parser library); every derived item must store source_id + source_quote + confidence; no UI card renders without a working source chip; one atomic task per session, commit at the end. Then scaffold a Next.js + Tailwind app that runs locally and shows an empty dashboard with nav: Today, Tasks, Calendar, Goals, People, Jobs, Review. Stop after P0-T1 and P0-T2 and show me. Don't start P0-T3."
 
 **Session 2 - Supabase + the schema:**
 > "Read `/CLAUDE.md` and `/docs/PROGRESS.md` and confirm state in 3 bullets before coding. Then do tasks P0-T3 and P0-T4 only: connect Supabase, add email/password auth, and create a migration for the `sources` and `items` tables exactly as in `/docs/DATA_MODEL.md`, with RLS policies scoping rows to the signed-in user. Verify by showing me I can sign in and that an inserted test row is only visible to my user. Then run the end-of-session handoff protocol from `/docs/ROADMAP.md` 4.4."

@@ -19,7 +19,7 @@ create table if not exists public.sources (
 
 create index if not exists sources_user_id_idx on public.sources(user_id);
 
--- Everything GOTT derives, with a trail home.
+-- Everything Otto derives, with a trail home.
 create table if not exists public.items (
   id           uuid primary key default gen_random_uuid(),
   user_id      uuid not null references auth.users(id) on delete cascade,
@@ -30,7 +30,7 @@ create table if not exists public.items (
   confidence   numeric check (confidence is null or (confidence >= 0 and confidence <= 1)),
   source_id    uuid references public.sources(id) on delete set null,  -- WHERE it came from
   source_quote text,                -- the EXACT line that justified it
-  reasoning    text,                -- one sentence: why GOTT created this
+  reasoning    text,                -- one sentence: why Otto created this
   created_by   text not null default 'jarvis' check (created_by in ('jarvis','user')),
   created_at   timestamptz not null default now()
 );

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 
 /**
  * Compact "about you" editor. This profile (who you are / role / what you're building toward) is fed
- * to the email triage so GOTT judges importance relative to YOUR work, not someone else's.
+ * to the email triage so Otto judges importance relative to YOUR work, not someone else's.
  * Collapsed by default.
  */
 export function ProfileForm({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {

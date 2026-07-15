@@ -4,7 +4,7 @@
 > chat. Points to files; does not summarize the whole codebase.
 
 ## What this project is
-**GOTT** — a goal-grounded attention engine.
+**Otto** — a goal-grounded attention engine.
 It reads your email, meeting notes, Notion, and calendar; turns commitments into tracked
 tasks/follow-ups with a source link for each; and orders everything by importance against the goals
 and sub-goals you enter.

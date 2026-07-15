@@ -3,7 +3,7 @@
 This file is read automatically every session. Follow it exactly.
 
 ## What this project is
-**GOTT (Goal Oriented Task Tracker)** — a goal-grounded attention engine. It reads your email, meeting notes, Notion, and
+**Otto** — a goal-grounded attention engine. It reads your email, meeting notes, Notion, and
 calendar, turns commitments into tracked tasks/follow-ups **with a source link for each**, and
 orders everything by importance against the goals and sub-goals you enter. One simple white UI:
 red = overdue/urgent, green = on-track/done. The point is reducing friction. (`/docs/PRD.md` and
@@ -54,7 +54,7 @@ red = overdue/urgent, green = on-track/done. The point is reducing friction. (`/
 ```
 /CLAUDE.md                 # this file
 /docs/                     # ROADMAP, PRD, DATA_MODEL, DECISIONS, PROGRESS, SESSION_HANDOFF
-/gott-product-roadmap.md   # canonical roadmap (mirrored to /docs/ROADMAP.md)
+/otto-product-roadmap.md   # canonical roadmap (mirrored to /docs/ROADMAP.md)
 <Next.js app at repo root> # app/ (or src/app), components/, lib/, etc.
 ```
 

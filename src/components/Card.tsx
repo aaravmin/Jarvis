@@ -12,7 +12,7 @@ export type CardProps = {
   source: CardSource;
   /** Optional body content (description, sub-items, etc.). */
   children?: React.ReactNode;
-  /** Optional one-line "why GOTT created this". */
+  /** Optional one-line "why Otto created this". */
   reasoning?: string;
   /** Optional right-aligned slot in the header (e.g. a due date or status badge). */
   meta?: React.ReactNode;

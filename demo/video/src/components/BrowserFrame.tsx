@@ -1,6 +1,11 @@
 import React from "react";
 import { interpolate, useCurrentFrame } from "remotion";
-import { theme, font, shadow } from "../theme";
+import { theme, font } from "../theme";
+import { FRAME_BAR } from "../layout";
+
+// Near full-bleed frame: a big float shadow would clip at the comp edge and read
+// as a hard line, so keep the drop shadow tight and soft.
+const FRAME_SHADOW = "0 2px 10px rgba(16,24,40,0.08), 0 16px 44px rgba(16,24,40,0.12)";
 
 export type Pan = { x: number; y: number };
 
@@ -45,7 +50,7 @@ export const BrowserFrame: React.FC<Props> = ({
   const tx = pan.x * panRange * panProgress;
   const ty = pan.y * panRange * panProgress;
 
-  const barH = 46;
+  const barH = FRAME_BAR;
 
   return (
     <div
@@ -56,7 +61,7 @@ export const BrowserFrame: React.FC<Props> = ({
         borderRadius: radius,
         background: theme.surface,
         border: `1px solid ${theme.border}`,
-        boxShadow: shadow.float,
+        boxShadow: FRAME_SHADOW,
         overflow: "hidden",
       }}
     >

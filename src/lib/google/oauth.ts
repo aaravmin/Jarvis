@@ -1,7 +1,7 @@
 import "server-only";
 
 /**
- * Google OAuth 2.0 helpers (server-only). Per hard rule #6 we use the NARROWEST scopes: GOTT only
+ * Google OAuth 2.0 helpers (server-only). Per hard rule #6 we use the NARROWEST scopes: Otto only
  * READS your email and calendar to derive tasks and follow-ups; it never writes to Google. Tokens are
  * never exposed to the browser, these run in route handlers and are stored server-side via store.ts.
  *

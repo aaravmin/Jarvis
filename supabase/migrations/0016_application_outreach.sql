@@ -1,6 +1,6 @@
 -- 0016_application_outreach.sql — the Application & Outreach Agent's data layer.
 --
--- This phase gives GOTT a "brain" (Grok) + "hands/eyes" (Playwright) that can prepare job/grant
+-- This phase gives Otto a "brain" (Grok) + "hands/eyes" (Playwright) that can prepare job/grant
 -- applications and outreach emails. The data tables here are its MEMORY:
 --   • documents       — the user's resumes / grant materials (files in Supabase Storage + extracted
 --                        text so the model can read them cheaply). What the agent fills forms FROM.

@@ -34,8 +34,8 @@ function StatusBanner({ status }: { status?: string }) {
 
 /**
  * Notion connector row for the Connections sheet. PER-USER: each user connects their own Notion via
- * OAuth and picks the pages GOTT may read; the token is stored server-side, RLS-scoped. Read-only,
- * GOTT never writes back to Notion (hard rule #1). `envFallback` marks a self-hosted instance
+ * OAuth and picks the pages Otto may read; the token is stored server-side, RLS-scoped. Read-only,
+ * Otto never writes back to Notion (hard rule #1). `envFallback` marks a self-hosted instance
  * running on a deployment-wide NOTION_API_KEY instead of a per-user connection. Renders as a row (no
  * outer border) so it sits inside ConnectionsPanel's divided sheet, beside the Google row.
  */
@@ -61,7 +61,7 @@ export function NotionCard({
   const note = connected
     ? "Reads only the pages you've granted access to."
     : canConnect
-      ? "Opens Notion to pick which pages GOTT can read."
+      ? "Opens Notion to pick which pages Otto can read."
       : envFallback
         ? "Pages shared with the integration sync automatically."
         : "Not configured on this deployment.";

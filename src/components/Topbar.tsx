@@ -22,7 +22,7 @@ export function Topbar({ userEmail }: { userEmail?: string }) {
       </span>
       <button
         type="button"
-        onClick={() => window.dispatchEvent(new Event("gott:command"))}
+        onClick={() => window.dispatchEvent(new Event("otto:command"))}
         aria-label="Search"
         className="inline-flex size-9 items-center justify-center rounded-md border bg-card text-muted-foreground transition-colors hover:text-foreground md:hidden"
       >

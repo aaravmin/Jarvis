@@ -2,18 +2,18 @@
 @import "tw-animate-css";
 
 /*
-  GOTT design tokens - reconciled onto shadcn's semantic names (CP1 redesign foundation).
+  Otto design tokens - reconciled onto shadcn's semantic names (CP1 redesign foundation).
 
   Two token families coexist so we can migrate page by page without breaking anything:
     1. shadcn semantic tokens (background/foreground/card/popover/primary/secondary/muted/accent/
        destructive/border/input/ring/radius) power the shadcn primitives in components/ui/*.
-    2. The original GOTT tokens (surface, surface-2/3, muted-strong, accent, accent-strong,
+    2. The original Otto tokens (surface, surface-2/3, muted-strong, accent, accent-strong,
        accent-soft, border-strong, danger, warning) stay at their old VALUES so every not-yet-ported
        page keeps rendering exactly as before.
 
-  The accent collision is resolved deliberately: GOTT's dark ink action color (#334155) is now
+  The accent collision is resolved deliberately: Otto's dark ink action color (#334155) is now
   `--primary`; shadcn's `accent`/`muted` LIGHT-hover role is served by `--secondary` (#f0f2f4) inside
-  the primitives (see components/ui). `--accent`/`--muted` therefore keep GOTT's old ink values until
+  the primitives (see components/ui). `--accent`/`--muted` therefore keep Otto's old ink values until
   CP2 mechanically ports the remaining surfaces off them.
 
   Light-first: a near-white canvas where red = overdue/urgent and green = on track/done. All chrome is
@@ -32,7 +32,7 @@
   --card-foreground: #111827;
   --popover: #ffffff;
   --popover-foreground: #111827;
-  --primary: #334155; /* ink action (formerly GOTT --accent); takes white text */
+  --primary: #334155; /* ink action (formerly Otto --accent); takes white text */
   --primary-foreground: #ffffff;
   --secondary: #f0f2f4; /* light fill / hover (shadcn accent/muted role) */
   --secondary-foreground: #111827;
@@ -43,15 +43,15 @@
   --input: #e5e8eb;
   --radius: 0.5rem;
 
-  /* ---- original GOTT tokens (kept at old VALUES for un-ported pages) ---- */
+  /* ---- original Otto tokens (kept at old VALUES for un-ported pages) ---- */
   --surface: #ffffff; /* sidebar / panels */
   --surface-2: #ffffff; /* raised cards */
   --surface-3: #f0f2f4; /* hover / active */
   --border: #e5e8eb;
   --border-strong: #cfd6dc;
-  --muted: #64748b; /* GOTT secondary text (text-muted); NOT a light bg here */
+  --muted: #64748b; /* Otto secondary text (text-muted); NOT a light bg here */
   --muted-strong: #374151;
-  --accent: #334155; /* GOTT dark ink; == --primary during migration */
+  --accent: #334155; /* Otto dark ink; == --primary during migration */
   --accent-strong: #1e293b;
   --accent-soft: #e9eef5;
   --success: #16a34a; /* green: on track / done only */
@@ -82,7 +82,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* original GOTT color mappings (still referenced by un-ported pages) */
+  /* original Otto color mappings (still referenced by un-ported pages) */
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);

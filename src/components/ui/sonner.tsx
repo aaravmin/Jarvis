@@ -9,7 +9,7 @@ import {
 } from "lucide-react"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 
-// GOTT is a light-first surface, so toasts render light regardless of the viewer's OS theme.
+// Otto is a light-first surface, so toasts render light regardless of the viewer's OS theme.
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner

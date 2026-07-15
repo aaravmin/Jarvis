@@ -66,7 +66,7 @@ export default async function EmailPage() {
       {emails.length === 0 ? (
         <div className="rounded-md border border-dashed bg-card px-6 py-12 text-center">
           <h2 className="text-sm font-semibold text-foreground">No emails yet</h2>
-          <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">Sync Gmail and GOTT keeps only what matters.</p>
+          <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">Sync Gmail and Otto keeps only what matters.</p>
         </div>
       ) : (
         <div className="space-y-4">

@@ -1,14 +1,14 @@
-# CAPABILITIES — what GOTT can and cannot do
+# CAPABILITIES — what Otto can and cannot do
 
 > Honest, current, and short. Updated 2026-07-13 after the simplification (see DECISIONS.md).
-> If a capability isn't listed under CAN, GOTT does not do it.
+> If a capability isn't listed under CAN, Otto does not do it.
 
-## What GOTT is
+## What Otto is
 A goal-grounded attention engine.
 It reads your email, meeting notes, Notion, and calendar; turns commitments into tracked
 tasks/follow-ups each carrying a source link; and orders everything by importance against the goals
 and sub-goals you enter.
-Every GOTT-derived fact lands in a review queue before it counts - the user is always the
+Every Otto-derived fact lands in a review queue before it counts - the user is always the
 decision-maker.
 
 ## CAN

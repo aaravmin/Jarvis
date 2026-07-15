@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 /**
- * Paste a meeting transcript and let GOTT pull the action items out of it. The transcript is stored
+ * Paste a meeting transcript and let Otto pull the action items out of it. The transcript is stored
  * as a `meeting` source and mined by the same extractor the inbox uses; results land in the Review
  * queue (suggest-only). Nothing here computes a date or invents a task, that's enforced server-side.
  */
@@ -57,7 +57,7 @@ export function PasteMeetingForm() {
         <Input placeholder="Meeting name (optional), e.g. Advisor sync" value={title} onChange={(e) => setTitle(e.target.value)} />
         <Textarea
           className="min-h-[160px] resize-y"
-          placeholder="Paste a transcript or notes. GOTT proposes action items, each with the exact line it came from."
+          placeholder="Paste a transcript or notes. Otto proposes action items, each with the exact line it came from."
           value={transcript}
           onChange={(e) => setTranscript(e.target.value)}
         />

@@ -1,5 +1,5 @@
 gaia-ui (https://github.com/theexperiencecompany/gaia-ui)
-Portions of GOTT's UI primitives are adapted from gaia-ui, used under the MIT License.
+Portions of Otto's UI primitives are adapted from gaia-ui, used under the MIT License.
 
 MIT License
 

@@ -1,6 +1,6 @@
 -- 0013_connection_types_and_templates.sql
 -- The "smart template" system: when you email a contact you have a personal connection to (e.g. "a
--- parent's friend"), GOTT adapts a base template to weave that connection in, then saves a REUSABLE,
+-- parent's friend"), Otto adapts a base template to weave that connection in, then saves a REUSABLE,
 -- GENERALIZED template tied to the *type* of connection — never the personal specifics.
 --
 -- HARD PRIVACY RULE (per the user's explicit instruction): connection_types and the generated

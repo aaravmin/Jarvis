@@ -1,8 +1,7 @@
-import { Brand } from "@/components/Brand";
 import { LoginForm } from "./LoginForm";
 
 export const metadata = {
-  title: "Sign in, GOTT",
+  title: "Sign in, Otto",
 };
 
 export default async function LoginPage({
@@ -15,12 +14,9 @@ export default async function LoginPage({
   return (
     <main className="app-ambient flex min-h-dvh items-center justify-center px-5 py-10">
       <div className="w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <Brand withWordmark={false} />
-          <div>
-            <h1 className="text-lg font-semibold text-foreground">GOTT</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Your private command center.</p>
-          </div>
+        <div className="mb-6 text-center">
+          <h1 className="text-lg font-semibold text-foreground">Otto</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Your private command center.</p>
         </div>
 
         <div className="rounded-md border bg-card p-6 shadow-sm">

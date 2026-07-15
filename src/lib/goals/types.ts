@@ -1,5 +1,5 @@
 /**
- * Goals are the ANCHORS of GOTT: every entity (contact, meeting, calendar event, email, task,
+ * Goals are the ANCHORS of Otto: every entity (contact, meeting, calendar event, email, task,
  * opportunity) links to one or more goals, and goals connect to each other through shared entities.
  * This file holds the in-app goal shapes; the relational model lives in the goals + goal_links +
  * goal_connections tables.

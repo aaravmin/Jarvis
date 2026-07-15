@@ -16,14 +16,14 @@ export function DesktopRail({ userEmail }: { userEmail?: string }) {
   return (
     <aside className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col border-r bg-secondary/40 px-2.5 py-3 md:flex">
       <div className="flex items-center justify-between px-1.5 pb-3">
-        <Link href="/today" aria-label="GOTT home">
+        <Link href="/today" aria-label="Otto home">
           <Brand />
         </Link>
       </div>
 
       <button
         type="button"
-        onClick={() => window.dispatchEvent(new Event("gott:command"))}
+        onClick={() => window.dispatchEvent(new Event("otto:command"))}
         className="mb-3 flex items-center gap-2 rounded-md border bg-card px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <Search className="size-3.5" />

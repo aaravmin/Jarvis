@@ -43,7 +43,7 @@ export default async function MeetingsPage() {
       {meetings.length === 0 ? (
         <div className="rounded-md border border-dashed bg-card px-6 py-12 text-center">
           <h2 className="text-sm font-semibold text-foreground">No meetings yet</h2>
-          <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">Paste a transcript above and GOTT pulls the action items.</p>
+          <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">Paste a transcript above and Otto pulls the action items.</p>
         </div>
       ) : (
         <section className="space-y-1.5">

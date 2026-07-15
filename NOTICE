@@ -1,4 +1,4 @@
-GOTT - third-party notices
+Otto - third-party notices
 
 This product includes software developed by third parties.
 
@@ -6,7 +6,7 @@ This product includes software developed by third parties.
   src/components/ui/raised-button.tsx is adapted from gaia-ui's raised-button.
   Full license: LICENSES/gaia-ui-MIT.txt
   (gaia-ui's navbar-menu was evaluated and intentionally not vendored: its animated
-  marketing-nav motion runs counter to GOTT's calm, flat Notion/Sheets aesthetic.)
+  marketing-nav motion runs counter to Otto's calm, flat Notion/Sheets aesthetic.)
 
 - shadcn/ui primitives (MIT) under src/components/ui/ are generated from the shadcn
   registry and are MIT-licensed.

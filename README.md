@@ -1,8 +1,8 @@
-<h1 align="center">GOTT</h1>
+<h1 align="center">Otto</h1>
 
 <p align="center">
   <strong>A goal-grounded attention engine.</strong><br />
-  GOTT (Goal Oriented Task Tracker) reads your email, meeting notes, Notion, and calendar, turns commitments into tracked
+  Otto reads your email, meeting notes, Notion, and calendar, turns commitments into tracked
   tasks and follow-ups with a source link for every single one, and orders everything by what
   matters most to your goals.
 </p>
@@ -24,7 +24,7 @@
 
 ---
 
-Most "AI assistants" hand you a chat box. GOTT is built on the opposite bet: the assistant's job
+Most "AI assistants" hand you a chat box. Otto is built on the opposite bet: the assistant's job
 is to **reduce friction**, not to converse. It checks the four places your commitments live (email,
 meeting notes, Notion, calendar), derives what needs doing, and puts it on one white page in order
 of importance — red for overdue, green for done. Every item carries a link back to the exact line
@@ -55,7 +55,7 @@ calendar, and Notion current from one button; connecting Google runs a first syn
 | Step | What happens | Built with |
 |------|--------------|------------|
 | **1 · Ingest** | Gmail, Calendar, and recently edited Notion pages are stored as `sources` — raw text, when it occurred, a permalink home. | Google OAuth (read-only) · Notion OAuth, per-user (read-only) |
-| **2 · Extract** | GOTT reads a source and proposes items (tasks, events, follow-ups) plus optional goal relevance, as structured JSON — never free text. | xAI Grok · structured output |
+| **2 · Extract** | Otto reads a source and proposes items (tasks, events, follow-ups) plus optional goal relevance, as structured JSON — never free text. | xAI Grok · structured output |
 | **3 · Verify** | Every item's `source_quote` and every goal link's `goal_quote` must be a real substring of the source, or it's dropped. | citation gate, in code |
 | **4 · Resolve dates** | The model returns raw phrases ("next Friday"); code resolves real timestamps against the source's date. **The LLM never computes a date.** | chrono-node (`src/lib/dates.ts`) |
 | **5 · Review (L0)** | Suggestions land in Review with their goal chips. One approval accepts the item and its goal tag together. | `PATCH /api/items` |
@@ -68,7 +68,7 @@ calendar, and Notion current from one button; connecting Google runs a first syn
 | **Supabase** | Postgres + Auth + RLS — the system of record | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Yes** |
 | **xAI Grok** | All LLM calls: inbox triage, item extraction, goal-relevance proposals | `XAI_API_KEY` (+ `XAI_MODEL`) | **Yes** |
 | **Google Workspace** | Read-only Gmail + Calendar connector | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (+ optional `GOOGLE_OAUTH_REDIRECT`) | For email/calendar |
-| **Notion** | Read-only meeting notes / pages connector — each user connects their own via OAuth and picks the pages GOTT may read | `NOTION_CLIENT_ID`, `NOTION_CLIENT_SECRET` (+ optional `NOTION_OAUTH_REDIRECT`; `NOTION_API_KEY` only as a single-person self-host fallback) | Optional |
+| **Notion** | Read-only meeting notes / pages connector — each user connects their own via OAuth and picks the pages Otto may read | `NOTION_CLIENT_ID`, `NOTION_CLIENT_SECRET` (+ optional `NOTION_OAUTH_REDIRECT`; `NOTION_API_KEY` only as a single-person self-host fallback) | Optional |
 
 Each optional service is gated on its key — unset it and the feature says so plainly; the rest of
 the app keeps working.
@@ -88,8 +88,8 @@ Enforced, not aspirational ([`CLAUDE.md`](CLAUDE.md)):
 ## Running it locally
 
 ```bash
-git clone https://github.com/aaravmin/GOTT.git
-cd GOTT
+git clone https://github.com/aaravmin/Otto.git
+cd Otto
 npm install
 
 cp .env.example .env.local      # fill in the keys (see the table above)
