@@ -8,19 +8,19 @@ export const SC9Outro: React.FC<{ durationInFrames: number }> = ({ durationInFra
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const tag = spring({ frame: frame - 44, fps, config: { damping: 200, mass: 0.9, stiffness: 110 } });
+  const tag = spring({ frame: frame - 28, fps, config: { damping: 200, mass: 0.7, stiffness: 150 } });
   const tagY = interpolate(tag, [0, 1], [16, 0]);
 
-  const sub = spring({ frame: frame - 74, fps, config: { damping: 200, mass: 0.9, stiffness: 110 } });
+  const sub = spring({ frame: frame - 52, fps, config: { damping: 200, mass: 0.7, stiffness: 150 } });
   const subY = interpolate(sub, [0, 1], [14, 0]);
 
-  const dotsProgress = interpolate(frame, [74, 156], [0, 1], {
+  const dotsProgress = interpolate(frame, [40, 90], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
   // fade to white at the very end
-  const white = interpolate(frame, [durationInFrames - 60, durationInFrames - 6], [0, 1], {
+  const white = interpolate(frame, [durationInFrames - 40, durationInFrames - 6], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: (t) => t * t,
@@ -30,7 +30,7 @@ export const SC9Outro: React.FC<{ durationInFrames: number }> = ({ durationInFra
     <AbsoluteFill>
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <Wordmark size={140} delay={6} />
+          <Wordmark size={150} delay={6} />
 
           <div
             style={{
@@ -63,7 +63,7 @@ export const SC9Outro: React.FC<{ durationInFrames: number }> = ({ durationInFra
               color: theme.borderStrong,
             }}
           >
-            Jarvis, a goal-grounded attention engine
+            GOTT, a goal-grounded attention engine
           </div>
         </div>
       </AbsoluteFill>

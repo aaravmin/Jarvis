@@ -1,4 +1,5 @@
 import type { CardSource } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { SourceChip } from "@/components/SourceChip";
 
 export type CardProps = {
@@ -17,13 +18,18 @@ export type CardProps = {
   meta?: React.ReactNode;
   /** Optional footer-right actions (e.g. Accept/Dismiss in the Review queue). */
   actions?: React.ReactNode;
+  /**
+   * "card" (default) = bordered, self-contained tile. "row" = borderless dense content meant to sit
+   * inside a divided sheet-list container (Today / Review), where the list owns the hairlines.
+   */
+  variant?: "card" | "row";
 };
 
 /**
- * The provenance-enforcing card primitive. Reused everywhere a derived item is shown.
- * Invariant: it cannot render without a working source chip.
+ * The provenance-enforcing item primitive. Reused everywhere a derived item is shown.
+ * Invariant: it cannot render without a working source chip. Dense by default (Notion/Sheets rhythm).
  */
-export function Card({ title, source, children, reasoning, meta, actions }: CardProps) {
+export function Card({ title, source, children, reasoning, meta, actions, variant = "card" }: CardProps) {
   // Enforce the invariant. Loud in development, silent-but-logged in production.
   if (!source || typeof source.quote !== "string" || source.quote.trim() === "") {
     const message =
@@ -38,24 +44,29 @@ export function Card({ title, source, children, reasoning, meta, actions }: Card
   }
 
   return (
-    <article className="rounded-xl border border-border bg-surface-2 p-4 transition-colors hover:border-border-strong">
+    <article
+      className={cn(
+        "min-w-0",
+        variant === "card" && "rounded-md border bg-card p-3 transition-colors hover:border-border-strong",
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
-        <h3 className="text-sm font-semibold leading-snug text-foreground">{title}</h3>
-        {meta && <div className="shrink-0 text-xs text-muted">{meta}</div>}
+        <h3 className="text-sm font-medium leading-snug text-foreground">{title}</h3>
+        {meta && <div className="shrink-0 text-xs text-muted-foreground">{meta}</div>}
       </div>
 
-      {children && <div className="mt-2 min-w-0 break-words text-sm leading-relaxed text-muted-strong">{children}</div>}
+      {children && <div className="mt-1 min-w-0 break-words text-sm leading-snug text-muted-strong">{children}</div>}
 
       {reasoning && (
-        <p className="mt-2 text-xs italic text-muted">
-          <span className="not-italic text-muted-strong">Why: </span>
+        <p className="mt-1 text-xs leading-snug text-muted-foreground">
+          <span className="text-muted-strong">Why </span>
           {reasoning}
         </p>
       )}
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+      <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
         <SourceChip source={source} />
-        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+        {actions && <div className="flex flex-wrap items-center gap-1.5">{actions}</div>}
       </div>
     </article>
   );

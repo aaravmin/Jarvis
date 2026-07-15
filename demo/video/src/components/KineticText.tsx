@@ -39,14 +39,14 @@ export const KineticText: React.FC<Props> = ({
   fontSize = 64,
   lineGap = 14,
   align = "center",
-  startDelay = 4,
-  stagger = 3,
+  startDelay = 2,
+  stagger = 2,
   weight = 700,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const exitStart = durationInFrames - 14;
+  const exitStart = durationInFrames - 7;
   const exit = interpolate(frame, [exitStart, durationInFrames], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
@@ -85,12 +85,12 @@ export const KineticText: React.FC<Props> = ({
             const s = spring({
               frame: frame - delay,
               fps,
-              config: { damping: 200, mass: 0.7, stiffness: 130 },
+              config: { damping: 200, mass: 0.5, stiffness: 200 },
             });
             const y = interpolate(s, [0, 1], [26, 0]);
             const underlineWipe = interpolate(
               frame,
-              [delay + 8, delay + 22],
+              [delay + 5, delay + 15],
               [0, 1],
               { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: (t) => 1 - Math.pow(1 - t, 2) }
             );

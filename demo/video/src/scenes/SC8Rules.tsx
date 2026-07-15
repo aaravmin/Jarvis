@@ -25,7 +25,7 @@ const Heading: React.FC = () => {
         Trust, by construction
       </div>
       <div style={{ fontSize: 22, fontWeight: 500, color: theme.muted, marginTop: 8 }}>
-        Four rules Jarvis never breaks
+        Four rules GOTT never breaks
       </div>
     </div>
   );

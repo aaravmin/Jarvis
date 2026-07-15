@@ -53,6 +53,11 @@ const RULES: Rule[] = [
   },
 ];
 
+// After the four cards flip in, a highlight steps through them one at a time so
+// each card is a fresh ~20-frame beat (and the eye is guided to read each rule).
+const EMPH_START = 60;
+const EMPH_STEP = 20;
+
 export const RuleCards: React.FC<{ durationInFrames: number }> = ({ durationInFrames }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -60,6 +65,8 @@ export const RuleCards: React.FC<{ durationInFrames: number }> = ({ durationInFr
   const cardW = 468;
   const cardH = 236;
   const gap = 28;
+
+  const activeCard = Math.floor((frame - EMPH_START) / EMPH_STEP);
 
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", fontFamily: font.sans }}>
@@ -74,24 +81,43 @@ export const RuleCards: React.FC<{ durationInFrames: number }> = ({ durationInFr
         }}
       >
         {RULES.map((r, i) => {
-          const delay = 8 + i * 16;
-          const flip = spring({ frame: frame - delay, fps, config: { damping: 200, mass: 0.9, stiffness: 90 } });
+          const delay = 4 + i * 11;
+          const flip = spring({ frame: frame - delay, fps, config: { damping: 200, mass: 0.8, stiffness: 130 } });
           const rotateY = interpolate(flip, [0, 1], [78, 0]);
           const opacity = interpolate(flip, [0, 0.4], [0, 1], { extrapolateRight: "clamp" });
           const num = String(i + 1).padStart(2, "0");
+
+          // sequential highlight beat
+          const emphIn = interpolate(
+            frame,
+            [EMPH_START + i * EMPH_STEP, EMPH_START + i * EMPH_STEP + 6],
+            [0, 1],
+            { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+          );
+          const emphOut = interpolate(
+            frame,
+            [EMPH_START + i * EMPH_STEP + EMPH_STEP - 6, EMPH_START + i * EMPH_STEP + EMPH_STEP],
+            [1, 0],
+            { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+          );
+          const emph = activeCard === i ? Math.min(emphIn, emphOut) : 0;
+          const lift = emph * 8;
+          const emphScale = 1 + emph * 0.03;
           return (
             <div
               key={i}
               style={{
                 width: cardW,
                 height: cardH,
-                transform: `rotateY(${rotateY}deg)`,
+                transform: `rotateY(${rotateY}deg) translateY(${-lift}px) scale(${emphScale})`,
                 transformOrigin: "left center",
                 opacity,
                 background: theme.surface,
-                border: `1px solid ${theme.border}`,
+                border: `1px solid ${emph > 0.1 ? theme.accentStrong : theme.border}`,
                 borderRadius: 22,
-                boxShadow: shadow.cardLg,
+                boxShadow: emph > 0.1
+                  ? `${shadow.cardLg}, 0 0 0 2px ${theme.accentStrong}`
+                  : shadow.cardLg,
                 padding: "30px 32px",
                 display: "flex",
                 flexDirection: "column",

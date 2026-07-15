@@ -56,7 +56,7 @@ const Sidebar: React.FC<{ active: string }> = ({ active }) => (
         padding: "0 8px 22px",
       }}
     >
-      JARVIS
+      GOTT
     </div>
     <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
       {NAV.map((n) => {

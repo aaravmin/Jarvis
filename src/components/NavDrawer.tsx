@@ -42,17 +42,17 @@ export function NavDrawer({ userEmail }: { userEmail?: string }) {
         onClick={() => setOpen(true)}
         aria-label="Open navigation"
         aria-expanded={open}
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-2 text-muted transition-colors hover:border-accent/50 hover:text-foreground"
+        className="inline-flex size-9 shrink-0 items-center justify-center rounded-md border bg-card text-muted-foreground transition-colors hover:text-foreground"
       >
-        <Menu className="h-[18px] w-[18px]" />
+        <Menu className="size-[18px]" />
       </button>
 
       {open && (
         <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Navigation">
-          <div className="drawer-overlay absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          <div className="drawer-overlay absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
 
-          <aside className="drawer-panel absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col border-r border-border bg-surface shadow-2xl">
-            <div className="flex h-16 items-center justify-between px-5 border-b border-border">
+          <aside className="drawer-panel absolute inset-y-0 left-0 flex w-64 max-w-[85vw] flex-col border-r bg-secondary/40 shadow-2xl">
+            <div className="flex h-14 items-center justify-between border-b px-4">
               <Link href="/today" aria-label="GOTT home">
                 <Brand />
               </Link>
@@ -60,43 +60,29 @@ export function NavDrawer({ userEmail }: { userEmail?: string }) {
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Close navigation"
-                className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                className="rounded p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               >
-                <X className="h-4 w-4" />
+                <X className="size-4" />
               </button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto px-3 py-4">
-              <p className="px-3 pb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
-                Command center
-              </p>
-              <ul className="space-y-1">
+            <nav className="flex-1 overflow-y-auto px-2.5 py-3">
+              <ul className="space-y-0.5">
                 {NAV_ITEMS.map((item) => {
                   const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                  const Icon = item.icon;
                   return (
                     <li key={item.href}>
                       <Link
                         href={item.href}
                         aria-current={active ? "page" : undefined}
                         className={[
-                          "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                          "block rounded-md px-2 py-1.5 text-sm transition-colors",
                           active
-                            ? "bg-surface-3 text-foreground"
-                            : "text-muted hover:bg-surface-2 hover:text-foreground",
+                            ? "bg-secondary font-medium text-foreground"
+                            : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
                         ].join(" ")}
                       >
-                        <Icon
-                          className={[
-                            "h-[18px] w-[18px] shrink-0 transition-colors",
-                            active ? "text-accent" : "text-muted group-hover:text-foreground",
-                          ].join(" ")}
-                          strokeWidth={2}
-                        />
-                        <span className="font-medium">{item.label}</span>
-                        {active && (
-                          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_1px_var(--color-accent)]" />
-                        )}
+                        {item.label}
                       </Link>
                     </li>
                   );
@@ -104,28 +90,23 @@ export function NavDrawer({ userEmail }: { userEmail?: string }) {
               </ul>
             </nav>
 
-            <div className="space-y-2 border-t border-border px-4 py-3">
-              {userEmail && (
-                <div className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2">
-                  <div className="min-w-0 leading-tight">
-                    <p className="truncate text-xs font-medium text-foreground" title={userEmail}>
-                      {userEmail}
-                    </p>
-                    <p className="text-[11px] text-muted">Signed in</p>
-                  </div>
-                  <form action="/auth/signout" method="post">
-                    <button
-                      type="submit"
-                      aria-label="Sign out"
-                      title="Sign out"
-                      className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-3 hover:text-foreground"
-                    >
-                      <LogOut className="h-4 w-4" />
-                    </button>
-                  </form>
-                </div>
-              )}
-            </div>
+            {userEmail && (
+              <div className="flex items-center justify-between gap-2 border-t px-4 py-2.5">
+                <p className="min-w-0 truncate text-[11px] text-muted-foreground" title={userEmail}>
+                  {userEmail}
+                </p>
+                <form action="/auth/signout" method="post">
+                  <button
+                    type="submit"
+                    aria-label="Sign out"
+                    title="Sign out"
+                    className="rounded p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                  >
+                    <LogOut className="size-4" />
+                  </button>
+                </form>
+              </div>
+            )}
           </aside>
         </div>
       )}

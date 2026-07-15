@@ -1,0 +1,138 @@
+{
+  "goals-create": [
+    {
+      "label": "new-goal-input",
+      "x": 717,
+      "y": 71,
+      "w": 639,
+      "h": 20
+    },
+    {
+      "label": "g1-card",
+      "x": 680,
+      "y": 453,
+      "w": 768,
+      "h": 335
+    },
+    {
+      "label": "subgoal-input",
+      "x": 743,
+      "y": 603,
+      "w": 632,
+      "h": 34
+    }
+  ],
+  "review": [
+    {
+      "label": "r1-source-chip",
+      "x": 723,
+      "y": 535,
+      "w": 221,
+      "h": 26
+    },
+    {
+      "label": "r1-source-modal",
+      "x": 704,
+      "y": 347,
+      "w": 512,
+      "h": 386
+    },
+    {
+      "label": "r1-checkbox",
+      "x": 680,
+      "y": 445,
+      "w": 16,
+      "h": 16
+    },
+    {
+      "label": "r3-checkbox",
+      "x": 680,
+      "y": 341,
+      "w": 16,
+      "h": 16
+    },
+    {
+      "label": "bulk-accept-bar",
+      "x": 680,
+      "y": 140,
+      "w": 768,
+      "h": 44
+    }
+  ],
+  "today-hero": [
+    {
+      "label": "overdue-card-a1",
+      "x": 728,
+      "y": 204,
+      "w": 720,
+      "h": 147
+    },
+    {
+      "label": "needs-reply-card-e1",
+      "x": 728,
+      "y": 272,
+      "w": 720,
+      "h": 138
+    },
+    {
+      "label": "reply-in-gmail-link",
+      "x": 1307,
+      "y": 368,
+      "w": 124,
+      "h": 26
+    },
+    {
+      "label": "goal-chip-a2",
+      "x": 727,
+      "y": 87,
+      "w": 179,
+      "h": 24
+    },
+    {
+      "label": "waiting-on-card-e2",
+      "x": 710,
+      "y": 329,
+      "w": 738,
+      "h": 138
+    },
+    {
+      "label": "a2-checkbox-before-check",
+      "x": 680,
+      "y": 45,
+      "w": 20,
+      "h": 20
+    }
+  ],
+  "montage-tasks": [
+    {
+      "label": "task-row",
+      "x": 680,
+      "y": 136,
+      "w": 768,
+      "h": 58
+    },
+    {
+      "label": "task-row-edit-icon",
+      "x": 1381,
+      "y": 152,
+      "w": 26,
+      "h": 26
+    },
+    {
+      "label": "inline-edit-form",
+      "x": 680,
+      "y": 136,
+      "w": 768,
+      "h": 220
+    }
+  ],
+  "goals-after": [
+    {
+      "label": "g1-card-after",
+      "x": 680,
+      "y": 453,
+      "w": 768,
+      "h": 335
+    }
+  ]
+}

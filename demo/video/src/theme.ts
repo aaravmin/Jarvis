@@ -48,16 +48,18 @@ export const shadow = {
 export const fps = 30;
 
 // Absolute scene boundaries (frames @ 30fps). End of last scene = total duration.
+// RAPID 0.7s RE-CUT: every scene is packed with beats <= 21 frames each; no static
+// hold exceeds ~20 frames. Durations below are the sum of those beats, not padded.
 export const SCENES = {
-  intro: { from: 0, duration: 240 },
-  premise: { from: 240, duration: 420 },
-  goals: { from: 660, duration: 540 },
-  ingest: { from: 1200, duration: 460 },
-  review: { from: 1660, duration: 820 },
-  today: { from: 2480, duration: 1480 },
-  montage: { from: 3960, duration: 740 },
-  rules: { from: 4700, duration: 550 },
-  outro: { from: 5250, duration: 690 },
+  intro: { from: 0, duration: 108 },
+  premise: { from: 108, duration: 152 },
+  goals: { from: 260, duration: 140 },
+  ingest: { from: 400, duration: 182 },
+  review: { from: 582, duration: 140 },
+  today: { from: 722, duration: 250 },
+  montage: { from: 972, duration: 112 },
+  rules: { from: 1084, duration: 150 },
+  outro: { from: 1234, duration: 120 },
 } as const;
 
-export const TOTAL_FRAMES = SCENES.outro.from + SCENES.outro.duration; // 5940 = 3:18
+export const TOTAL_FRAMES = SCENES.outro.from + SCENES.outro.duration; // 1354 = 45.1s

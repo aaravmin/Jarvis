@@ -1,47 +1,105 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /*
-  GOTT design tokens.
-  Light-first: a white canvas where red means "overdue / urgent" and green means "on track / done".
-  ALL chrome (buttons, icons, chips, nav) is neutral ink so the two status colors are the only loud
-  colors on the page; attention is carried by them, nothing else.
+  GOTT design tokens - reconciled onto shadcn's semantic names (CP1 redesign foundation).
+
+  Two token families coexist so we can migrate page by page without breaking anything:
+    1. shadcn semantic tokens (background/foreground/card/popover/primary/secondary/muted/accent/
+       destructive/border/input/ring/radius) power the shadcn primitives in components/ui/*.
+    2. The original GOTT tokens (surface, surface-2/3, muted-strong, accent, accent-strong,
+       accent-soft, border-strong, danger, warning) stay at their old VALUES so every not-yet-ported
+       page keeps rendering exactly as before.
+
+  The accent collision is resolved deliberately: GOTT's dark ink action color (#334155) is now
+  `--primary`; shadcn's `accent`/`muted` LIGHT-hover role is served by `--secondary` (#f0f2f4) inside
+  the primitives (see components/ui). `--accent`/`--muted` therefore keep GOTT's old ink values until
+  CP2 mechanically ports the remaining surfaces off them.
+
+  Light-first: a near-white canvas where red = overdue/urgent and green = on track/done. All chrome is
+  neutral ink so those two status colors are the only loud colors on the page.
 */
+
+/* Make `dark:` opt-in via an explicit .dark class instead of the OS preference, so a dark-OS viewer
+   still sees the light app (the primitives ship dark: variants we never activate). */
+@custom-variant dark (&:is(.dark *));
+
 :root {
-  --background: #f7f8f9; /* app canvas, neutral near-white */
+  /* ---- shadcn semantic tokens (drive components/ui/*) ---- */
+  --background: #ffffff; /* Notion white content; the shell carries the faint wash */
+  --foreground: #111827; /* near-black ink */
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  --primary: #334155; /* ink action (formerly GOTT --accent); takes white text */
+  --primary-foreground: #ffffff;
+  --secondary: #f0f2f4; /* light fill / hover (shadcn accent/muted role) */
+  --secondary-foreground: #111827;
+  --muted-foreground: #64748b; /* shadcn secondary text */
+  --accent-foreground: #111827;
+  --destructive: #dc2626; /* red: urgent / overdue only */
+  --destructive-foreground: #ffffff;
+  --input: #e5e8eb;
+  --radius: 0.5rem;
+
+  /* ---- original GOTT tokens (kept at old VALUES for un-ported pages) ---- */
   --surface: #ffffff; /* sidebar / panels */
   --surface-2: #ffffff; /* raised cards */
   --surface-3: #f0f2f4; /* hover / active */
   --border: #e5e8eb;
   --border-strong: #cfd6dc;
-  --foreground: #111827; /* near-black ink */
-  --muted: #64748b; /* secondary text */
+  --muted: #64748b; /* GOTT secondary text (text-muted); NOT a light bg here */
   --muted-strong: #374151;
-  --accent: #334155; /* slate ink: reads on white, takes white button text, never reads as a status */
-  --accent-strong: #1e293b; /* darker ink hover */
-  --accent-soft: #e9eef5; /* tinted accent background / badges */
-  --success: #16a34a;
+  --accent: #334155; /* GOTT dark ink; == --primary during migration */
+  --accent-strong: #1e293b;
+  --accent-soft: #e9eef5;
+  --success: #16a34a; /* green: on track / done only */
   --warning: #d97706;
   --danger: #dc2626;
-  --ring: #64748b;
+  --ring: #94a3b8; /* focus ring (shadcn value) */
 }
 
 @theme inline {
+  /* shadcn color mappings */
   --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* original GOTT color mappings (still referenced by un-ported pages) */
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
-  --color-border: var(--border);
   --color-border-strong: var(--border-strong);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
   --color-muted-strong: var(--muted-strong);
-  --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-accent-soft: var(--accent-soft);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
-  --color-ring: var(--ring);
+
+  /* radius scale derived from --radius (shadcn convention) */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -76,11 +134,11 @@ body {
   background: var(--muted);
 }
 
-/* Subtle neutral radial wash behind the app, on the light canvas. */
+/* Faint neutral wash for the app shell only (the content column stays Notion-white). */
 .app-ambient {
   background:
-    radial-gradient(60rem 40rem at 12% -10%, rgba(51, 65, 85, 0.05), transparent 60%),
-    radial-gradient(50rem 40rem at 100% 0%, rgba(30, 41, 59, 0.03), transparent 55%),
+    radial-gradient(60rem 40rem at 12% -10%, rgba(51, 65, 85, 0.035), transparent 60%),
+    radial-gradient(50rem 40rem at 100% 0%, rgba(30, 41, 59, 0.025), transparent 55%),
     var(--background);
 }
 

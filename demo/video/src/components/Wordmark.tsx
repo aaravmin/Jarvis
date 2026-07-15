@@ -3,7 +3,7 @@ import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { theme, font } from "../theme";
 
 /**
- * JARVIS wordmark. Letters stagger up on a spring while the letter-spacing
+ * GOTT wordmark. Letters stagger up on a spring while the letter-spacing
  * expands from tight to wide. Used in the intro and outro.
  */
 export const Wordmark: React.FC<{ size?: number; delay?: number; color?: string }> = ({
@@ -13,7 +13,7 @@ export const Wordmark: React.FC<{ size?: number; delay?: number; color?: string 
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const letters = "JARVIS".split("");
+  const letters = "GOTT".split("");
 
   const spread = spring({ frame: frame - delay, fps, config: { damping: 200, mass: 1.1, stiffness: 60 } });
   const tracking = interpolate(spread, [0, 1], [size * 0.02, size * 0.14]);

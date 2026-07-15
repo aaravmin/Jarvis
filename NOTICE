@@ -1,0 +1,15 @@
+GOTT - third-party notices
+
+This product includes software developed by third parties.
+
+- gaia-ui (MIT, Copyright (c) 2026 The Experience Company)
+  src/components/ui/raised-button.tsx is adapted from gaia-ui's raised-button.
+  Full license: LICENSES/gaia-ui-MIT.txt
+  (gaia-ui's navbar-menu was evaluated and intentionally not vendored: its animated
+  marketing-nav motion runs counter to GOTT's calm, flat Notion/Sheets aesthetic.)
+
+- shadcn/ui primitives (MIT) under src/components/ui/ are generated from the shadcn
+  registry and are MIT-licensed.
+
+Note: the gaia MAIN application (theexperiencecompany/gaia) is Polyform Noncommercial
+and is NOT used, copied, or derived from anywhere in this codebase.

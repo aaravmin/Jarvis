@@ -3,10 +3,10 @@ import { AbsoluteFill, Sequence } from "remotion";
 import { BrowserFrame } from "../components/BrowserFrame";
 import { Footage } from "../components/Footage";
 import { ChapterChip } from "../components/ChapterChip";
-import { Callout } from "../components/Callout";
+import { LowerThird } from "../components/LowerThird";
 import { FRAME } from "../layout";
 
-/** SC3 660-1200 (540f): Goals. F1 footage + two callouts. */
+/** SC3 (140f): Goals. Real goals-create footage (typing a goal) + rapid captions. */
 export const SC3Goals: React.FC<{ durationInFrames: number }> = ({ durationInFrames }) => {
   return (
     <AbsoluteFill>
@@ -14,33 +14,29 @@ export const SC3Goals: React.FC<{ durationInFrames: number }> = ({ durationInFra
         <BrowserFrame
           url="goals"
           sceneDuration={durationInFrames}
-          zoom={{ from: 1.0, to: 1.04 }}
-          pan={{ x: 0, y: -0.5 }}
+          zoom={{ from: 1.02, to: 1.06 }}
+          pan={{ x: 0, y: -0.4 }}
           panEase={0.9}
         >
-          <Footage id="F1" label="Goals" page="goals" variant="goals" showFrames={durationInFrames} />
+          {/* Types "Win a national roasting award" then adds it. */}
+          <Footage id="goals-create" label="Goals" page="goals" variant="goals" showFrames={durationInFrames} trimStart={0} playbackRate={1.6} />
         </BrowserFrame>
       </div>
 
       <ChapterChip index="01" title="Goals" durationInFrames={durationInFrames} />
 
-      <Sequence from={46} durationInFrames={196}>
-        <Callout
-          region={{ x: 664, y: 322, w: 792, h: 150 }}
-          label="Start with goals, not tasks"
-          placement="bottom"
-          color="ink"
-          durationInFrames={196}
-        />
+      {/* Rapid captions; the live typing carries the motion underneath. */}
+      <Sequence from={6} durationInFrames={46}>
+        <LowerThird text="Start with goals, not tasks" durationInFrames={46} />
       </Sequence>
-
-      <Sequence from={286} durationInFrames={durationInFrames - 286 - 8}>
-        <Callout
-          region={{ x: 690, y: 512, w: 690, h: 60 }}
-          label="Sub-goals are your definition of important"
-          placement="top"
-          color="ink"
-          durationInFrames={durationInFrames - 286 - 8}
+      <Sequence from={52} durationInFrames={44}>
+        <LowerThird text="Just type it, in plain words" durationInFrames={44} />
+      </Sequence>
+      <Sequence from={96} durationInFrames={durationInFrames - 96}>
+        <LowerThird
+          text="Sub-goals are your definition of important"
+          sub="This is what GOTT plans around."
+          durationInFrames={durationInFrames - 96}
         />
       </Sequence>
     </AbsoluteFill>

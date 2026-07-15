@@ -1,11 +1,11 @@
 {
-  "name": "jarvis-demo-video",
+  "name": "gott-demo-video",
   "version": "1.0.0",
   "private": true,
-  "description": "Remotion film for the Jarvis x Driftwood Roasters demo",
+  "description": "Remotion film for the GOTT x Driftwood Roasters demo",
   "scripts": {
-    "preview": "remotion render src/index.ts JarvisDemo ../out/preview.mp4 --scale 0.5",
-    "render": "remotion render src/index.ts JarvisDemo ../out/jarvis-demo.mp4 --codec h264",
+    "preview": "remotion render src/index.ts GottDemo ../out/preview.mp4 --scale 0.5",
+    "render": "remotion render src/index.ts GottDemo ../out/gott-demo.mp4 --codec h264",
     "studio": "remotion studio src/index.ts"
   },
   "dependencies": {

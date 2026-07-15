@@ -1,10 +1,8 @@
-import { Target } from "lucide-react";
-
-/** A small pill naming a goal an item serves. Shared by the Today feed and the Review queue. */
+/** A small neutral pill naming a goal an item serves. Shared by the Today feed and the Review queue.
+ *  No icon: goal linkage is not a status, so it stays quiet ink on a faint fill. */
 export function GoalChip({ title }: { title: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-accent/30 bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent-strong">
-      <Target className="h-3 w-3" strokeWidth={2} />
+    <span className="inline-flex max-w-[14rem] items-center truncate rounded border border-border bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-muted-strong">
       {title}
     </span>
   );

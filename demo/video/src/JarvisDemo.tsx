@@ -15,7 +15,8 @@ import { SC9Outro } from "./scenes/SC9Outro";
 
 // Crossfade tail: a scene keeps rendering this many frames past its end, behind
 // the incoming scene which fades in over it -> a true dissolve, no canvas flash.
-const FADE = 16;
+// Kept short (8f) for the rapid re-cut so scene changes read as fast, clean cuts.
+const FADE = 8;
 
 type SceneDef = {
   key: keyof typeof SCENES;

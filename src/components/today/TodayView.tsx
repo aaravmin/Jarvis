@@ -3,24 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  RefreshCw,
-  Sun,
-  Target,
-  Link2,
-  Check,
-  Loader2,
-  CheckSquare,
-  CalendarClock,
-  Reply,
-  Hourglass,
-  ArrowUpRight,
-  Plug,
-  type LucideIcon,
-} from "lucide-react";
+import { RefreshCw, Check, Loader2, ArrowUpRight } from "lucide-react";
 import { Card } from "@/components/Card";
 import { GoalChip } from "@/components/GoalChip";
 import { SourceChip } from "@/components/SourceChip";
+import { Button } from "@/components/ui/button";
 import { SyncAllButton } from "@/components/today/SyncAllButton";
 import { syncAllAccounts } from "@/components/today/sync-all";
 import { formatWhen, formatEventTime } from "@/lib/format";
@@ -30,17 +17,19 @@ import type { AttentionEntry, AttentionFeed, Bucket } from "@/lib/priority/types
 /**
  * The Today "attention" surface, the home page of GOTT. `initialFeed` is server-rendered (loaded via
  * loadAttention in the page) for a fast first paint; this component only owns interaction on top of it:
- * inline complete (optimistic) and a manual refresh. Buckets are rendered in BUCKET_ORDER, empty ones
- * skipped. Overdue carries a red left border, done is compact and green, everything else stays neutral,
- * red and green are the only loud colors (per the product's design brief).
+ * inline complete (optimistic) and a manual refresh. Buckets render as dense sheet rows in BUCKET_ORDER,
+ * empty ones skipped. Red is used ONLY for overdue/owed replies and green ONLY for done; everything else
+ * stays neutral ink (the product's design brief).
  */
 
-const KIND_META: Record<AttentionEntry["kind"], { label: string; icon: LucideIcon; pill?: "reply" | "nudge" }> = {
-  task: { label: "Task", icon: CheckSquare },
-  follow_up: { label: "Follow-up", icon: Reply },
-  event: { label: "Event", icon: CalendarClock },
-  needs_reply: { label: "Needs reply", icon: Reply, pill: "reply" },
-  waiting_on: { label: "Waiting on them", icon: Hourglass, pill: "nudge" },
+// Kind is shown as a quiet text tag. `pill: "reply"` tints it red (you owe a reply); everything else
+// is neutral. No icons - the label carries the meaning.
+const KIND_META: Record<AttentionEntry["kind"], { label: string; pill?: "reply" | "nudge" }> = {
+  task: { label: "Task" },
+  follow_up: { label: "Follow-up" },
+  event: { label: "Event" },
+  needs_reply: { label: "Needs reply", pill: "reply" },
+  waiting_on: { label: "Waiting", pill: "nudge" },
 };
 
 const DONE_DISPLAY_CAP = 8;
@@ -48,7 +37,7 @@ const DONE_DISPLAY_CAP = 8;
 // Auto-sync-on-open fires at most once per browser session, and only when our newest data is this old.
 const AUTOSYNC_STALE_MS = 6 * 60 * 60 * 1000; // 6h
 const AUTOSYNC_GUARD = "gott-autosync";
-const SYNCED_SUFFIX = "auto-syncs when you open GOTT";
+const SYNCED_SUFFIX = "auto-syncs on open";
 
 /** Plain-code relative age (display only; not a provenance date computation). */
 function relativeAgo(ms: number): string {
@@ -67,14 +56,14 @@ function syncedAgoLabel(newestSourceAt: string | null): string {
   const ms = Date.now() - new Date(newestSourceAt).getTime();
   if (Number.isNaN(ms)) return SYNCED_SUFFIX;
   const rel = relativeAgo(ms);
-  return rel === "just now" ? `Synced just now · ${SYNCED_SUFFIX}` : `Synced ${rel} ago · ${SYNCED_SUFFIX}`;
+  return rel === "just now" ? `Synced just now` : `Synced ${rel} ago`;
 }
 
 type Tone = "danger" | "success" | "neutral";
 const TONE_CLASS: Record<Tone, string> = {
-  danger: "font-medium text-danger",
+  danger: "font-medium text-destructive",
   success: "font-medium text-success",
-  neutral: "text-muted-strong",
+  neutral: "text-muted-foreground",
 };
 
 function dueLabel(entry: AttentionEntry): { text: string; tone: Tone } | null {
@@ -192,64 +181,42 @@ export function TodayView({
 
   if (total === 0) {
     return (
-      <div className="flex min-h-[55vh] flex-col items-center justify-center gap-3 px-6 text-center">
-        <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-border-strong bg-surface-2">
-          <Sun className="h-6 w-6 text-accent" strokeWidth={1.75} />
-        </span>
-        <h2 className="text-base font-semibold text-foreground">Nothing needs your attention</h2>
-        <p className="max-w-sm text-sm text-muted">
-          Connect Gmail, Calendar, and Notion so GOTT can find what is on your plate, and set a goal
-          or two so it knows what matters to you.
+      <div className="flex min-h-[55vh] flex-col items-center justify-center gap-2 px-6 text-center">
+        <h2 className="text-sm font-semibold text-foreground">Nothing needs your attention</h2>
+        <p className="max-w-sm text-xs text-muted-foreground">
+          Connect your accounts and set a goal or two so GOTT knows what matters.
         </p>
-        <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
           <SyncAllButton notionEnabled={notionEnabled} />
-          <Link
-            href="/connections"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm font-medium text-muted-strong transition-colors hover:bg-surface-3"
-          >
-            <Plug className="h-4 w-4" /> Connect your accounts
-          </Link>
-          <Link
-            href="/goals"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm font-medium text-muted-strong transition-colors hover:bg-surface-3"
-          >
-            <Target className="h-4 w-4" /> Set your goals
-          </Link>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/connections">Connect accounts</Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/goals">Set goals</Link>
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-accent">
-            <Sun className="h-3.5 w-3.5" /> Today
-          </p>
-          <h1 className="mt-1 text-lg font-semibold text-foreground">What matters most</h1>
-          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-strong">
-            Ordered by importance and grounded in your goals. Overdue is red, done is green.
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
+    <div className="space-y-5">
+      <header className="flex items-end justify-between gap-4">
+        <h1 className="text-base font-semibold tracking-tight text-foreground">Today</h1>
+        <div className="flex flex-col items-end gap-1">
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={refresh}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-sm text-muted-strong transition-colors hover:border-accent/50 hover:text-foreground"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            <Button variant="outline" size="sm" onClick={refresh}>
+              <RefreshCw className={refreshing ? "animate-spin" : ""} />
               Refresh
-            </button>
+            </Button>
             <SyncAllButton notionEnabled={notionEnabled} />
           </div>
-          <p className="text-[11px] text-muted">{autoSyncing ? "Syncing your accounts..." : syncedLabel}</p>
+          <p className="text-[11px] text-muted-foreground">{autoSyncing ? "Syncing..." : syncedLabel}</p>
         </div>
       </header>
 
       {actionError && (
-        <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{actionError}</p>
+        <p className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">{actionError}</p>
       )}
 
       {BUCKET_ORDER.map((bucket) => {
@@ -260,34 +227,38 @@ export function TodayView({
         const isDone = bucket === "done";
 
         return (
-          <section key={bucket} className={isOverdue ? "space-y-3 border-l-2 border-danger/60 pl-3 sm:pl-4" : "space-y-3"}>
-            <h2
-              className={`text-xs font-semibold uppercase tracking-wider ${
-                isOverdue ? "text-danger" : isDone ? "text-success" : "text-muted-strong"
-              }`}
-            >
-              {meta.label} <span className="font-normal normal-case text-muted">({entries.length})</span>
-            </h2>
+          <section key={bucket} className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <h2
+                className={`text-[11px] font-semibold uppercase tracking-wide ${
+                  isOverdue ? "text-destructive" : isDone ? "text-success" : "text-muted-foreground"
+                }`}
+              >
+                {meta.label}
+              </h2>
+              <span className="text-[11px] text-muted-foreground">{entries.length}</span>
+            </div>
 
             {isDone ? (
               <DoneList entries={entries.slice(0, DONE_DISPLAY_CAP)} pending={pending} onToggle={toggle} />
             ) : (
-              <ul className="space-y-3">
+              <ul
+                className={`divide-y overflow-hidden rounded-md border bg-card ${
+                  isOverdue ? "border-l-2 border-l-destructive/60" : ""
+                }`}
+              >
                 {entries.map((entry) => (
-                  <li key={entry.id}>
-                    <EntryRow entry={entry} busy={pending.has(entry.id)} onToggle={() => void toggle(entry)} />
-                  </li>
+                  <EntryRow key={entry.id} entry={entry} busy={pending.has(entry.id)} onToggle={() => void toggle(entry)} />
                 ))}
               </ul>
             )}
 
             {isDone && entries.length > DONE_DISPLAY_CAP && (
-              <p className="text-xs text-muted">
-                +{entries.length - DONE_DISPLAY_CAP} more done, see the{" "}
-                <Link href="/tasks" className="text-accent hover:underline">
+              <p className="text-[11px] text-muted-foreground">
+                +{entries.length - DONE_DISPLAY_CAP} more in{" "}
+                <Link href="/tasks" className="text-primary hover:underline">
                   Tasks
-                </Link>{" "}
-                list.
+                </Link>
               </p>
             )}
           </section>
@@ -297,20 +268,15 @@ export function TodayView({
   );
 }
 
-function KindPill({ kind }: { kind: AttentionEntry["kind"] }) {
+function KindTag({ kind }: { kind: AttentionEntry["kind"] }) {
   const meta = KIND_META[kind];
-  const Icon = meta.icon;
-  // needs_reply is red-tinted (you owe a reply); waiting_on is a neutral "the ball is in their court".
-  const shell =
+  const cls =
     meta.pill === "reply"
-      ? "border-danger/35 bg-danger/5 text-danger"
-      : meta.pill === "nudge"
-        ? "border-border-strong bg-surface-3 text-muted-strong"
-        : "border-border text-muted-strong";
-  const iconColor = meta.pill === "reply" ? "text-danger" : "text-accent";
+      ? "border-destructive/30 text-destructive"
+      : "border-border text-muted-foreground";
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] ${shell}`}>
-      <Icon className={`h-2.5 w-2.5 ${iconColor}`} /> {meta.label}
+    <span className={`inline-flex items-center rounded border px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide ${cls}`}>
+      {meta.label}
     </span>
   );
 }
@@ -322,11 +288,11 @@ function CompleteCheckbox({ checked, busy, onClick }: { checked: boolean; busy: 
       onClick={onClick}
       disabled={busy}
       title={checked ? "Mark not done" : "Mark done"}
-      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors disabled:opacity-50 ${
-        checked ? "border-success/50 bg-success/15 text-success" : "border-border text-transparent hover:border-accent/60"
+      className={`mt-0.5 flex size-[18px] shrink-0 items-center justify-center rounded border transition-colors disabled:opacity-50 ${
+        checked ? "border-success/50 bg-success/15 text-success" : "border-input text-transparent hover:border-primary/60"
       }`}
     >
-      {busy ? <Loader2 className="h-3 w-3 animate-spin text-muted" /> : <Check className="h-3.5 w-3.5" />}
+      {busy ? <Loader2 className="size-3 animate-spin text-muted-foreground" /> : <Check className="size-3" />}
     </button>
   );
 }
@@ -336,52 +302,48 @@ function EntryRow({ entry, busy, onToggle }: { entry: AttentionEntry; busy: bool
   const isReply = entry.origin === "reply";
   const hasBody = isReply || entry.goalTags.length > 0 || entry.meetingTopics.length > 0;
   return (
-    <div className="flex items-start gap-2.5">
+    <li className="flex items-start gap-2.5 px-3 py-2 transition-colors hover:bg-secondary/40">
       {entry.origin === "item" ? (
         <CompleteCheckbox checked={entry.status === "done"} busy={busy} onClick={onToggle} />
       ) : (
-        // Reply entries and calendar events aren't checkable — they clear themselves. Keep the spacer.
-        <span className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+        // Reply entries and calendar events aren't checkable - they clear themselves. Keep the spacer.
+        <span className="mt-0.5 size-[18px] shrink-0" aria-hidden />
       )}
-      <div className="min-w-0 flex-1">
-        <Card
-          title={entry.title}
-          source={entry.source}
-          reasoning={entry.reasoning ?? undefined}
-          meta={
-            <span className="inline-flex flex-wrap items-center justify-end gap-1.5">
-              <KindPill kind={entry.kind} />
-              {due && <span className={TONE_CLASS[due.tone]}>{due.text}</span>}
-            </span>
-          }
-          actions={entry.threadLink ? <ReplyAction entry={entry} /> : undefined}
-        >
-          {hasBody && (
-            <div className="space-y-1.5">
-              {isReply && entry.source.quote && (
-                <p className="text-xs italic leading-relaxed text-muted">&ldquo;{entry.source.quote}&rdquo;</p>
-              )}
-              {entry.goalTags.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {entry.goalTags.map((g) => (
-                    <GoalChip key={g.goalId} title={g.title} />
-                  ))}
-                </div>
-              )}
-              {entry.meetingTopics.length > 0 && (
-                <p className="flex flex-wrap items-start gap-1.5 text-xs text-muted">
-                  <Link2 className="mt-0.5 h-3 w-3 shrink-0" strokeWidth={2} />
-                  <span>
-                    <span className="text-muted-strong">Likely topics: </span>
-                    {entry.meetingTopics.map((t) => t.title).join(", ")}
-                  </span>
-                </p>
-              )}
-            </div>
-          )}
-        </Card>
-      </div>
-    </div>
+      <Card
+        variant="row"
+        title={entry.title}
+        source={entry.source}
+        reasoning={entry.reasoning ?? undefined}
+        meta={
+          <span className="inline-flex flex-wrap items-center justify-end gap-1.5">
+            <KindTag kind={entry.kind} />
+            {due && <span className={TONE_CLASS[due.tone]}>{due.text}</span>}
+          </span>
+        }
+        actions={entry.threadLink ? <ReplyAction entry={entry} /> : undefined}
+      >
+        {hasBody && (
+          <div className="space-y-1">
+            {isReply && entry.source.quote && (
+              <p className="line-clamp-2 text-xs italic leading-snug text-muted-foreground">&ldquo;{entry.source.quote}&rdquo;</p>
+            )}
+            {entry.goalTags.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1">
+                {entry.goalTags.map((g) => (
+                  <GoalChip key={g.goalId} title={g.title} />
+                ))}
+              </div>
+            )}
+            {entry.meetingTopics.length > 0 && (
+              <p className="text-xs leading-snug text-muted-foreground">
+                <span className="text-muted-strong">Related: </span>
+                {entry.meetingTopics.map((t) => t.title).join(", ")}
+              </p>
+            )}
+          </div>
+        )}
+      </Card>
+    </li>
   );
 }
 
@@ -393,9 +355,9 @@ function ReplyAction({ entry }: { entry: AttentionEntry }) {
       href={entry.threadLink}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 rounded-lg border border-accent/30 bg-surface-2 px-2.5 py-1 text-xs font-semibold text-accent transition-colors hover:bg-surface-3"
+      className="inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[11px] font-medium text-primary transition-colors hover:bg-secondary"
     >
-      {label} <ArrowUpRight className="h-3.5 w-3.5" />
+      {label} <ArrowUpRight className="size-3" />
     </a>
   );
 }
@@ -410,11 +372,11 @@ function DoneList({
   onToggle: (entry: AttentionEntry) => void;
 }) {
   return (
-    <ul className="space-y-1.5">
+    <ul className="divide-y overflow-hidden rounded-md border bg-card">
       {entries.map((entry) => (
-        <li key={entry.id} className="flex items-center gap-2.5 rounded-lg border border-border bg-surface-2/70 px-3 py-2">
+        <li key={entry.id} className="flex items-center gap-2.5 px-3 py-1.5">
           <CompleteCheckbox checked busy={pending.has(entry.id)} onClick={() => onToggle(entry)} />
-          <p className="min-w-0 flex-1 truncate text-sm text-muted line-through">{entry.title}</p>
+          <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground line-through">{entry.title}</p>
           <SourceChip source={entry.source} />
         </li>
       ))}

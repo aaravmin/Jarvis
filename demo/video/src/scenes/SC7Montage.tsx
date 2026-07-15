@@ -11,7 +11,7 @@ import { FRAME } from "../layout";
 const Caption: React.FC<{ text: string }> = ({ text }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const s = spring({ frame: frame - 6, fps, config: { damping: 200, mass: 0.7, stiffness: 130 } });
+  const s = spring({ frame: frame - 2, fps, config: { damping: 200, mass: 0.55, stiffness: 175 } });
   const y = interpolate(s, [0, 1], [24, 0]);
   return (
     <div
@@ -51,26 +51,28 @@ const Item: React.FC<{
   variant: string;
   caption: string;
   frames: number;
-}> = ({ id, url, variant, caption, frames }) => (
+  trimStart?: number;
+  playbackRate?: number;
+}> = ({ id, url, variant, caption, frames, trimStart = 0, playbackRate = 1 }) => (
   <AbsoluteFill>
     <div style={{ position: "absolute", left: FRAME.x, top: FRAME.y, width: FRAME.w, height: FRAME.h }}>
       <BrowserFrame url={url} sceneDuration={frames} zoom={{ from: 1.02, to: 1.05 }} pan={{ x: 0, y: -0.4 }}>
-        <Footage id={id} label={url} page={url} variant={variant} showFrames={frames} />
+        <Footage id={id} label={url} page={url} variant={variant} showFrames={frames} trimStart={trimStart} playbackRate={playbackRate} />
       </BrowserFrame>
     </div>
     <Caption text={caption} />
   </AbsoluteFill>
 );
 
-/** SC7 3960-4700 (740f): montage, five quick-wipe cuts. */
+/** SC7 (112f): montage, five quick-wipe cuts (a new page every ~21 frames). */
 export const SC7Montage: React.FC<{ durationInFrames: number }> = ({ durationInFrames }) => {
-  const T = 10; // transition frames
+  const T = 7; // transition frames
   const items = [
-    { id: "F4", url: "meetings", variant: "meetings", caption: "Meeting notes become action items", frames: 150 },
-    { id: "F5", url: "email", variant: "email", caption: "Only the email that matters", frames: 150 },
-    { id: "F6", url: "calendar", variant: "calendar", caption: "Calendar, aware of your commitments", frames: 150 },
-    { id: "F7", url: "tasks", variant: "tasks", caption: "The full ledger", frames: 150 },
-    { id: "F8", url: "goals", variant: "goals", caption: "Goals, advancing.", frames: 180 },
+    { id: "montage-meetings", url: "meetings", variant: "meetings", caption: "Meeting notes to tasks", frames: 28, trimStart: 0, playbackRate: 1.5 },
+    { id: "montage-email", url: "email", variant: "email", caption: "Only email that matters", frames: 28, trimStart: 30, playbackRate: 2.6 },
+    { id: "montage-calendar", url: "calendar", variant: "calendar", caption: "Calendar, aware", frames: 28, trimStart: 30, playbackRate: 2.6 },
+    { id: "montage-tasks", url: "tasks", variant: "tasks", caption: "The full ledger", frames: 28, trimStart: 60, playbackRate: 1.6 },
+    { id: "goals-after", url: "goals", variant: "goals", caption: "Goals, advancing", frames: 28, trimStart: 30, playbackRate: 1.6 },
   ];
 
   return (

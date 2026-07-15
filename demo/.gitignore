@@ -3,4 +3,5 @@ out/
 video/node_modules/
 video/public/footage/
 footage/*.webm
+capture/.auth-state.json
 .DS_Store

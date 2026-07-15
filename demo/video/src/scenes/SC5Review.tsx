@@ -3,11 +3,10 @@ import { AbsoluteFill, Sequence } from "remotion";
 import { BrowserFrame } from "../components/BrowserFrame";
 import { Footage } from "../components/Footage";
 import { ChapterChip } from "../components/ChapterChip";
-import { Callout } from "../components/Callout";
 import { LowerThird } from "../components/LowerThird";
 import { FRAME } from "../layout";
 
-/** SC5 1660-2480 (820f): Review queue. F2 footage + three callouts + lower third. */
+/** SC5 (140f): Review queue. Real footage (source modal -> check -> bulk accept) + captions. */
 export const SC5Review: React.FC<{ durationInFrames: number }> = ({ durationInFrames }) => {
   return (
     <AbsoluteFill>
@@ -15,51 +14,30 @@ export const SC5Review: React.FC<{ durationInFrames: number }> = ({ durationInFr
         <BrowserFrame
           url="review"
           sceneDuration={durationInFrames}
-          zoom={{ from: 1.0, to: 1.05 }}
+          zoom={{ from: 1.02, to: 1.06 }}
           pan={{ x: 0, y: -0.3 }}
           panEase={0.85}
         >
-          <Footage id="F2" label="Review" page="review" variant="review" showFrames={durationInFrames} />
+          {/* Opens R1's source quote, checks R1 + R3, bulk-accepts. */}
+          <Footage id="review" label="Review" page="review" variant="review" showFrames={durationInFrames} trimStart={90} playbackRate={2.2} />
         </BrowserFrame>
       </div>
 
       <ChapterChip index="03" title="Review" durationInFrames={durationInFrames} />
 
-      {/* C1 - source quote */}
-      <Sequence from={90} durationInFrames={210}>
-        <Callout
-          region={{ x: 668, y: 358, w: 230, h: 34 }}
-          label="Every suggestion quotes its source"
-          placement="bottom"
-          color="ink"
-          durationInFrames={210}
-        />
+      <Sequence from={6} durationInFrames={46}>
+        <LowerThird text="Every suggestion cites its source" durationInFrames={46} />
       </Sequence>
-
-      {/* C2 - goal chip */}
-      <Sequence from={330} durationInFrames={210}>
-        <Callout
-          region={{ x: 668, y: 476, w: 236, h: 34 }}
-          label="Goal chips show why it matters"
-          placement="bottom"
-          color="ink"
-          durationInFrames={210}
-        />
+      <Sequence from={52} durationInFrames={44}>
+        <LowerThird text="Approve or dismiss, your call" durationInFrames={44} />
       </Sequence>
-
-      {/* C3 - bulk accept (positive => green) */}
-      <Sequence from={572} durationInFrames={200}>
-        <Callout
-          region={{ x: 658, y: 244, w: 330, h: 54 }}
-          label="One approval takes the item and its goal tag"
-          placement="bottom"
-          color="green"
-          durationInFrames={200}
+      <Sequence from={96} durationInFrames={durationInFrames - 96}>
+        <LowerThird
+          text="Bulk accept takes the item and its goal tag"
+          sub="Nothing is auto-accepted."
+          accent="green"
+          durationInFrames={durationInFrames - 96}
         />
-      </Sequence>
-
-      <Sequence from={600} durationInFrames={durationInFrames - 600}>
-        <LowerThird text="Nothing is auto-accepted." durationInFrames={durationInFrames - 600} />
       </Sequence>
     </AbsoluteFill>
   );

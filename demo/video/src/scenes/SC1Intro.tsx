@@ -9,23 +9,23 @@ export const SC1Intro: React.FC<{ durationInFrames: number }> = ({ durationInFra
   const { fps } = useVideoConfig();
 
   // white sweep reveals the canvas (diagonal wipe off to the right)
-  const sweep = interpolate(frame, [0, 26], [0, 1], {
+  const sweep = interpolate(frame, [0, 14], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: (t) => 1 - Math.pow(1 - t, 3),
   });
 
   // tagline
-  const tag = spring({ frame: frame - 60, fps, config: { damping: 200, mass: 0.9, stiffness: 110 } });
+  const tag = spring({ frame: frame - 26, fps, config: { damping: 200, mass: 0.7, stiffness: 150 } });
   const tagY = interpolate(tag, [0, 1], [18, 0]);
 
   // twin dots orbit + settle, timed after tagline, landing as the tagline period
-  const dotsProgress = interpolate(frame, [92, 172], [0, 1], {
+  const dotsProgress = interpolate(frame, [38, 88], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
-  const exit = interpolate(frame, [durationInFrames - 20, durationInFrames], [1, 0], {
+  const exit = interpolate(frame, [durationInFrames - 16, durationInFrames], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });

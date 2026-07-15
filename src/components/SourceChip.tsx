@@ -57,10 +57,10 @@ export function SourceChip({ source }: { source: CardSource }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-surface-2 px-2.5 py-1 text-xs text-muted-strong transition-colors hover:border-accent/50 hover:text-foreground"
+        className="inline-flex max-w-full items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
         title="See where this came from"
       >
-        <Icon className="h-3.5 w-3.5 shrink-0 text-accent" strokeWidth={2} />
+        <Icon className="h-3 w-3 shrink-0 text-muted-foreground" strokeWidth={2} />
         <span className="truncate">
           {sourceLabel(source.type)}
           {source.title ? ` · ${source.title}` : ""}

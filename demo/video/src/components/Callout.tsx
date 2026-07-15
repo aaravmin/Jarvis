@@ -39,25 +39,25 @@ export const Callout: React.FC<Props> = ({
   const rw = region.w + ringPad * 2;
   const rh = region.h + ringPad * 2;
 
-  // --- entrance / draw ---
-  const draw = interpolate(frame, [3, 22], [0, 1], {
+  // --- entrance / draw (rapid: ring snaps in ~8f, pill springs ~by f12) ---
+  const draw = interpolate(frame, [1, 9], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: (t) => 1 - Math.pow(1 - t, 3),
   });
-  const ringOpacity = interpolate(frame, [0, 7], [0, 1], {
+  const ringOpacity = interpolate(frame, [0, 4], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
   const pillSpring = spring({
-    frame: frame - 9,
+    frame: frame - 3,
     fps,
-    config: { damping: 200, mass: 0.9, stiffness: 120 },
+    config: { damping: 200, mass: 0.6, stiffness: 190 },
   });
 
-  // --- exit ---
-  const exitStart = durationInFrames - 12;
+  // --- exit (fast cut: last 5 frames) ---
+  const exitStart = durationInFrames - 5;
   const exit = interpolate(frame, [exitStart, durationInFrames], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",

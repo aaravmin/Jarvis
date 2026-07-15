@@ -65,12 +65,13 @@ const SOURCES: Src[] = [
 ];
 
 // 9 tokens, 3 per source. `ok:false` are the 3 that fail verification.
+// Rapid cadence: a token arrives at the badge roughly every 7 frames.
 type Token = { src: number; spawn: number; travel: number; ok: boolean; slot: number };
 const REJECT = new Set([2, 4, 7]);
 const TOKENS: Token[] = Array.from({ length: 9 }).map((_, i) => {
   const src = i % 3;
-  const spawn = 48 + i * 13;
-  return { src, spawn, travel: 44, ok: !REJECT.has(i), slot: i };
+  const spawn = 16 + i * 7;
+  return { src, spawn, travel: 26, ok: !REJECT.has(i), slot: i };
 });
 
 const bezier = (
@@ -86,10 +87,10 @@ const bezier = (
   ];
 };
 
-// timeline anchors
-const GATE_START = 214;
-const SORT_START = 236;
-const STAMP_START = 292;
+// timeline anchors (rapid re-cut: tokens land ~16-98, gate/sort/stamp 104-166)
+const GATE_START = 104;
+const SORT_START = 116;
+const STAMP_START = 150;
 
 export const IngestFunnel: React.FC<{ durationInFrames: number }> = ({ durationInFrames }) => {
   const frame = useCurrentFrame();
@@ -98,7 +99,7 @@ export const IngestFunnel: React.FC<{ durationInFrames: number }> = ({ durationI
   // count candidates that have arrived at J
   const arrived = TOKENS.filter((t) => frame >= t.spawn + t.travel).length;
 
-  const jSpring = spring({ frame: frame - 18, fps, config: { damping: 200, mass: 0.8, stiffness: 120 } });
+  const jSpring = spring({ frame: frame - 8, fps, config: { damping: 200, mass: 0.7, stiffness: 150 } });
   const jScale = interpolate(jSpring, [0, 1], [0.6, 1]);
 
   // J pulse each time a token arrives
@@ -127,7 +128,7 @@ export const IngestFunnel: React.FC<{ durationInFrames: number }> = ({ durationI
               stroke={theme.borderStrong}
               strokeWidth={1.5}
               strokeDasharray="2 8"
-              strokeOpacity={interpolate(frame, [30, 50], [0, 0.55], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}
+              strokeOpacity={interpolate(frame, [8, 22], [0, 0.55], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}
             />
           );
         })}
@@ -135,7 +136,7 @@ export const IngestFunnel: React.FC<{ durationInFrames: number }> = ({ durationI
 
       {/* source cards */}
       {SOURCES.map((s, i) => {
-        const sp = spring({ frame: frame - i * 6, fps, config: { damping: 200, mass: 0.8, stiffness: 120 } });
+        const sp = spring({ frame: frame - i * 4, fps, config: { damping: 200, mass: 0.7, stiffness: 150 } });
         const x = interpolate(sp, [0, 1], [-60, 0]);
         return (
           <div
@@ -245,7 +246,7 @@ export const IngestFunnel: React.FC<{ durationInFrames: number }> = ({ durationI
           letterSpacing: -2,
         }}
       >
-        J
+        G
       </div>
 
       {/* counter chip under J */}
@@ -255,7 +256,7 @@ export const IngestFunnel: React.FC<{ durationInFrames: number }> = ({ durationI
           left: J_CX,
           top: J_CY + J_SIZE / 2 + 26,
           transform: "translateX(-50%)",
-          opacity: interpolate(frame, [50, 66], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
+          opacity: interpolate(frame, [24, 36], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
           display: "flex",
           alignItems: "center",
           gap: 10,
@@ -283,13 +284,13 @@ const VERIFIED_SLOTS = 6;
 
 const GateAndSort: React.FC<{ frame: number; verifiedCount: number }> = ({ frame, verifiedCount }) => {
   // sweep bar
-  const sweep = interpolate(frame, [GATE_START, GATE_START + 18], [0, 1], {
+  const sweep = interpolate(frame, [GATE_START, GATE_START + 14], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: (t) => 1 - Math.pow(1 - t, 3),
   });
   const sweepX = interpolate(sweep, [0, 1], [J_CX - 40, 1560]);
-  const sweepOpacity = interpolate(frame, [GATE_START, GATE_START + 14, GATE_START + 40], [0, 0.9, 0]);
+  const sweepOpacity = interpolate(frame, [GATE_START, GATE_START + 9, GATE_START + 26], [0, 0.9, 0]);
 
   // verified grid to the right of J
   const gridX = 1420;
@@ -318,7 +319,7 @@ const GateAndSort: React.FC<{ frame: number; verifiedCount: number }> = ({ frame
       {Array.from({ length: VERIFIED_SLOTS }).map((_, i) => {
         const col = i % 2;
         const row = Math.floor(i / 2);
-        const appear = interpolate(frame, [SORT_START + i * 6, SORT_START + i * 6 + 14], [0, 1], {
+        const appear = interpolate(frame, [SORT_START + i * 5, SORT_START + i * 5 + 12], [0, 1], {
           extrapolateLeft: "clamp",
           extrapolateRight: "clamp",
           easing: (t) => 1 - Math.pow(1 - t, 3),
@@ -359,7 +360,7 @@ const GateAndSort: React.FC<{ frame: number; verifiedCount: number }> = ({ frame
 
       {/* 3 rejected tokens bounce off + red fade */}
       {[0, 1, 2].map((i) => {
-        const t = interpolate(frame, [SORT_START + 4 + i * 5, SORT_START + 34 + i * 5], [0, 1], {
+        const t = interpolate(frame, [SORT_START + 3 + i * 4, SORT_START + 26 + i * 4], [0, 1], {
           extrapolateLeft: "clamp",
           extrapolateRight: "clamp",
           easing: (x) => x * x,
@@ -400,7 +401,7 @@ const GateAndSort: React.FC<{ frame: number; verifiedCount: number }> = ({ frame
 };
 
 const VerifiedStamp: React.FC<{ frame: number; count: number }> = ({ frame, count }) => {
-  const s = interpolate(frame, [STAMP_START, STAMP_START + 16], [0, 1], {
+  const s = interpolate(frame, [STAMP_START, STAMP_START + 14], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: (t) => 1 - Math.pow(1 - t, 3),

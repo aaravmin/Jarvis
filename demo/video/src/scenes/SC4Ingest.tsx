@@ -23,7 +23,7 @@ const Heading: React.FC = () => {
       }}
     >
       <div style={{ fontSize: 46, fontWeight: 800, color: theme.foreground, letterSpacing: -0.6 }}>
-        Then Jarvis reads it all
+        Then GOTT reads it all
       </div>
       <div style={{ fontSize: 22, fontWeight: 500, color: theme.muted, marginTop: 8 }}>
         One pass across every source, into one place
@@ -41,11 +41,11 @@ export const SC4Ingest: React.FC<{ durationInFrames: number }> = ({ durationInFr
 
       <ChapterChip index="02" title="Ingest" durationInFrames={durationInFrames} />
 
-      <Sequence from={70} durationInFrames={durationInFrames - 70}>
+      <Sequence from={118} durationInFrames={durationInFrames - 118}>
         <LowerThird
-          text="Jarvis reads what you already have"
+          text="GOTT reads what you already have"
           sub="Read-only. Nothing is sent."
-          durationInFrames={durationInFrames - 70}
+          durationInFrames={durationInFrames - 118}
         />
       </Sequence>
     </AbsoluteFill>

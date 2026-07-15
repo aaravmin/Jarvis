@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadAttention } from "@/lib/priority/load";
 import { notionAvailable } from "@/lib/notion/store";
 import { TodayView } from "@/components/today/TodayView";
+import { Button } from "@/components/ui/button";
 import type { AttentionFeed } from "@/lib/priority/types";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export default async function TodayPage() {
     loadError = err instanceof Error ? err.message : "Could not build your day.";
   }
 
-  // Newest source we hold whose content is not in the future (calendar events can be) — a cheap proxy
+  // Newest source we hold whose content is not in the future (calendar events can be) - a cheap proxy
   // for data freshness that drives the "Synced X ago" line and auto-sync-on-open. Best-effort.
   let newestSourceAt: string | null = null;
   if (user) {
@@ -46,22 +47,19 @@ export default async function TodayPage() {
 
   if (!feed) {
     return (
-      <div className="mx-auto max-w-3xl space-y-3">
-        <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+      <div className="mx-auto w-full max-w-6xl space-y-3">
+        <p className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
           {loadError ?? "Could not build your day."}
         </p>
-        <Link
-          href="/today"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-muted-strong transition-colors hover:border-accent/50 hover:text-foreground"
-        >
-          Try again
-        </Link>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/today">Try again</Link>
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto w-full max-w-6xl">
       <TodayView key={feed.generatedAt} initialFeed={feed} notionEnabled={notionOn} newestSourceAt={newestSourceAt} />
     </div>
   );
