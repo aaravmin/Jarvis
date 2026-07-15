@@ -3,30 +3,44 @@
     {
       "label": "overdue-invoice-card",
       "x": 498,
-      "y": 132,
+      "y": 134,
       "w": 1149,
       "h": 110
     },
     {
       "label": "goal-chip",
       "x": 538,
-      "y": 163,
+      "y": 165,
       "w": 177,
       "h": 21
     },
     {
       "label": "needs-reply-card",
       "x": 498,
-      "y": 178,
+      "y": 180,
       "w": 1149,
       "h": 84
     },
     {
       "label": "reply-in-gmail-link",
       "x": 1237,
-      "y": 232,
+      "y": 234,
       "w": 106,
       "h": 23
+    },
+    {
+      "label": "suggested-heading",
+      "x": 496,
+      "y": 818,
+      "w": 71,
+      "h": 17
+    },
+    {
+      "label": "suggested-accept",
+      "x": 1547,
+      "y": 896,
+      "w": 89,
+      "h": 32
     }
   ],
   "review": [
@@ -70,16 +84,30 @@
   ],
   "goals": [
     {
-      "label": "goal-row-with-subgoals",
+      "label": "goal-row-with-weekly-goals",
       "x": 497,
       "y": 289,
       "w": 1150,
       "h": 229
     },
     {
-      "label": "subgoal-row",
+      "label": "add-weekly-goal-button",
+      "x": 1559,
+      "y": 299,
+      "w": 24,
+      "h": 24
+    },
+    {
+      "label": "weekly-goal-input",
       "x": 529,
-      "y": 458,
+      "y": 358,
+      "w": 1048,
+      "h": 32
+    },
+    {
+      "label": "weekly-goal-row",
+      "x": 529,
+      "y": 511,
       "w": 1106,
       "h": 50
     },
@@ -101,15 +129,15 @@
   "cmdk": [
     {
       "label": "command-palette",
-      "x": 709,
-      "y": 368,
-      "w": 502,
-      "h": 343
+      "x": 711,
+      "y": 370,
+      "w": 497,
+      "h": 340
     },
     {
       "label": "selected-nav-item",
       "x": 713,
-      "y": 534,
+      "y": 490,
       "w": 494,
       "h": 44
     }

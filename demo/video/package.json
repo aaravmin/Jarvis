@@ -1,11 +1,11 @@
 {
-  "name": "gott-demo-video",
+  "name": "otto-demo-video",
   "version": "1.0.0",
   "private": true,
-  "description": "Remotion film for the GOTT x Driftwood Roasters demo",
+  "description": "Remotion film for the Otto x Driftwood Roasters demo",
   "scripts": {
-    "preview": "remotion render src/index.ts GottDemo ../out/preview.mp4 --scale 0.5",
-    "render": "remotion render src/index.ts GottDemo ../out/gott-demo.mp4 --codec h264",
+    "preview": "remotion render src/index.ts OttoDemo ../out/preview.mp4 --scale 0.5",
+    "render": "remotion render src/index.ts OttoDemo ../out/otto-demo.mp4 --codec h264",
     "studio": "remotion studio src/index.ts"
   },
   "dependencies": {

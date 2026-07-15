@@ -1,11 +1,13 @@
-// GOTT demo v3 capture script (post-redesign: Notion/Sheets dense UI).
-// Records clean 1920x1080 webm clips of the NEW dense UI against the seeded Driftwood Roasters account.
+// Otto demo capture script (post-redesign: Notion/Sheets dense UI, renamed GOTT -> Otto).
+// Records clean 1920x1080 webm clips of the FINAL Otto UI against the seeded Driftwood Roasters account.
+// The left rail shows the "Otto" wordmark (no logo) and has NO Review tab; pending suggestions now live
+// in a "Suggested" section at the end of Today (Review was folded in; /review redirects to /today).
 // Each shot runs in its own headless-chromium context/page so Playwright writes one webm per shot. A
 // visible synthetic cursor (ink dot + click ripple) is injected via addInitScript so the recording reads
 // as a real hand. Steady, product-led motion (the edit is ~1 min): slow eased moves + slow scrolls,
 // ~2s padding each end. Run `node capture.mjs [shotId]` for one shot, or no args for all in order.
 //
-// Shots: today, review, tasks, goals, calendar, email, cmdk.
+// Shots: today, tasks, goals, calendar, email, cmdk. (No standalone `review` shot - that route redirects.)
 // Only `tasks` mutates the DB (checks one task done) and it reverts that toggle right after, so a full
 // run leaves the seed exactly as it found it and is safe to re-run.
 
@@ -269,7 +271,8 @@ async function revertTaskToggle(browser, title) {
 // ---------------------------------------------------------------------------
 
 /** today: slow scroll through Overdue (red invoice + red Needs-reply) -> Today -> Next 7 days -> Later
- * -> Done. Pause on a Needs-reply card, hover "Reply in Gmail" WITHOUT clicking away. */
+ * -> Done -> Suggested. Pause on a Needs-reply card, hover "Reply in Gmail" WITHOUT clicking away, then
+ * carry on to the "Suggested" section at the very end and hover an item's Accept (no click - no DB write). */
 async function shotToday(browser) {
   const id = "today";
   const { context, page, state } = await newShotPage(browser);
@@ -302,45 +305,35 @@ async function shotToday(browser) {
 
   // Slow scroll down through the buckets to Done.
   await smoothScroll(page, 300, { steps: 14, stepDelay: 75 });
-  await settle(page, 700); // Today
+  await settle(page, 650); // Today
   await smoothScroll(page, 320, { steps: 14, stepDelay: 75 });
-  await settle(page, 700); // Next 7 days
+  await settle(page, 650); // Next 7 days
   await smoothScroll(page, 340, { steps: 14, stepDelay: 75 });
-  await settle(page, 600); // Later
+  await settle(page, 550); // Later
   const doneHeading = page.getByRole("heading", { name: "Done", exact: true });
   await doneHeading.scrollIntoViewIfNeeded().catch(() => {});
   await smoothScroll(page, 260, { steps: 12, stepDelay: 75 });
-  await settle(page, 2000); // post-roll, hold on Done strip
+  await settle(page, 900); // brief hold on the green Done strip
 
-  return finishShot(context, page, id, id);
-}
-
-/** review: dense queue - check 2 checkboxes, the bulk bar appears, hover Accept (no click - no DB write). */
-async function shotReview(browser) {
-  const id = "review";
-  const { context, page, state } = await newShotPage(browser);
-  await page.goto(`${BASE}/review`, { waitUntil: "networkidle" });
-  await settle(page, 2000);
-
-  const cb1 = page.getByRole("button", { name: "Select Cupping with Fern Cafe" });
-  const cb2 = page.getByRole("button", { name: "Select Get packaging quote comparison" });
-  await cb1.waitFor({ state: "visible", timeout: 10000 });
-  await recordRegionFromLocator(id, "review-checkbox", cb1);
-
-  await smoothClick(page, state, cb1);
-  await settle(page, 600);
-  await smoothClick(page, state, cb2);
-  await settle(page, 700);
-
-  const bulkBar = page.getByText("2 selected", { exact: true }).locator("xpath=ancestor::div[1]");
-  await bulkBar.waitFor({ state: "visible", timeout: 8000 });
-  await recordRegionFromLocator(id, "bulk-bar", bulkBar);
-  await settle(page, 600);
-
-  const acceptBtn = page.getByRole("button", { name: "Accept 2" });
-  await recordRegionFromLocator(id, "accept-button", acceptBtn);
-  await smoothHover(page, state, acceptBtn); // hover only, do NOT click
-  await settle(page, 2000); // post-roll, hold with Accept hovered
+  // Carry on to the "Suggested" section at the very end of the feed (Review, folded into Today). It is
+  // the L0 approval gate: each item has its own Dismiss/Accept. Hover an Accept WITHOUT clicking.
+  const suggestedHeading = page.getByRole("heading", { name: "Suggested", exact: true });
+  await smoothScroll(page, 360, { steps: 16, stepDelay: 72 });
+  await settle(page, 400);
+  if (await suggestedHeading.count()) {
+    await suggestedHeading.scrollIntoViewIfNeeded().catch(() => {});
+    await recordRegionFromLocator(id, "suggested-heading", suggestedHeading);
+    await smoothScroll(page, 150, { steps: 9, stepDelay: 72 }); // nudge so the Accept buttons sit clear of the fold
+    await settle(page, 500);
+    const acceptBtn = page.getByRole("button", { name: "Accept" }).first();
+    await acceptBtn.waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
+    await recordRegionFromLocator(id, "suggested-accept", acceptBtn);
+    await smoothHover(page, state, acceptBtn).catch(() => {}); // hover only, never click (no DB write)
+    await settle(page, 2400); // post-roll, hold on the Suggested section
+  } else {
+    console.warn("  [today] Suggested section not found - holding at feed bottom instead");
+    await settle(page, 2000);
+  }
 
   return finishShot(context, page, id, id);
 }
@@ -386,28 +379,43 @@ async function shotTasks(browser) {
   return outPath;
 }
 
-/** goals: Goals list with sub-goals, then a goal detail with Linked items. */
+/** goals: Goals list with its weekly goals (formerly "sub-goals"), reveal the "Add weekly goal" form so
+ * the new wording shows on camera, then drill into a weekly goal's detail with its Linked items. */
 async function shotGoals(browser) {
   const id = "goals";
   const { context, page, state } = await newShotPage(browser);
   await page.goto(`${BASE}/goals`, { waitUntil: "networkidle" });
   await settle(page, 2000);
 
-  // "Grow wholesale revenue" is the top-level goal that carries the 3 sub-goals; it sits at the bottom.
+  // "Grow wholesale revenue" is the top-level goal that carries the 3 weekly goals; it sits at the bottom.
   const parentRow = page.getByText("Grow wholesale revenue", { exact: true }).locator("xpath=ancestor::div[contains(@class,'px-3')][1]");
   await parentRow.first().scrollIntoViewIfNeeded().catch(() => {});
-  await recordRegionFromLocator(id, "goal-row-with-subgoals", parentRow.first());
+  await recordRegionFromLocator(id, "goal-row-with-weekly-goals", parentRow.first());
   await smoothScroll(page, 220, { steps: 14, stepDelay: 75 });
   await settle(page, 700);
+
+  // Reveal the "Add weekly goal" inline form so the renamed wording ("Weekly goal title") is on camera.
+  // Read-only: we open the input and hold, but never type or submit, so the seed is untouched.
+  const addWeekly = parentRow.first().locator('button[title="Add weekly goal"]').first();
+  if (await addWeekly.count()) {
+    await recordRegionFromLocator(id, "add-weekly-goal-button", addWeekly);
+    await smoothClick(page, state, addWeekly);
+    const weeklyInput = page.getByPlaceholder("Weekly goal title");
+    await weeklyInput.waitFor({ state: "visible", timeout: 6000 }).catch(() => {});
+    await recordRegionFromLocator(id, "weekly-goal-input", weeklyInput);
+    await settle(page, 1700); // hold so "Weekly goal title" reads
+  } else {
+    console.warn("  [goals] 'Add weekly goal' button not found - skipping the wording reveal");
+  }
 
   const subGoal = page.locator("li", { hasText: "Land 10 new cafe accounts" }).first();
   await subGoal.waitFor({ state: "visible", timeout: 10000 });
   await subGoal.scrollIntoViewIfNeeded();
-  await recordRegionFromLocator(id, "subgoal-row", subGoal);
+  await recordRegionFromLocator(id, "weekly-goal-row", subGoal);
   await smoothHover(page, state, subGoal);
-  await settle(page, 900);
+  await settle(page, 800);
 
-  // Drill into the sub-goal's detail (Linked (2)).
+  // Drill into the weekly goal's detail (Linked (2)).
   const subLink = subGoal.getByRole("link").first();
   await smoothClick(page, state, subLink);
   await page.getByRole("heading", { name: /^Linked/ }).waitFor({ state: "visible", timeout: 10000 });
@@ -449,16 +457,14 @@ async function shotCmdk(browser) {
   await palette.waitFor({ state: "visible", timeout: 8000 });
   const dialog = page.locator('[role="dialog"]').first();
   await recordRegionFromLocator(id, "command-palette", dialog);
-  await settle(page, 1100); // palette open, first item highlighted
+  await settle(page, 1300); // palette open, first item ("Today") highlighted
 
-  // Arrow down to a nav item (2x -> "Goals"), pausing so the moving highlight reads on camera.
+  // Arrow down once to "Goals" (now the 2nd nav item - Review is gone), pausing so the highlight reads.
   await page.keyboard.press("ArrowDown");
-  await settle(page, 550);
-  await page.keyboard.press("ArrowDown");
-  await settle(page, 550);
+  await settle(page, 900);
   const selected = page.locator('[data-slot="command-item"][data-selected="true"]');
   await recordRegionFromLocator(id, "selected-nav-item", selected);
-  await settle(page, 2000); // post-roll, hold on the highlighted nav item
+  await settle(page, 2000); // post-roll, hold on the highlighted "Goals" nav item
 
   return finishShot(context, page, id, id);
 }
@@ -467,13 +473,12 @@ async function shotCmdk(browser) {
 // Main
 // ---------------------------------------------------------------------------
 const SHOT_DEFS = [
-  { id: "today", run: shotToday, notes: "Today feed, dense rows. Holds at top of Overdue (red invoice 'Pay Cascadia invoice #2841' + two red Needs-reply cards). Pauses on the 'Reply to Sam Okafor' Needs-reply card, hovers its 'Reply in Gmail' link WITHOUT clicking (page never leaves /today), then slow-scrolls Today -> Next 7 days -> Later -> Done. 2s pre/post padding." },
-  { id: "review", run: shotReview, notes: "Review queue (dense sheet). Checks 2 checkboxes ('Cupping with Fern Cafe' + 'Get packaging quote comparison'), the bulk bar ('2 selected / Accept 2 / Dismiss 2') appears at the top, then hovers 'Accept 2' WITHOUT clicking (no DB write). 2s pre/post padding." },
+  { id: "today", run: shotToday, notes: "Today feed, dense rows. Holds at top of Overdue (red invoice 'Pay Cascadia invoice #2841' + two red Needs-reply cards). Pauses on the 'Reply to Sam Okafor' Needs-reply card, hovers its 'Reply in Gmail' link WITHOUT clicking (page never leaves /today), slow-scrolls Today -> Next 7 days -> Later -> Done, then carries on to the 'Suggested' section at the end (Review, folded into Today) and hovers an item's Accept WITHOUT clicking. 2s pre/post padding." },
   { id: "tasks", run: shotTasks, notes: "The new Tasks TABLE. Slow pan down and back, then checks off 'Book Probat quarterly service' - it strikes through + turns done (green check) in place. The toggle is reverted right after so the seed stays pristine. 2s pre/post padding." },
-  { id: "goals", run: shotGoals, notes: "Goals list: 'Grow wholesale revenue' with its 3 sub-goals visible, then drills into the 'Land 10 new cafe accounts' sub-goal detail showing 'Linked (2)' items + back-to-Goals link. 2s pre/post padding." },
+  { id: "goals", run: shotGoals, notes: "Goals list: 'Grow wholesale revenue' with its 3 weekly goals visible, reveals the 'Add weekly goal' inline form ('Weekly goal title') so the renamed wording reads, then drills into the 'Land 10 new cafe accounts' weekly-goal detail showing 'Linked (2)' items + back-to-Goals link. 2s pre/post padding." },
   { id: "calendar", run: (b) => shotScrollList(b, { id: "calendar", url: "/calendar", scrollAmount: 320 }), notes: "Dense calendar sheet, slow scroll through the 4 events (Cupping with Fern Cafe, Production planning sync, Cascadia payment due, Farmers market - Lippitt Park)." },
   { id: "email", run: (b) => shotScrollList(b, { id: "email", url: "/email", scrollAmount: 520 }), notes: "Dense email sheet, slow scroll through the 6 sender groups (Driftwood Roasters, Fern Cafe, Hobart St Bakery, Providence Packaging Co, Providence Farmers Market Collective, Cascadia Green Coffee Importers)." },
-  { id: "cmdk", run: shotCmdk, notes: "Over the Today surface, presses Cmd-K; the command palette opens (input 'Go to...', 9 nav items). Arrows down twice to highlight the 'Goals' nav item and holds. 2s pre/post padding." },
+  { id: "cmdk", run: shotCmdk, notes: "Over the Today surface, presses Cmd-K; the command palette opens (input 'Go to...', 8 nav items). Arrows down once to highlight the 'Goals' nav item (now 2nd, Review is gone) and holds. 2s pre/post padding." },
 ];
 
 async function main() {

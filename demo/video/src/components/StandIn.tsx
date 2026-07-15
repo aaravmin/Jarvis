@@ -10,7 +10,6 @@ import { theme, font } from "../theme";
 
 const NAV: { label: string; badge?: string }[] = [
   { label: "Today" },
-  { label: "Review", badge: "4" },
   { label: "Goals" },
   { label: "Tasks" },
   { label: "Meetings" },
@@ -49,14 +48,14 @@ const Sidebar: React.FC<{ active: string }> = ({ active }) => (
   >
     <div
       style={{
-        fontWeight: 800,
-        fontSize: 16,
-        letterSpacing: 6,
+        fontWeight: 600,
+        fontSize: 15,
+        letterSpacing: -0.2,
         color: theme.foreground,
         padding: "0 8px 22px",
       }}
     >
-      GOTT
+      Otto
     </div>
     <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
       {NAV.map((n) => {
@@ -430,7 +429,6 @@ export const StandIn: React.FC<{ label: string; page: string; variant?: string }
 function pageToNav(page: string): string {
   const map: Record<string, string> = {
     today: "Today",
-    review: "Review",
     goals: "Goals",
     tasks: "Tasks",
     meetings: "Meetings",

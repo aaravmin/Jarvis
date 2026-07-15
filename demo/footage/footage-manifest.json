@@ -2,43 +2,37 @@
   {
     "id": "today",
     "file": "today.webm",
-    "durationSec": 25.6,
-    "notes": "Today feed, dense rows. Holds at top of Overdue (red invoice 'Pay Cascadia invoice #2841' + two red Needs-reply cards). Pauses on the 'Reply to Sam Okafor' Needs-reply card, hovers its 'Reply in Gmail' link WITHOUT clicking (page never leaves /today), then slow-scrolls Today -> Next 7 days -> Later -> Done. 2s pre/post padding."
-  },
-  {
-    "id": "review",
-    "file": "review.webm",
-    "durationSec": 13.6,
-    "notes": "Review queue (dense sheet). Checks 2 checkboxes ('Cupping with Fern Cafe' + 'Get packaging quote comparison'), the bulk bar ('2 selected / Accept 2 / Dismiss 2') appears at the top, then hovers 'Accept 2' WITHOUT clicking (no DB write). 2s pre/post padding."
+    "durationSec": 25.96,
+    "notes": "Today feed, dense rows. Holds at top of Overdue (red invoice 'Pay Cascadia invoice #2841' + two red Needs-reply cards). Pauses on the 'Reply to Sam Okafor' Needs-reply card, hovers its 'Reply in Gmail' link WITHOUT clicking (page never leaves /today), slow-scrolls Today -> Next 7 days -> Later -> Done, then carries on to the 'Suggested' section at the end (Review, folded into Today) and hovers an item's Accept WITHOUT clicking. 2s pre/post padding."
   },
   {
     "id": "tasks",
     "file": "tasks.webm",
-    "durationSec": 14.16,
+    "durationSec": 13.36,
     "notes": "The new Tasks TABLE. Slow pan down and back, then checks off 'Book Probat quarterly service' - it strikes through + turns done (green check) in place. The toggle is reverted right after so the seed stays pristine. 2s pre/post padding."
   },
   {
     "id": "goals",
     "file": "goals.webm",
-    "durationSec": 13.76,
-    "notes": "Goals list: 'Grow wholesale revenue' with its 3 sub-goals visible, then drills into the 'Land 10 new cafe accounts' sub-goal detail showing 'Linked (2)' items + back-to-Goals link. 2s pre/post padding."
+    "durationSec": 15.72,
+    "notes": "Goals list: 'Grow wholesale revenue' with its 3 weekly goals visible, reveals the 'Add weekly goal' inline form ('Weekly goal title') so the renamed wording reads, then drills into the 'Land 10 new cafe accounts' weekly-goal detail showing 'Linked (2)' items + back-to-Goals link. 2s pre/post padding."
   },
   {
     "id": "calendar",
     "file": "calendar.webm",
-    "durationSec": 8.24,
+    "durationSec": 7.84,
     "notes": "Dense calendar sheet, slow scroll through the 4 events (Cupping with Fern Cafe, Production planning sync, Cascadia payment due, Farmers market - Lippitt Park)."
   },
   {
     "id": "email",
     "file": "email.webm",
-    "durationSec": 8.2,
+    "durationSec": 7.88,
     "notes": "Dense email sheet, slow scroll through the 6 sender groups (Driftwood Roasters, Fern Cafe, Hobart St Bakery, Providence Packaging Co, Providence Farmers Market Collective, Cascadia Green Coffee Importers)."
   },
   {
     "id": "cmdk",
     "file": "cmdk.webm",
-    "durationSec": 9.8,
-    "notes": "Over the Today surface, presses Cmd-K; the command palette opens (input 'Go to...', 9 nav items). Arrows down twice to highlight the 'Goals' nav item and holds. 2s pre/post padding."
+    "durationSec": 9,
+    "notes": "Over the Today surface, presses Cmd-K; the command palette opens (input 'Go to...', 8 nav items). Arrows down once to highlight the 'Goals' nav item (now 2nd, Review is gone) and holds. 2s pre/post padding."
   }
 ]

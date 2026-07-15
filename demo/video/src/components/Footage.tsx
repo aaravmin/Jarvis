@@ -1,7 +1,14 @@
 import React from "react";
-import { OffthreadVideo, staticFile, Freeze, useCurrentFrame } from "remotion";
+import { OffthreadVideo, staticFile } from "remotion";
 import { StandIn } from "./StandIn";
 import { FOOTAGE_AVAILABLE, getClip, clipStartFrom } from "../footage";
+import { fps } from "../theme";
+
+// OffthreadVideo renders blank for the ~1s of source that sits right against `endAt` (observed on these
+// Playwright webms). So we set endAt a couple seconds PAST the last frame we actually show - the extra
+// range is only ever decoded, never displayed - capped just inside the clip's real length so we never
+// point endAt beyond decodable footage. This keeps every SHOWN frame clear of that boundary artifact.
+const DECODE_TAIL_BUFFER = 60; // frames of extra decode headroom beyond the last shown frame
 
 type Props = {
   id: string; // clip id in the manifest (F1..F8)
@@ -18,8 +25,6 @@ type Props = {
 
 /**
  * Renders real capture footage when available, else the app-shell stand-in.
- * When a clip is shorter than the scene needs, the last frame is frozen
- * (Freeze) rather than time-stretched.
  */
 export const Footage: React.FC<Props> = ({
   id,
@@ -38,37 +43,22 @@ export const Footage: React.FC<Props> = ({
 
   const src = staticFile(`footage/${clip.file}`);
   const startFrom = clipStartFrom() + trimStart;
+  const shown = Math.ceil(showFrames * playbackRate);
+  // Extend endAt past the last shown frame (avoids the boundary blank), but never past the clip's real
+  // last decodable frame.
+  const clipLastFrame = clip.durationSec != null ? Math.floor(clip.durationSec * fps) - 2 : null;
+  let endAt = startFrom + shown + DECODE_TAIL_BUFFER;
+  if (clipLastFrame != null) endAt = Math.min(endAt, clipLastFrame);
+  endAt = Math.max(endAt, startFrom + shown + 1); // never clip a frame we actually show
 
-  return (
-    <FreezeIfShort src={src} startFrom={startFrom} showFrames={showFrames} playbackRate={playbackRate} />
-  );
-};
-
-/**
- * Plays the clip from startFrom; if the source runs out before showFrames,
- * the visible last frame is held via Freeze so nothing stretches.
- */
-const FreezeIfShort: React.FC<{
-  src: string;
-  startFrom: number;
-  showFrames: number;
-  playbackRate: number;
-}> = ({ src, startFrom, showFrames, playbackRate }) => {
-  const frame = useCurrentFrame();
-  // If we ever detect we're past available media we just keep OffthreadVideo,
-  // which holds its last decoded frame; Freeze is applied at the scene layer
-  // when the manifest says the clip is short. Kept simple + robust here.
-  void frame;
   return (
     <OffthreadVideo
       src={src}
       startFrom={startFrom}
-      endAt={startFrom + Math.ceil(showFrames * playbackRate)}
+      endAt={endAt}
       playbackRate={playbackRate}
       style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }}
       transparent={false}
     />
   );
 };
-
-export { Freeze };

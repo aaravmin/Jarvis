@@ -32,3 +32,19 @@ export const clipUsableFrames = (id: string, paddingSec = 2): number | null => {
 
 /** Frame offset into the raw webm where the usable middle begins. */
 export const clipStartFrom = (paddingSec = 2): number => Math.round(paddingSec * fps);
+
+/**
+ * trimStart that anchors a scene to a clip's TAIL: show `tailFrames` of footage ending `endPadSec`
+ * before the clip's true end. Used for held final beats (e.g. the Suggested section at the end of the
+ * Today clip) so the scene lands on the sustained hold regardless of the exact scroll timing. Returns a
+ * trimStart relative to the usable start (Footage adds clipStartFrom() back). Falls back to 0 if the
+ * clip duration is unknown.
+ */
+export const clipTailTrim = (id: string, tailFrames: number, endPadSec = 0.4): number => {
+  const c = getClip(id);
+  if (!c || c.durationSec == null) return 0;
+  const totalFrames = Math.round(c.durationSec * fps);
+  const endFrame = totalFrames - Math.round(endPadSec * fps);
+  const startFromRaw = Math.max(clipStartFrom(), endFrame - tailFrames);
+  return Math.max(0, startFromRaw - clipStartFrom());
+};

@@ -48,18 +48,18 @@ export const shadow = {
 export const fps = 30;
 
 // Absolute scene boundaries (frames @ 30fps). End of last scene = total duration.
-// DEMO v3 (~1 min, product-led): a short branded open, a handful of app surfaces
-// each shown as real footage FILLING a big browser frame with one short caption,
-// then a short branded close. Brisk but NOT frantic - every section breathes 7-16s
-// so the eye can read the real UI. No rapid-cut set-pieces.
+// Otto cut (~1 min, product-led): open on a clean Driftwood Roasters intro card (NO branded
+// graphic, no attention motif), then a handful of app surfaces each shown as real footage
+// FILLING a big browser frame with one short caption, then a plain "Otto" text close. Brisk
+// but NOT frantic - every section breathes 6-13s so the eye can read the real UI.
 export const SCENES = {
-  open: { from: 0, duration: 105 }, // 3.5s  GOTT wordmark + tagline
-  today: { from: 105, duration: 360 }, // 12.0s overdue red + Sam needs-reply (the RED highlight)
-  review: { from: 465, duration: 246 }, // 8.2s  approve what it found (suggest-only)
-  tasks: { from: 711, duration: 450 }, // 15.0s the sheet + check-off going green (the GREEN highlight)
-  cmdk: { from: 1161, duration: 180 }, // 6.0s  Cmd-K palette -> highlights Goals (nav into the next scene)
-  goals: { from: 1341, duration: 264 }, // 8.8s  grounded in your goals ("Linked (2)")
-  close: { from: 1605, duration: 126 }, // 4.2s  GOTT wordmark returns
+  intro: { from: 0, duration: 90 }, // 3.0s  Driftwood Roasters intro card (text only)
+  today: { from: 90, duration: 456 }, // 15.2s overdue red + Sam needs-reply (the RED highlight)
+  suggested: { from: 546, duration: 216 }, // 7.2s  the Suggested section at the end of Today (approve gate)
+  tasks: { from: 762, duration: 288 }, // 9.6s  the sheet + check-off going green (the GREEN highlight)
+  cmdk: { from: 1050, duration: 186 }, // 6.2s  Cmd-K palette -> highlights Goals (nav into the next scene)
+  goals: { from: 1236, duration: 345 }, // 11.5s weekly goals + grounded in your goals ("Linked (2)")
+  close: { from: 1581, duration: 114 }, // 3.8s  plain "Otto" wordmark
 } as const;
 
-export const TOTAL_FRAMES = SCENES.close.from + SCENES.close.duration; // 1731 = 57.7s
+export const TOTAL_FRAMES = SCENES.close.from + SCENES.close.duration; // 1695 = 56.5s
