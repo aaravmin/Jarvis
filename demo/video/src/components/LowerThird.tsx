@@ -62,7 +62,6 @@ export const LowerThird: React.FC<Props> = ({ text, sub, durationInFrames, accen
               borderRadius: 999,
               background: dot,
               flexShrink: 0,
-              boxShadow: `0 0 0 4px ${accent === "red" ? "rgba(220,38,38,0.2)" : "rgba(22,163,74,0.2)"}`,
             }}
           />
         ) : (

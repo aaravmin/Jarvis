@@ -4,7 +4,7 @@
     {
       "id": "today",
       "file": "today.webm",
-      "durationSec": 25.96,
+      "durationSec": 25.08,
       "notes": "Today feed, dense rows. Holds at top of Overdue (red invoice 'Pay Cascadia invoice #2841' + two red Needs-reply cards). Pauses on the 'Reply to Sam Okafor' Needs-reply card, hovers its 'Reply in Gmail' link WITHOUT clicking (page never leaves /today), slow-scrolls Today -> Next 7 days -> Later -> Done, then carries on to the 'Suggested' section at the end (Review, folded into Today) and hovers an item's Accept WITHOUT clicking. 2s pre/post padding."
     },
     {
