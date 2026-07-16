@@ -1,7 +1,7 @@
 import React from "react";
 import { Composition } from "remotion";
-import { JarvisDemo } from "./JarvisDemo";
-import { TOTAL_FRAMES, fps } from "./theme";
+import { JarvisDemo, TOTAL_FRAMES } from "./JarvisDemo";
+import { fps } from "./theme";
 
 export const RemotionRoot: React.FC = () => {
   return (

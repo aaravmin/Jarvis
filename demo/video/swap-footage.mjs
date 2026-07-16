@@ -53,6 +53,19 @@ async function main() {
   const manifest = { available: out.length > 0, clips: out };
   await fs.writeFile(outManifestPath, JSON.stringify(manifest, null, 2) + "\n");
   console.log(`\nWrote ${outManifestPath} with ${out.length} clip(s), available=${manifest.available}.`);
+
+  // Also mirror the capture's click tracks (used by the compositor to sync the caramel ripple +
+  // zoom-on-click + page-switch flourish to real clicks). Write {} if the capture recorded none.
+  const clicksFrom = path.join(footageDir, "clicks.json");
+  const clicksTo = path.join(__dirname, "src", "clicks.json");
+  let clicks = {};
+  try {
+    clicks = JSON.parse(await fs.readFile(clicksFrom, "utf8"));
+  } catch {
+    clicks = {};
+  }
+  await fs.writeFile(clicksTo, JSON.stringify(clicks, null, 2) + "\n");
+  console.log(`Wrote ${clicksTo} with click tracks for: ${Object.keys(clicks).join(", ") || "(none)"}.`);
   console.log("Now render:  npm run render");
 }
 

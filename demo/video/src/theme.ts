@@ -61,18 +61,20 @@ export const shadow = {
 
 export const fps = 30;
 
-// Absolute scene boundaries (frames @ 30fps). End of last scene = total duration.
-// Otto cut, tightened: open on a clean Driftwood Roasters intro card, then a handful of app surfaces each
-// shown as real footage FILLING a big browser frame with at most one short caption, then a plain "Otto"
-// text close. Brisk - each surface breathes ~5-10s so the eye can read the real UI, but nothing lingers.
-// The Cmd-K palette scene was cut (cmdk.webm is now unused, kept on disk).
-export const SCENES = {
-  intro: { from: 0, duration: 80 }, // 2.7s  Driftwood Roasters intro card (text only)
-  today: { from: 80, duration: 300 }, // 10.0s overdue red + Sam needs-reply (the RED highlight)
-  suggested: { from: 380, duration: 150 }, // 5.0s  the Suggested section at the end of Today (approve gate)
-  tasks: { from: 530, duration: 205 }, // 6.8s  the sheet + check-off going green (the GREEN highlight)
-  goals: { from: 735, duration: 210 }, // 7.0s  weekly goals nested under each big goal
-  close: { from: 945, duration: 82 }, // 2.7s  plain "Otto" wordmark
+// Motion v2 spine (frames @ 30fps). Scenes are sequenced with @remotion/transitions, so these are plain
+// durations (not absolute boundaries); each scene-to-scene transition overlaps TRANS frames. The HERO
+// scene's duration is derived from the real capture (see hero.ts) and is not listed here.
+//  intro     -> the Driftwood emblem assembles + the wordmark
+//  today     -> the red Overdue / Sam needs-reply attention beat (calm)
+//  suggested -> the Suggested approval gate at the end of Today (calm)
+//  hero      -> the continuous take: Today -> click Tasks -> check off (green) -> click Goals (motion)
+//  close     -> the plain "Otto" wordmark, text only
+export const DUR = {
+  intro: 120, // 4.0s
+  today: 214, // 7.1s
+  suggested: 166, // 5.5s
+  close: 106, // 3.5s
 } as const;
 
-export const TOTAL_FRAMES = SCENES.close.from + SCENES.close.duration; // 1027 = 34.2s
+/** Frames each scene-to-scene transition overlaps (directional slide / fade). */
+export const TRANS = 16;

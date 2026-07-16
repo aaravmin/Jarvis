@@ -16,6 +16,8 @@ type Props = {
   pan?: Pan; // normalized -1..1 Ken-Burns drift target (fraction of a subtle range)
   panEase?: number; // 0..1 how far into the scene the pan completes
   radius?: number;
+  /** optional dynamic path that flips with real in-footage navigation (frame-keyed, scene-relative). */
+  urlSwitches?: Array<{ frame: number; url: string }>;
   children: React.ReactNode;
 };
 
@@ -31,9 +33,16 @@ export const BrowserFrame: React.FC<Props> = ({
   pan = { x: 0, y: 0 },
   panEase = 1,
   radius = 16,
+  urlSwitches,
   children,
 }) => {
   const frame = useCurrentFrame();
+
+  // Current path: the latest urlSwitch whose frame has been reached, else the static url.
+  const currentUrl =
+    urlSwitches && urlSwitches.length
+      ? urlSwitches.reduce((acc, s) => (frame >= s.frame ? s.url : acc), urlSwitches[0].url)
+      : url;
 
   const scale = interpolate(frame, [0, sceneDuration], [zoom.from, zoom.to], {
     extrapolateLeft: "clamp",
@@ -125,7 +134,7 @@ export const BrowserFrame: React.FC<Props> = ({
             />
           </svg>
           <span style={{ color: theme.mutedStrong }}>localhost:3000</span>
-          <span style={{ color: theme.muted }}>/{url}</span>
+          <span style={{ color: theme.muted }}>/{currentUrl}</span>
         </div>
       </div>
 

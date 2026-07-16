@@ -4,6 +4,7 @@ import { BrowserFrame } from "./BrowserFrame";
 import { Footage } from "./Footage";
 import { LowerThird } from "./LowerThird";
 import { GreenBurst } from "./GreenBurst";
+import { ClickFx, type FxClick } from "./ClickFx";
 import { FRAME } from "../layout";
 
 export type Caption = {
@@ -30,6 +31,10 @@ type Props = {
   captions?: Caption[];
   /** optional green celebration on a real check-off going done. */
   greenBurst?: { x: number; y: number; at: number };
+  /** real clicks in the footage -> caramel ripple + zoom-on-click + page-switch sweep, in sync. */
+  clicks?: FxClick[];
+  /** dynamic URL pill that flips with real in-footage navigation (scene-relative frames). */
+  urlSwitches?: Array<{ frame: number; url: string }>;
 };
 
 /**
@@ -43,6 +48,8 @@ export const AppSection: React.FC<Props> = ({
   durationInFrames,
   captions = [],
   greenBurst,
+  clicks = [],
+  urlSwitches,
 }) => {
   return (
     <AbsoluteFill>
@@ -50,18 +57,21 @@ export const AppSection: React.FC<Props> = ({
         <BrowserFrame
           url={url}
           sceneDuration={durationInFrames}
-          zoom={{ from: 1.0, to: 1.0 }} // no Ken-Burns push: the footage motion is enough, and it keeps captions/burst aligned
+          zoom={{ from: 1.0, to: 1.0 }} // BrowserFrame stays fixed; the ClickFx layer owns the zoom-on-click
           pan={{ x: 0, y: 0 }}
+          urlSwitches={urlSwitches}
         >
-          <Footage
-            id={footage.id}
-            label={footage.label}
-            page={footage.page}
-            variant={footage.variant}
-            showFrames={durationInFrames}
-            trimStart={footage.trimStart ?? 0}
-            playbackRate={footage.playbackRate ?? 1}
-          />
+          <ClickFx clicks={clicks} sceneDuration={durationInFrames} idle={clicks.length === 0}>
+            <Footage
+              id={footage.id}
+              label={footage.label}
+              page={footage.page}
+              variant={footage.variant}
+              showFrames={durationInFrames}
+              trimStart={footage.trimStart ?? 0}
+              playbackRate={footage.playbackRate ?? 1}
+            />
+          </ClickFx>
         </BrowserFrame>
       </div>
 
