@@ -341,12 +341,8 @@ function EntryRow({ entry, busy, onToggle }: { entry: AttentionEntry; busy: bool
         title={entry.title}
         source={entry.source}
         reasoning={entry.reasoning ?? undefined}
-        meta={
-          <span className="inline-flex flex-wrap items-center justify-end gap-1.5">
-            <KindTag kind={entry.kind} />
-            {due && <span className={TONE_CLASS[due.tone]}>{due.text}</span>}
-          </span>
-        }
+        kind={<KindTag kind={entry.kind} />}
+        meta={due ? <span className={TONE_CLASS[due.tone]}>{due.text}</span> : undefined}
         actions={entry.threadLink ? <ReplyAction entry={entry} /> : undefined}
       >
         {hasBody && (

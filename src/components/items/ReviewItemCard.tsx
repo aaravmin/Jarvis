@@ -55,14 +55,12 @@ export function ReviewItemCard({ item }: { item: ReviewItem }) {
       title={item.title}
       source={item.source}
       reasoning={item.reasoning ?? undefined}
-      meta={
-        <span className="inline-flex items-center gap-1.5">
-          <span className="inline-flex items-center rounded border border-border px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-            {TYPE_LABEL[item.itemType]}
-          </span>
-          {item.dueAt && <span className="text-muted-foreground">{formatDate(item.dueAt)}</span>}
+      kind={
+        <span className="inline-flex items-center rounded border border-border px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          {TYPE_LABEL[item.itemType]}
         </span>
       }
+      meta={item.dueAt ? <span className="text-muted-foreground">{formatDate(item.dueAt)}</span> : undefined}
       actions={
         <>
           <Button

@@ -10,26 +10,29 @@ export type CardProps = {
    * production, enforcing the hard rule: "no UI card renders without a working source chip."
    */
   source: CardSource;
-  /** Optional body content (description, sub-items, etc.). */
+  /** Optional body content under the title (goal chips, a quote, sub-items). */
   children?: React.ReactNode;
   /** Optional one-line "why Otto created this". */
   reasoning?: string;
-  /** Optional right-aligned slot in the header (e.g. a due date or status badge). */
+  /** The type/status column (e.g. a TASK / EVENT / NEEDS REPLY pill). */
+  kind?: React.ReactNode;
+  /** The right-hand due/status column (e.g. a due date, "Waiting on you"). */
   meta?: React.ReactNode;
-  /** Optional footer-right actions (e.g. Accept/Dismiss in the Review queue). */
+  /** Right-column actions under the due (Reply in Gmail, Accept/Dismiss). */
   actions?: React.ReactNode;
   /**
-   * "card" (default) = bordered, self-contained tile. "row" = borderless dense content meant to sit
-   * inside a divided sheet-list container (Today / Review), where the list owns the hairlines.
+   * "card" = bordered, self-contained tile. "row" (default) = a borderless four-column grid
+   * (info | type | source | due) meant to sit inside a divided sheet-list (Today / Suggested).
+   * The four columns align down the list so the eye reads: what it is, its type, its source, when due.
    */
   variant?: "card" | "row";
 };
 
 /**
- * The provenance-enforcing item primitive. Reused everywhere a derived item is shown.
- * Invariant: it cannot render without a working source chip. Dense by default (Notion/Sheets rhythm).
+ * The provenance-enforcing item primitive. Reused wherever a derived item is shown.
+ * Invariant: it cannot render without a working source chip. Dense (Notion/Sheets rhythm).
  */
-export function Card({ title, source, children, reasoning, meta, actions, variant = "card" }: CardProps) {
+export function Card({ title, source, children, reasoning, kind, meta, actions, variant = "row" }: CardProps) {
   // Enforce the invariant. Loud in development, silent-but-logged in production.
   if (!source || typeof source.quote !== "string" || source.quote.trim() === "") {
     const message =
@@ -43,30 +46,48 @@ export function Card({ title, source, children, reasoning, meta, actions, varian
     return null;
   }
 
-  return (
-    <article
-      className={cn(
-        "min-w-0",
-        variant === "card" && "rounded-md border bg-card p-3 transition-colors hover:border-border-strong",
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="text-sm font-medium leading-snug text-foreground">{title}</h3>
-        {meta && <div className="shrink-0 text-xs text-muted-foreground">{meta}</div>}
-      </div>
-
-      {children && <div className="mt-1 min-w-0 break-words text-sm leading-snug text-muted-strong">{children}</div>}
-
+  const info = (
+    <div className="min-w-0">
+      <h3 className="text-sm font-medium leading-snug text-foreground">{title}</h3>
       {reasoning && (
-        <p className="mt-1 text-xs leading-snug text-muted-foreground">
+        <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
           <span className="text-muted-strong">Why </span>
           {reasoning}
         </p>
       )}
+      {children && <div className="mt-1 min-w-0 break-words text-sm leading-snug text-muted-strong">{children}</div>}
+    </div>
+  );
 
-      <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+  if (variant === "card") {
+    return (
+      <article className="min-w-0 rounded-md border bg-card p-3">
+        <div className="flex items-start justify-between gap-3">
+          {info}
+          <div className="flex shrink-0 flex-col items-end gap-1 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              {kind}
+              {meta}
+            </span>
+            <SourceChip source={source} />
+            {actions && <div className="flex items-center gap-1.5">{actions}</div>}
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  // Row: four aligned columns. Stacks on mobile; spreads across the width on md+.
+  return (
+    <article className="grid min-w-0 grid-cols-1 items-start gap-x-4 gap-y-1.5 md:grid-cols-[minmax(0,1fr)_5rem_13.5rem_12.5rem] md:gap-y-0">
+      {info}
+      <div className="min-w-0 md:pt-0.5">{kind}</div>
+      <div className="min-w-0 md:pt-0.5">
         <SourceChip source={source} />
-        {actions && <div className="flex flex-wrap items-center gap-1.5">{actions}</div>}
+      </div>
+      <div className="flex flex-col items-start gap-1 text-xs md:items-end md:pt-0.5 md:text-right">
+        {meta}
+        {actions && <div className="flex flex-wrap items-center gap-1.5 md:justify-end">{actions}</div>}
       </div>
     </article>
   );
