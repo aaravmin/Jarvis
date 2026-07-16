@@ -34,11 +34,11 @@ export const IntroDriftwood: React.FC<{ durationInFrames: number }> = ({ duratio
           style={{
             opacity: kicker,
             fontFamily: font.sans,
-            fontSize: 22,
-            fontWeight: 600,
-            letterSpacing: 4.5,
+            fontSize: 23,
+            fontWeight: 700,
+            letterSpacing: 4.8,
             textTransform: "uppercase",
-            color: theme.muted,
+            color: theme.caramel,
           }}
         >
           Small-batch coffee roastery
@@ -46,14 +46,15 @@ export const IntroDriftwood: React.FC<{ durationInFrames: number }> = ({ duratio
 
         <div
           style={{
-            marginTop: 26,
+            marginTop: 28,
             transform: `translateY(${titleY}px)`,
             opacity: title,
-            fontFamily: font.sans,
-            fontSize: 104,
-            fontWeight: 700,
-            letterSpacing: -1.5,
-            lineHeight: 1.02,
+            fontFamily: font.serif,
+            fontSize: 132,
+            fontWeight: 600,
+            fontOpticalSizing: "auto",
+            letterSpacing: -2,
+            lineHeight: 1.0,
             color: theme.foreground,
           }}
         >
@@ -62,11 +63,11 @@ export const IntroDriftwood: React.FC<{ durationInFrames: number }> = ({ duratio
 
         <div
           style={{
-            marginTop: 30,
-            width: 320 * rule,
-            height: 2,
-            borderRadius: 2,
-            background: theme.borderStrong,
+            marginTop: 32,
+            width: 360 * rule,
+            height: 3,
+            borderRadius: 3,
+            background: theme.caramel,
             opacity: rule,
           }}
         />
@@ -77,9 +78,9 @@ export const IntroDriftwood: React.FC<{ durationInFrames: number }> = ({ duratio
             transform: `translateY(${subY}px)`,
             opacity: sub,
             fontFamily: font.sans,
-            fontSize: 30,
+            fontSize: 31,
             fontWeight: 500,
-            letterSpacing: 0.2,
+            letterSpacing: 0.3,
             color: theme.muted,
           }}
         >

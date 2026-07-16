@@ -1,8 +1,12 @@
 /**
  * Jarvis design tokens, mirrored from the app's globals.css.
  * Light-first canvas. Red = urgency ONLY. Green = done / positive ONLY.
- * Everything else is neutral ink so attention is carried by the two status colors.
+ * ONE warm accent (caramel/amber) is allowed for brand/neutral emphasis in the film's overlays only -
+ * it never carries a status and is used sparingly (intro eyebrow + rule, the neutral caption bar, the
+ * Otto close). Everything else stays neutral ink so attention is still carried by red/green.
  */
+import { SERIF, SANS } from "./fonts";
+
 export const theme = {
   // Canvas + surfaces
   background: "#f7f8f9",
@@ -30,10 +34,20 @@ export const theme = {
   success: "#16a34a",
   successSoft: "#dcfce7",
   warning: "#d97706",
+
+  // Warm brand accent (caramel/amber) - a coffee-roastery warmth. NOT a status color.
+  // Used sparingly in overlays only (never on the app footage). `caramel` reads with strong
+  // contrast on the light canvas; `caramelSoft` is for large brand type / on darker fields.
+  caramel: "#B45309",
+  caramelSoft: "#C2703D",
 } as const;
 
+// Warm, characterful pairing for the film's overlays. `serif` (Fraunces) = display / title cards;
+// `sans` (Figtree) = captions, eyebrows, small labels. Both are loaded via @remotion/google-fonts
+// (see ./fonts.ts) so they are embedded in the render, not a system fallback.
 export const font = {
-  sans: 'system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  serif: SERIF,
+  sans: SANS,
   mono: 'ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace',
 } as const;
 

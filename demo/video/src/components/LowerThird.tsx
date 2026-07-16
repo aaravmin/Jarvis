@@ -46,44 +46,46 @@ export const LowerThird: React.FC<Props> = ({ text, sub, durationInFrames, accen
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 14,
-          padding: "16px 24px",
-          borderRadius: 14,
+          gap: 16,
+          padding: "18px 28px",
+          borderRadius: 16,
           background: theme.inkStrong,
           boxShadow: shadow.float,
-          maxWidth: 900,
+          maxWidth: 1040,
         }}
       >
         {dot ? (
           <span
             style={{
-              width: 11,
-              height: 11,
+              width: 12,
+              height: 12,
               borderRadius: 999,
               background: dot,
               flexShrink: 0,
             }}
           />
         ) : (
+          // Neutral (non-status) caption bar carries the warm caramel accent - red/green stay reserved
+          // for urgent/done above.
           <span
             style={{
-              width: 4,
-              height: 26,
+              width: 5,
+              height: 30,
               borderRadius: 4,
-              background: "rgba(255,255,255,0.32)",
+              background: theme.caramelSoft,
               flexShrink: 0,
             }}
           />
         )}
-        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <div
             style={{
               color: "#ffffff",
               fontFamily: font.sans,
-              fontSize: 25,
-              fontWeight: 600,
+              fontSize: 30,
+              fontWeight: 700,
               letterSpacing: 0.1,
-              lineHeight: 1.2,
+              lineHeight: 1.18,
             }}
           >
             {text}
@@ -91,9 +93,9 @@ export const LowerThird: React.FC<Props> = ({ text, sub, durationInFrames, accen
           {sub ? (
             <div
               style={{
-                color: "rgba(255,255,255,0.66)",
+                color: "rgba(255,255,255,0.74)",
                 fontFamily: font.sans,
-                fontSize: 16.5,
+                fontSize: 19,
                 fontWeight: 500,
                 letterSpacing: 0.2,
               }}
