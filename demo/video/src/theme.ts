@@ -48,18 +48,17 @@ export const shadow = {
 export const fps = 30;
 
 // Absolute scene boundaries (frames @ 30fps). End of last scene = total duration.
-// Otto cut (~1 min, product-led): open on a clean Driftwood Roasters intro card (NO branded
-// graphic, no attention motif), then a handful of app surfaces each shown as real footage
-// FILLING a big browser frame with one short caption, then a plain "Otto" text close. Brisk
-// but NOT frantic - every section breathes 6-13s so the eye can read the real UI.
+// Otto cut, tightened: open on a clean Driftwood Roasters intro card, then a handful of app surfaces each
+// shown as real footage FILLING a big browser frame with at most one short caption, then a plain "Otto"
+// text close. Brisk - each surface breathes ~5-10s so the eye can read the real UI, but nothing lingers.
+// The Cmd-K palette scene was cut (cmdk.webm is now unused, kept on disk).
 export const SCENES = {
-  intro: { from: 0, duration: 90 }, // 3.0s  Driftwood Roasters intro card (text only)
-  today: { from: 90, duration: 456 }, // 15.2s overdue red + Sam needs-reply (the RED highlight)
-  suggested: { from: 546, duration: 216 }, // 7.2s  the Suggested section at the end of Today (approve gate)
-  tasks: { from: 762, duration: 288 }, // 9.6s  the sheet + check-off going green (the GREEN highlight)
-  cmdk: { from: 1050, duration: 186 }, // 6.2s  Cmd-K palette -> highlights Goals (nav into the next scene)
-  goals: { from: 1236, duration: 345 }, // 11.5s weekly goals + grounded in your goals ("Linked (2)")
-  close: { from: 1581, duration: 114 }, // 3.8s  plain "Otto" wordmark
+  intro: { from: 0, duration: 80 }, // 2.7s  Driftwood Roasters intro card (text only)
+  today: { from: 80, duration: 300 }, // 10.0s overdue red + Sam needs-reply (the RED highlight)
+  suggested: { from: 380, duration: 150 }, // 5.0s  the Suggested section at the end of Today (approve gate)
+  tasks: { from: 530, duration: 205 }, // 6.8s  the sheet + check-off going green (the GREEN highlight)
+  goals: { from: 735, duration: 210 }, // 7.0s  weekly goals nested under each big goal
+  close: { from: 945, duration: 82 }, // 2.7s  plain "Otto" wordmark
 } as const;
 
-export const TOTAL_FRAMES = SCENES.close.from + SCENES.close.duration; // 1695 = 56.5s
+export const TOTAL_FRAMES = SCENES.close.from + SCENES.close.duration; // 1027 = 34.2s

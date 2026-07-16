@@ -1,7 +1,7 @@
 import React from "react";
 import { AbsoluteFill, Sequence } from "remotion";
 import { SCENES } from "./theme";
-import { getClip, clipTailTrim } from "./footage";
+import { clipTailTrim } from "./footage";
 import { Backdrop } from "./components/Backdrop";
 import { SceneWrap } from "./components/SceneWrap";
 import { AppSection, type Caption } from "./components/AppSection";
@@ -13,48 +13,37 @@ import { OutroOtto } from "./scenes/OutroOtto";
 // from one page to the next. 10f reads as a calm cut, not a hard flash.
 const FADE = 10;
 
-// The command palette is a signature Notion/Linear moment; fall back to the
-// calendar surface only if that clip somehow isn't in the footage.
-const CMDK = getClip("cmdk") !== null;
-
 // The Suggested section lives at the very end of the Today clip (Review was folded into Today). We reuse
 // that one clip: the `today` scene plays its head (the red Overdue cards), and `suggested` plays its
 // tail (the held Suggested section), anchored to the clip's end so it lands on the hold every time.
 const SUGGESTED_RATE = 1.0;
 const SUGGESTED_TRIM = clipTailTrim("today", Math.ceil(SCENES.suggested.duration * SUGGESTED_RATE), 0.4);
 
-// --- Captions: at most one or two short lower-thirds per surface. The product
-// carries every scene; captions only name what you are looking at. ---
+// --- Captions: at most ONE short, concrete lower-third per surface. The product carries every scene;
+// most surfaces run nearly caption-free and just let the real UI speak. ---
 
-// today plays at ~1.02x from the top: the overdue-red hold + the "Reply to Sam Okafor" needs-reply card
-// are the first ~5s; the red caption lands while that red card is on screen (that IS the synced red
-// highlight), then the feed scrolls its sections. Captions are staggered so no two overlap on screen.
+// today plays at ~1.02x from the top: the overdue-red hold + the red "Reply to Sam Okafor" needs-reply
+// card fill the first ~4.5s, then the feed scrolls its sections. The one red caption lands while that red
+// card is on screen - that IS the synced red highlight.
 const TODAY_CAPTIONS: Caption[] = [
-  { text: "Everything that needs you.", sub: "In priority order, computed by code.", from: 10, dur: 74 },
-  { text: "It reads the thread.", sub: "Sam has been waiting 4 days.", accent: "red", from: 92, dur: 122 },
-  { text: "Now, soon, and later.", from: 252, dur: 112 },
+  { text: "It reads the thread.", sub: "Sam has been waiting 4 days.", accent: "red", from: 20, dur: 108 },
 ];
 
-// suggested plays the Today clip's tail: the "Suggested" section, each item gated by Accept / Dismiss.
+// suggested plays the Today clip's tail: the "Suggested" section, each item gated by Accept / Dismiss (L0).
 const SUGGESTED_CAPTIONS: Caption[] = [
-  { text: "It suggests. You approve.", sub: "Nothing is auto-accepted.", from: 28, dur: 172 },
+  { text: "Nothing is added without your approval.", from: 18, dur: 116 },
 ];
 
-// tasks plays at ~0.94x (a calm read of the sheet), ending on the check-off well before the clip's tail.
-// After a slow pan the "Book Probat quarterly service" row strikes through green; the green caption is
-// timed to land on that moment.
+// tasks plays at 1.3x: the dense sheet, then the cursor checks off "Book Probat quarterly service" and it
+// strikes through green in place. The one green caption is timed to land on that check-off and hold on it.
 const TASKS_CAPTIONS: Caption[] = [
-  { text: "Tasks, like a sheet.", sub: "Dense rows. Sort, edit, done.", from: 20, dur: 120 },
-  { text: "Check it off. Done.", accent: "green", from: 200, dur: 88 },
+  { text: "Check it off when it is done.", accent: "green", from: 150, dur: 55 },
 ];
 
-const CMDK_CAPTIONS: Caption[] = [
-  { text: "Jump anywhere.", sub: "Press Cmd K, then type.", from: 20, dur: 148 },
-];
-
+// goals opens on "Grow wholesale revenue" with its weekly goals nested under it (the roll-up), then reveals
+// the inline "Add weekly goal" form. The one caption lands on that nested list.
 const GOALS_CAPTIONS: Caption[] = [
-  { text: "Grounded in your goals.", sub: "Goals, and weekly goals.", from: 16, dur: 140 },
-  { text: "Every task ladders up to one.", from: 206, dur: 120 },
+  { text: "Weekly goals roll up to each big goal.", from: 18, dur: 128 },
 ];
 
 type SceneDef = {
@@ -100,29 +89,10 @@ const ORDER: SceneDef[] = [
       <AppSection
         url="tasks"
         durationInFrames={d}
-        footage={{ id: "tasks", label: "Tasks", page: "tasks", variant: "tasks", playbackRate: 0.9375 }}
+        footage={{ id: "tasks", label: "Tasks", page: "tasks", variant: "tasks", playbackRate: 1.3 }}
         captions={TASKS_CAPTIONS}
       />
     ),
-  },
-  {
-    key: "cmdk",
-    render: (d) =>
-      CMDK ? (
-        <AppSection
-          url="today"
-          durationInFrames={d}
-          footage={{ id: "cmdk", label: "Command", page: "today", variant: "today", playbackRate: 1.1 }}
-          captions={CMDK_CAPTIONS}
-        />
-      ) : (
-        <AppSection
-          url="calendar"
-          durationInFrames={d}
-          footage={{ id: "calendar", label: "Calendar", page: "calendar", variant: "calendar", playbackRate: 0.9 }}
-          captions={[{ text: "And what's coming up.", from: 24, dur: 140 }]}
-        />
-      ),
   },
   {
     key: "goals",
