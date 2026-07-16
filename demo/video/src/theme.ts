@@ -40,6 +40,13 @@ export const theme = {
   // contrast on the light canvas; `caramelSoft` is for large brand type / on darker fields.
   caramel: "#B45309",
   caramelSoft: "#C2703D",
+
+  // Brown Bee Coffee brand palette (the demo business's OWN mark, used only in the intro title +
+  // its wordmark / rule / eyebrow). `beeAmber` is the marigold honeycomb-cell hexagon; `beeBrownDark`
+  // is the small dot inside it; `beeBrown` is the refined wordmark / eyebrow ink. Never a status color.
+  beeAmber: "#F4B500",
+  beeBrownDark: "#3D2817",
+  beeBrown: "#6B4A2E",
 } as const;
 
 // Warm, characterful pairing for the film's overlays. `serif` (Fraunces) = display / title cards;

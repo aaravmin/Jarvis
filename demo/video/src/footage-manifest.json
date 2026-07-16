@@ -4,13 +4,13 @@
     {
       "id": "hero",
       "file": "hero.webm",
-      "durationSec": 22.24,
+      "durationSec": 20.04,
       "notes": "HERO continuous take with REAL in-app nav (for synced zoom + page-switch motion). Lands on Today (red Overdue cards), clicks 'Tasks' in the left rail (real page switch), checks off 'Book Probat quarterly service' (strikes through green in place), clicks 'Goals' in the left rail (real page switch), lands on 'Grow wholesale revenue' with weekly goals nested. Records clicks (nav:tasks, check:book-probat, nav:goals) to clicks.json. The check-off is reverted afterward so the seed stays pristine."
     },
     {
       "id": "today",
       "file": "today.webm",
-      "durationSec": 27.16,
+      "durationSec": 24.92,
       "notes": "Today feed, dense rows. Holds at top of Overdue (red invoice 'Pay Cascadia invoice #2841' + two red Needs-reply cards). Pauses on the 'Reply to Sam Okafor' Needs-reply card, hovers its 'Reply in Gmail' link WITHOUT clicking (page never leaves /today), slow-scrolls Today -> Next 7 days -> Later -> Done, then carries on to the 'Suggested' section at the end (Review, folded into Today) and hovers an item's Accept WITHOUT clicking. 2s pre/post padding."
     },
     {

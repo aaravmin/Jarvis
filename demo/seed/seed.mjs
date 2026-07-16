@@ -1,6 +1,6 @@
 // demo/seed/seed.mjs
 //
-// Seeds the "Driftwood Roasters" demo dataset into the demo account for the Jarvis demo video.
+// Seeds the "Brown Bee Coffee" demo dataset into the demo account for the Jarvis demo video.
 // Imports @supabase/supabase-js from the app's own node_modules (no separate npm install needed).
 // Reads NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY from ../../.env.local by parsing
 // the file directly (never prints the values). All writes go through the anon key AS THE SIGNED-IN
@@ -207,7 +207,7 @@ async function main() {
 
   // ---- Email sources ----------------------------------------------------
   const e1RawText =
-    "Could you send over wholesale pricing for the fall blends? We want to get Driftwood on the menu by September. " +
+    "Could you send over wholesale pricing for the fall blends? We want to get Brown Bee on the menu by September. " +
     "Also, are you still able to do a cupping with us this week so we can taste the new blends together?";
   await insertSource("E1", {
     source_type: "email",
@@ -264,8 +264,8 @@ async function main() {
     source_type: "email",
     title: "Roaster maintenance window",
     from_name: "Jonah",
-    from_email: "jonah@driftwoodroasters.com",
-    group_label: "Driftwood Roasters",
+    from_email: "jonah@brownbeecoffee.com",
+    group_label: "Brown Bee Coffee",
     permalink: "https://mail.google.com/mail/u/0/#inbox",
     occurred_at: iso(daysAgo(2)),
     raw_text: e4RawText,
@@ -275,7 +275,7 @@ async function main() {
   });
 
   const e5RawText =
-    "Hi Driftwood team, your booth for the Lippitt Park farmers market is confirmed for this month. " +
+    "Hi Brown Bee team, your booth for the Lippitt Park farmers market is confirmed for this month. " +
     "Please arrive by 8am to set up and bring your own tent weights.";
   await insertSource("E5", {
     source_type: "email",
@@ -435,7 +435,7 @@ async function main() {
 
   // ---- A2: due today task, from E1 ---------------------------------------
   {
-    const quote = "Could you send over wholesale pricing for the fall blends? We want to get Driftwood on the menu by September.";
+    const quote = "Could you send over wholesale pricing for the fall blends? We want to get Brown Bee on the menu by September.";
     assertSubstring("E1", e1RawText, quote);
     const id = await insertItem("A2", {
       item_type: "task",

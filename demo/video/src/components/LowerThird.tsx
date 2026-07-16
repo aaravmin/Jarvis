@@ -65,14 +65,14 @@ export const LowerThird: React.FC<Props> = ({ text, sub, durationInFrames, accen
             }}
           />
         ) : (
-          // Neutral (non-status) caption bar carries the warm caramel accent - red/green stay reserved
-          // for urgent/done above.
+          // Neutral (non-status) caption bar carries a calm slate accent - red/green stay reserved for
+          // urgent/done above, and nothing here reads as brown.
           <span
             style={{
               width: 5,
               height: 30,
               borderRadius: 4,
-              background: theme.caramelSoft,
+              background: theme.muted,
               flexShrink: 0,
             }}
           />

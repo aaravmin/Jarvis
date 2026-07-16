@@ -8,7 +8,7 @@ import { clipTailTrim } from "./footage";
 import { HERO } from "./hero";
 import { Backdrop } from "./components/Backdrop";
 import { AppSection, type Caption } from "./components/AppSection";
-import { IntroDriftwood } from "./scenes/IntroDriftwood";
+import { IntroBrownBee } from "./scenes/IntroBrownBee";
 import { OutroOtto } from "./scenes/OutroOtto";
 
 // The Suggested section lives at the very end of the Today clip (Review was folded into Today). We reuse
@@ -21,7 +21,7 @@ const SUGGESTED_TRIM = clipTailTrim("today", Math.ceil(DUR.suggested), 0.4);
 // today: the red Overdue hold + the red "Reply to Sam Okafor" needs-reply card. The one red caption
 // lands while that red card is on screen - the synced red highlight.
 const TODAY_CAPTIONS: Caption[] = [
-  { text: "It reads the thread.", sub: "Sam has been waiting 5 days.", accent: "red", from: 24, dur: 120 },
+  { text: "It reads the thread.", sub: "Sam has been waiting 4 days.", accent: "red", from: 24, dur: 120 },
 ];
 
 // suggested: the Today clip's tail - the "Suggested" section, each item gated by Accept / Dismiss (L0).
@@ -49,7 +49,7 @@ export const JarvisDemo: React.FC = () => {
       <Backdrop />
       <TransitionSeries>
         <TransitionSeries.Sequence durationInFrames={DUR.intro}>
-          <IntroDriftwood durationInFrames={DUR.intro} />
+          <IntroBrownBee durationInFrames={DUR.intro} />
         </TransitionSeries.Sequence>
 
         {/* intro -> Today: a soft fade into the product */}
@@ -76,8 +76,8 @@ export const JarvisDemo: React.FC = () => {
           />
         </TransitionSeries.Sequence>
 
-        {/* Suggested -> Hero: a directional slide in from the right, into the live navigation */}
-        <TransitionSeries.Transition presentation={slide({ direction: "from-right" })} timing={springy} />
+        {/* Suggested -> Hero: a clean, calm fade into the live navigation (no flashy directional slide) */}
+        <TransitionSeries.Transition presentation={fade()} timing={fadeT} />
 
         <TransitionSeries.Sequence durationInFrames={HERO.duration}>
           <AppSection

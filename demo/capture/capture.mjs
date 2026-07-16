@@ -32,49 +32,63 @@ const VIEWPORT = { width: 1920, height: 1080 };
 fs.mkdirSync(FOOTAGE_DIR, { recursive: true });
 
 // ---------------------------------------------------------------------------
-// Cursor injection: a 22px semi-transparent ink dot that follows real mousemove events, with a subtle
-// press (the dot dips to 0.8 scale on mousedown). Installed via addInitScript so it is present before
-// any page script runs, and persists across Next.js client-side (SPA) navigations since those don't
-// reload the document.
+// Cursor injection: a REAL mouse pointer - a standard arrow (black fill, thin white outline,
+// macOS/standard style) whose tip sits exactly at the pointer position and follows real mousemove
+// events, with a subtle press (dips to ~0.86 scale about the tip on mousedown). Drawn as an inline SVG
+// so it reads as an actual cursor, not a dot. Installed via addInitScript so it is present before any
+// page script runs, and persists across Next.js client-side (SPA) navigations (those don't reload the
+// document).
 //
-// NOTE: the click RIPPLE is no longer baked into the footage. The Remotion compositor draws its own
-// caramel-tinted ripple + zoom-on-click, synced frame-accurately to `clicks.json` (which this script
-// records). Baking a ripple here too would double it up, so the footage only carries the plain cursor.
+// The arrow's tip is at viewBox (2,2); a translate(-2px,-2px) puts that tip on the pointer's (x,y), and
+// transform-origin 2px 2px scales the press about the tip so it never drifts off the target.
+//
+// NOTE: the click PULSE is not baked into the footage. The Remotion compositor draws its own clean
+// status-colored pulse + gentle zoom-on-click, synced frame-accurately to `clicks.json` (which this
+// script records). Baking a pulse here too would double it up, so the footage carries only the pointer.
 // ---------------------------------------------------------------------------
 function installCursor() {
   if (window.__demoCursorInstalled__) return;
   window.__demoCursorInstalled__ = true;
-  const style = document.createElement("style");
-  style.textContent = `
-    #__demo_cursor__ {
-      position: fixed; top:0; left:0; width:22px; height:22px; border-radius:50%;
-      background: rgba(51,65,85,0.38); border: 1.5px solid rgba(30,41,59,0.6);
-      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-      pointer-events:none !important; z-index:2147483647; transform:translate(-11px,-11px) scale(1);
-      will-change: transform; transition: transform .12s ease-out;
-    }
-    #__demo_cursor__.__press__ { transform: translate(-11px,-11px) scale(0.8); }
-  `;
+  const base = "translate(-2px,-2px)";
   const attach = () => {
-    document.documentElement.appendChild(style);
-    const dot = document.createElement("div");
-    dot.id = "__demo_cursor__";
-    dot.style.left = "960px";
-    dot.style.top = "540px";
-    document.documentElement.appendChild(dot);
+    // Hide Next.js dev-only overlays (the bottom-left dev indicator / "N" logo / "N Issues" toast) so
+    // no dev tooling chrome ever lands in the footage. Targets the portal host + badge/toast roots;
+    // applies to elements added later too. Cosmetic capture-side only - the app is never touched.
+    const devHide = document.createElement("style");
+    devHide.textContent =
+      "nextjs-portal,[data-nextjs-toast],[data-next-badge-root],[data-next-badge]," +
+      "#__next-build-watcher,[data-nextjs-dialog-overlay],[data-nextjs-dev-tools-button]" +
+      "{display:none !important;visibility:hidden !important;opacity:0 !important;}";
+    document.documentElement.appendChild(devHide);
+
+    const wrap = document.createElement("div");
+    wrap.id = "__demo_cursor__";
+    wrap.style.cssText =
+      "position:fixed;top:0;left:0;width:22px;height:30px;pointer-events:none !important;" +
+      "z-index:2147483647;transform:" + base + ";transform-origin:2px 2px;" +
+      "will-change:left,top,transform;transition:transform .09s ease-out;" +
+      "filter:drop-shadow(0 1px 1.5px rgba(0,0,0,0.32));";
+    wrap.innerHTML =
+      '<svg width="22" height="30" viewBox="0 0 22 30" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M2,2 L2,22.8 L7.46,17.86 L10.45,24.75 L12.66,23.84 L9.8,16.95 L16.69,16.95 Z" ' +
+      'fill="#1b1b1b" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>' +
+      "</svg>";
+    wrap.style.left = "960px";
+    wrap.style.top = "540px";
+    document.documentElement.appendChild(wrap);
     window.addEventListener(
       "mousemove",
       (e) => {
-        dot.style.left = e.clientX + "px";
-        dot.style.top = e.clientY + "px";
+        wrap.style.left = e.clientX + "px";
+        wrap.style.top = e.clientY + "px";
       },
       { passive: true, capture: true },
     );
-    // Subtle press feedback only (no ripple - the compositor draws the caramel ripple from clicks.json).
-    window.addEventListener("mousedown", () => dot.classList.add("__press__"), { capture: true });
+    // Subtle press feedback only (no pulse - the compositor draws the status pulse from clicks.json).
+    window.addEventListener("mousedown", () => { wrap.style.transform = base + " scale(0.86)"; }, { capture: true });
     window.addEventListener(
       "mouseup",
-      () => setTimeout(() => dot.classList.remove("__press__"), 90),
+      () => setTimeout(() => { wrap.style.transform = base; }, 90),
       { capture: true },
     );
   };

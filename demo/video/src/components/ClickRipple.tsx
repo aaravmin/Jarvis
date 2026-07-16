@@ -1,73 +1,53 @@
 import React from "react";
 import { useCurrentFrame } from "remotion";
-import { theme } from "../theme";
 import { clamp01, easeOutCubic } from "../motion";
 
 /**
- * Our take on the Screen-Studio click highlight: NOT the default blue dot. A caramel-tinted set that
- * matches the app's rounded aesthetic - a soft filled press-flash, an expanding ROUNDED-SQUARE pulse
- * (echoing the app's rounded cards), and a trailing caramel ring. Rendered at a view-local point,
- * firing at scene-relative frame `start`.
+ * A single, clean click pulse - deliberately simple (no caramel, no double-ring / rounded-square /
+ * trailing-ring). One soft press dot + one expanding ring, both in the click's status color:
+ *   - GREEN  for a positive / completion action (a check-off),
+ *   - RED    where the context is urgent / overdue,
+ *   - NEUTRAL slate for a plain navigation click (smaller + softer via `strength`).
+ * Rendered at a view-local point, firing at scene-relative frame `start`.
  */
-export const ClickRipple: React.FC<{ x: number; y: number; start: number; tint?: string }> = ({
-  x,
-  y,
-  start,
-  tint = theme.caramel,
-}) => {
+export const ClickRipple: React.FC<{
+  x: number;
+  y: number;
+  start: number;
+  tint: string;
+  strength?: number; // 1 = full (check); < 1 shrinks + softens (nav)
+}> = ({ x, y, start, tint, strength = 1 }) => {
   const frame = useCurrentFrame();
   const t = frame - start;
-  const LEN = 24;
+  const LEN = 20;
   if (t < 0 || t > LEN) return null;
 
   const p = t / LEN; // 0..1
 
-  // Press flash: a soft filled disc that blooms and fades in the first third (the "press").
-  const flashP = clamp01(t / 8);
-  const flashSize = 16 + 26 * easeOutCubic(flashP);
-  const flashOpacity = (1 - flashP) * 0.5;
+  // Soft press dot: a small filled disc that blooms and fades in the first third (the "press").
+  const dotP = clamp01(t / 7);
+  const dotSize = (11 + 9 * easeOutCubic(dotP)) * strength;
+  const dotOpacity = (1 - dotP) * 0.3 * strength;
 
-  // Rounded-square pulse: expands from the press point, border only, fades over the full length.
-  const sq = easeOutCubic(p);
-  const sqSize = 26 + 116 * sq;
-  const sqOpacity = (1 - p) * 0.85;
-  const sqRadius = 10 + 16 * sq;
-
-  // Trailing ring (circle), slightly delayed - the "double" read.
-  const r2 = easeOutCubic(clamp01((t - 4) / (LEN - 4)));
-  const ringSize = 18 + 92 * r2;
-  const ringOpacity = t > 4 ? (1 - clamp01((t - 4) / (LEN - 4))) * 0.55 : 0;
+  // One expanding ring, fading over the full length.
+  const ring = easeOutCubic(p);
+  const ringSize = (18 + 62 * ring) * strength;
+  const ringOpacity = (1 - p) * 0.62 * strength;
 
   return (
     <div style={{ position: "absolute", left: x, top: y, width: 0, height: 0, pointerEvents: "none" }}>
-      {/* press flash */}
       <div
         style={{
           position: "absolute",
-          left: -flashSize / 2,
-          top: -flashSize / 2,
-          width: flashSize,
-          height: flashSize,
+          left: -dotSize / 2,
+          top: -dotSize / 2,
+          width: dotSize,
+          height: dotSize,
           borderRadius: 999,
           background: tint,
-          opacity: flashOpacity,
-          filter: "blur(0.5px)",
+          opacity: dotOpacity,
         }}
       />
-      {/* rounded-square pulse */}
-      <div
-        style={{
-          position: "absolute",
-          left: -sqSize / 2,
-          top: -sqSize / 2,
-          width: sqSize,
-          height: sqSize,
-          borderRadius: sqRadius,
-          border: `3px solid ${tint}`,
-          opacity: sqOpacity,
-        }}
-      />
-      {/* trailing ring */}
       <div
         style={{
           position: "absolute",
@@ -76,7 +56,7 @@ export const ClickRipple: React.FC<{ x: number; y: number; start: number; tint?:
           width: ringSize,
           height: ringSize,
           borderRadius: 999,
-          border: `2px solid ${theme.caramelSoft}`,
+          border: `2px solid ${tint}`,
           opacity: ringOpacity,
         }}
       />

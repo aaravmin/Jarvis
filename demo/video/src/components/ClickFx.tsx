@@ -6,18 +6,35 @@ import { DoneStamp } from "./DoneStamp";
 import { clamp01, navPush, pulse, smoother, VIEW_W, VIEW_H } from "../motion";
 
 export type FxKind = "nav" | "check" | "tap";
+/** Optional explicit status color; otherwise derived from kind (check -> green, else neutral). */
+export type FxTone = "green" | "red" | "neutral";
 export type FxClick = {
   frame: number; // scene-relative frame of the click
   x: number; // view-local px (inside the browser frame)
   y: number;
   kind: FxKind;
+  tone?: FxTone;
   stampDelay?: number; // check only: frames after the click the green "done" stamp lands
 };
 
-const K_CHECK = 1.27;
-const K_TAP = 1.18;
-const CHECK_ENV = { pre: 3, rise: 12, hold: 54, fall: 20 };
-const TAP_ENV = { pre: 2, rise: 10, hold: 26, fall: 16 };
+// Gentle zoom-on-click (dialed back so a check-off no longer crops the left nav rail): a small push
+// on the check, a barely-there push on a tap, and a soft recoil on a nav click.
+const K_CHECK = 1.06;
+const K_TAP = 1.05;
+const CHECK_ENV = { pre: 3, rise: 14, hold: 52, fall: 24 };
+const TAP_ENV = { pre: 2, rise: 12, hold: 26, fall: 18 };
+
+function toneOf(c: FxClick): FxTone {
+  return c.tone ?? (c.kind === "check" ? "green" : "neutral");
+}
+function toneColor(c: FxClick): string {
+  const t = toneOf(c);
+  return t === "green" ? theme.success : t === "red" ? theme.danger : theme.ink;
+}
+/** Neutral (nav) pulses are smaller + softer than a green completion pulse. */
+function toneStrength(c: FxClick): number {
+  return toneOf(c) === "neutral" ? 0.62 : 1;
+}
 
 /** Scale contribution of a single click at the given frame (1 = no zoom). */
 function clickScale(frame: number, c: FxClick): number {
@@ -26,15 +43,16 @@ function clickScale(frame: number, c: FxClick): number {
   return 1 + (K_TAP - 1) * pulse(frame, c.frame, TAP_ENV);
 }
 
-/** A caramel light band sweeping across the screen on a nav click - punctuates the real page switch. */
+/** A soft, neutral light band that gently glides across on a nav click - a subtle punctuation of the
+ * real page switch, not the old flashy caramel sweep. */
 function NavSweep({ c }: { c: FxClick }) {
   const frame = useCurrentFrame();
   const t = frame - c.frame;
-  const LEN = 18;
+  const LEN = 20;
   if (t < 0 || t > LEN) return null;
   const p = t / LEN;
-  const tx = -0.45 * VIEW_W + 1.9 * VIEW_W * smoother(p); // sweep left -> right
-  const opacity = (t < 4 ? t / 4 : 1 - clamp01((t - 4) / (LEN - 4))) * 0.9;
+  const tx = -0.4 * VIEW_W + 1.8 * VIEW_W * smoother(p); // glide left -> right
+  const opacity = (t < 5 ? t / 5 : 1 - clamp01((t - 5) / (LEN - 5))) * 0.4;
   return (
     <AbsoluteFill style={{ overflow: "hidden", pointerEvents: "none" }}>
       <div
@@ -43,9 +61,9 @@ function NavSweep({ c }: { c: FxClick }) {
           top: 0,
           bottom: 0,
           left: 0,
-          width: VIEW_W * 0.5,
-          transform: `translateX(${tx}px) skewX(-12deg)`,
-          background: `linear-gradient(90deg, transparent, ${theme.caramel}2e 45%, ${theme.caramelSoft}22 55%, transparent)`,
+          width: VIEW_W * 0.42,
+          transform: `translateX(${tx}px) skewX(-10deg)`,
+          background: "linear-gradient(90deg, transparent, rgba(148,163,184,0.16) 50%, transparent)",
           opacity,
         }}
       />
@@ -54,10 +72,10 @@ function NavSweep({ c }: { c: FxClick }) {
 }
 
 /**
- * Wraps the framed footage with the click-driven motion: a zoom that eases toward whichever click is
- * active (springy in, hold, ease back), a caramel ripple at every click, a green "done" stamp on
- * check-offs, and a caramel sweep punctuating each nav/page switch. When `clicks` is empty it applies a
- * calm idle drift so still surfaces still breathe.
+ * Wraps the framed footage with the click-driven motion: a gentle zoom that eases toward whichever
+ * click is active (springy in, hold, ease back), ONE clean status-colored pulse at every click, a
+ * green "done" stamp on check-offs, and a subtle neutral sweep punctuating each page switch. When
+ * `clicks` is empty it applies a calm idle drift so still surfaces still breathe.
  */
 export const ClickFx: React.FC<{
   clicks: FxClick[];
@@ -83,7 +101,7 @@ export const ClickFx: React.FC<{
     }
   }
   if (strength < 0.0008 && clicks.length === 0 && idle) {
-    scale = 1 + 0.016 * smoother(clamp01(frame / sceneDuration));
+    scale = 1 + 0.012 * smoother(clamp01(frame / sceneDuration));
   }
 
   const checks = clicks.filter((c) => c.kind === "check");
@@ -101,7 +119,7 @@ export const ClickFx: React.FC<{
       >
         {children}
         {clicks.map((c, i) => (
-          <ClickRipple key={`r${i}`} x={c.x} y={c.y} start={c.frame} />
+          <ClickRipple key={`r${i}`} x={c.x} y={c.y} start={c.frame} tint={toneColor(c)} strength={toneStrength(c)} />
         ))}
         {checks.map((c, i) => (
           <DoneStamp

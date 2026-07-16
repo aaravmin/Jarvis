@@ -59,9 +59,9 @@ export function pulse(
 export function navPush(f: number, c: number): number {
   const pts: Array<[number, number]> = [
     [c - 1, 1],
-    [c + 5, 0.964],
-    [c + 13, 1.014],
-    [c + 22, 1.0],
+    [c + 6, 0.98],
+    [c + 15, 1.006],
+    [c + 24, 1.0],
   ];
   if (f <= pts[0][0]) return 1;
   if (f >= pts[pts.length - 1][0]) return 1;
