@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/format";
+import { PILL } from "@/lib/ui";
 
 export type Task = {
   id: string;
@@ -147,9 +148,7 @@ export function TaskItem({ task }: { task: Task }) {
       <TableCell className="max-w-0 w-full whitespace-normal">
         <div className="flex items-center gap-1.5">
           {task.item_type && task.item_type !== "task" && (
-            <span className="inline-flex shrink-0 items-center rounded border border-border px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              {TYPE_LABEL[task.item_type]}
-            </span>
+            <span className={`${PILL} shrink-0`}>{TYPE_LABEL[task.item_type]}</span>
           )}
           <p className={`truncate text-sm ${done ? "text-muted-foreground line-through" : "text-foreground"}`}>{task.title}</p>
         </div>

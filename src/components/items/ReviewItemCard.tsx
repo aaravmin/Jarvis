@@ -7,6 +7,7 @@ import { Card } from "@/components/Card";
 import { GoalChip } from "@/components/GoalChip";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
+import { PILL } from "@/lib/ui";
 import type { ReviewItem } from "@/lib/items/review";
 
 const TYPE_LABEL: Record<ReviewItem["itemType"], string> = {
@@ -55,10 +56,11 @@ export function ReviewItemCard({ item }: { item: ReviewItem }) {
       title={item.title}
       source={item.source}
       reasoning={item.reasoning ?? undefined}
-      kind={
-        <span className="inline-flex items-center rounded border border-border px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          {TYPE_LABEL[item.itemType]}
-        </span>
+      kind={<span className={PILL}>{TYPE_LABEL[item.itemType]}</span>}
+      tags={
+        item.goalTags.length > 0
+          ? item.goalTags.map((g) => <GoalChip key={g.id} title={g.title} />)
+          : undefined
       }
       meta={item.dueAt ? <span className="text-muted-foreground">{formatDate(item.dueAt)}</span> : undefined}
       actions={
@@ -80,14 +82,6 @@ export function ReviewItemCard({ item }: { item: ReviewItem }) {
           </Button>
         </>
       }
-    >
-      {item.goalTags.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1">
-          {item.goalTags.map((g) => (
-            <GoalChip key={g.id} title={g.title} />
-          ))}
-        </div>
-      )}
-    </Card>
+    />
   );
 }

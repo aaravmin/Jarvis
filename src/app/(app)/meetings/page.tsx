@@ -33,7 +33,7 @@ export default async function MeetingsPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-4">
+    <div className="space-y-4">
       <header>
         <h1 className="text-base font-semibold tracking-tight text-foreground">Meetings</h1>
       </header>

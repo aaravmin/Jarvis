@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Sparkles, Loader2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PILL } from "@/lib/ui";
 import type { GoalDetail } from "@/lib/goals/load";
 
-const TYPE_TAG =
-  "inline-flex items-center rounded border border-border px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground";
+// Shared muted section label, so Goals reads like the same product as Today / Email / Meetings.
+const SECTION_LABEL = "text-[11px] font-semibold uppercase tracking-wide text-muted-foreground";
 
 export function GoalDetailView({ detail }: { detail: GoalDetail }) {
   const router = useRouter();
@@ -40,7 +41,7 @@ export function GoalDetailView({ detail }: { detail: GoalDetail }) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-4">
+    <div className="space-y-4">
       <div>
         <Link href="/goals" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-3.5" /> Goals
@@ -52,7 +53,7 @@ export function GoalDetailView({ detail }: { detail: GoalDetail }) {
       {/* Intersections, entities serving this goal AND others */}
       {intersections.length > 0 && (
         <section className="space-y-1.5">
-          <h2 className="text-sm font-semibold text-foreground">Intersections</h2>
+          <h2 className={SECTION_LABEL}>Intersections</h2>
           <div className="divide-y overflow-hidden rounded-md border bg-card">
             {intersections.map((x) => (
               <IntersectionCard key={`${x.entityType}:${x.entityId}`} x={x} onChanged={() => router.refresh()} />
@@ -64,7 +65,7 @@ export function GoalDetailView({ detail }: { detail: GoalDetail }) {
       {/* Suggested links (L0) */}
       {suggested.length > 0 && (
         <section className="space-y-1.5">
-          <h2 className="text-sm font-semibold text-foreground">Suggested links</h2>
+          <h2 className={SECTION_LABEL}>Suggested links</h2>
           <div className="divide-y overflow-hidden rounded-md border bg-card">
             {suggested.map((e) => (
               <div key={e.linkId} className="flex items-center justify-between gap-3 px-3 py-2">
@@ -93,7 +94,7 @@ export function GoalDetailView({ detail }: { detail: GoalDetail }) {
 
       {/* Linked entities */}
       <section className="space-y-1.5">
-        <h2 className="text-sm font-semibold text-foreground">Linked ({accepted.length})</h2>
+        <h2 className={SECTION_LABEL}>Linked ({accepted.length})</h2>
         {accepted.length === 0 ? (
           <p className="rounded-md border border-dashed bg-card px-3 py-4 text-center text-xs text-muted-foreground">
             Nothing linked yet.
@@ -103,7 +104,7 @@ export function GoalDetailView({ detail }: { detail: GoalDetail }) {
             {accepted.map((e) => (
               <div key={e.linkId} className="flex items-center justify-between gap-3 px-3 py-2">
                 <div className="min-w-0">
-                  <span className={TYPE_TAG}>{e.entityType}</span>{" "}
+                  <span className={PILL}>{e.entityType}</span>{" "}
                   {e.href ? (
                     <Link href={e.href} className="text-sm text-foreground hover:text-primary">{e.label}</Link>
                   ) : (
@@ -129,7 +130,7 @@ export function GoalDetailView({ detail }: { detail: GoalDetail }) {
       {/* Connections to other goals */}
       <section className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">Connections</h2>
+          <h2 className={SECTION_LABEL}>Connections</h2>
           <Button variant="outline" size="sm" onClick={() => void generateConnections()} disabled={connBusy}>
             {connBusy ? <Loader2 className="animate-spin" /> : <Sparkles />}
             Find connections

@@ -6,7 +6,6 @@ import {
   CheckSquare,
   Target,
   Plug,
-  Rocket,
   type LucideIcon,
 } from "lucide-react";
 
@@ -73,13 +72,6 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Plug,
     description: "Connect Google and Notion so Otto can read your email, calendar, and notes.",
     deliveredBy: "Connectors",
-  },
-  {
-    label: "Set up",
-    href: "/onboard",
-    icon: Rocket,
-    description: "Tell Otto who you are, set goals, and connect your accounts.",
-    deliveredBy: "Onboarding",
   },
 ];
 

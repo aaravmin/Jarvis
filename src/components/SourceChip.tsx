@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import type { CardSource, SourceType } from "@/lib/types";
 import { formatWhen, sourceLabel } from "@/lib/format";
+import { PILL } from "@/lib/ui";
+import { cn } from "@/lib/utils";
 
 const SOURCE_ICONS: Record<SourceType, LucideIcon> = {
   email: Mail,
@@ -57,11 +59,11 @@ export function SourceChip({ source }: { source: CardSource }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex max-w-full items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        className={cn(PILL, "max-w-full transition-colors hover:bg-input hover:text-foreground")}
         title="See where this came from"
       >
         <Icon className="h-3 w-3 shrink-0 text-muted-foreground" strokeWidth={2} />
-        <span className="truncate">
+        <span className="min-w-0 truncate">
           {sourceLabel(source.type)}
           {source.title ? ` · ${source.title}` : ""}
         </span>

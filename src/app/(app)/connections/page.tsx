@@ -22,18 +22,16 @@ export default async function ConnectionsPage({
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
-      <ConnectionsPanel
-        connection={connection}
-        status={sp.google}
-        notion={{
-          connected: !!notion,
-          workspaceName: notion?.workspaceName,
-          canConnect: notionOAuthConfigured(),
-          envFallback: !notion && !!process.env.NOTION_API_KEY,
-          status: sp.notion,
-        }}
-      />
-    </div>
+    <ConnectionsPanel
+      connection={connection}
+      status={sp.google}
+      notion={{
+        connected: !!notion,
+        workspaceName: notion?.workspaceName,
+        canConnect: notionOAuthConfigured(),
+        envFallback: !notion && !!process.env.NOTION_API_KEY,
+        status: sp.notion,
+      }}
+    />
   );
 }

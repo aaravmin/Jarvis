@@ -3,14 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { RefreshCw, Check, Loader2, ArrowUpRight } from "lucide-react";
+import { Check, Loader2, ArrowUpRight } from "lucide-react";
 import { Card } from "@/components/Card";
 import { GoalChip } from "@/components/GoalChip";
 import { SourceChip } from "@/components/SourceChip";
 import { Button } from "@/components/ui/button";
 import { SyncAllButton } from "@/components/today/SyncAllButton";
-import { BackfillButton } from "@/components/items/BackfillButton";
 import { ReviewItemCard } from "@/components/items/ReviewItemCard";
+import { PILL } from "@/lib/ui";
+import { cn } from "@/lib/utils";
 import { syncAllAccounts } from "@/components/today/sync-all";
 import { formatWhen, formatEventTime } from "@/lib/format";
 import { BUCKET_META, BUCKET_ORDER, scoreItem } from "@/lib/priority/score";
@@ -119,7 +120,6 @@ export function TodayView({
   const [feed, setFeed] = useState(initialFeed);
   const [pending, setPending] = useState<Set<string>>(new Set());
   const [actionError, setActionError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
   const [autoSyncing, setAutoSyncing] = useState(false);
   // Rendered on the client only (avoids an SSR/CSR hydration mismatch on the relative time).
   const [syncedLabel, setSyncedLabel] = useState<string>(SYNCED_SUFFIX);
@@ -144,14 +144,6 @@ export function TodayView({
       router.refresh();
     });
   }, [newestSourceAt, notionEnabled, router]);
-
-  const refresh = useCallback(() => {
-    setRefreshing(true);
-    router.refresh();
-    // router.refresh() re-runs the server component; the page remounts us with a fresh key once the
-    // new feed lands, so this just clears the spinner after a moment for feedback.
-    window.setTimeout(() => setRefreshing(false), 600);
-  }, [router]);
 
   const toggle = useCallback(
     async (entry: AttentionEntry) => {
@@ -209,18 +201,11 @@ export function TodayView({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <header className="flex items-end justify-between gap-4">
         <h1 className="text-base font-semibold tracking-tight text-foreground">Today</h1>
         <div className="flex flex-col items-end gap-1">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={refresh}>
-              <RefreshCw className={refreshing ? "animate-spin" : ""} />
-              Refresh
-            </Button>
-            <BackfillButton />
-            <SyncAllButton notionEnabled={notionEnabled} />
-          </div>
+          <SyncAllButton notionEnabled={notionEnabled} />
           <p className="text-[11px] text-muted-foreground">{autoSyncing ? "Syncing..." : syncedLabel}</p>
         </div>
       </header>
@@ -297,15 +282,8 @@ export function TodayView({
 
 function KindTag({ kind }: { kind: AttentionEntry["kind"] }) {
   const meta = KIND_META[kind];
-  const cls =
-    meta.pill === "reply"
-      ? "border-destructive/30 text-destructive"
-      : "border-border text-muted-foreground";
-  return (
-    <span className={`inline-flex items-center rounded border px-1 py-0.5 text-[10px] font-medium uppercase tracking-wide ${cls}`}>
-      {meta.label}
-    </span>
-  );
+  // The one standard pill everywhere; only "Needs reply" tints its text red (a reply is owed).
+  return <span className={cn(PILL, meta.pill === "reply" && "text-destructive")}>{meta.label}</span>;
 }
 
 function CompleteCheckbox({ checked, busy, onClick }: { checked: boolean; busy: boolean; onClick: () => void }) {
@@ -327,7 +305,11 @@ function CompleteCheckbox({ checked, busy, onClick }: { checked: boolean; busy: 
 function EntryRow({ entry, busy, onToggle }: { entry: AttentionEntry; busy: boolean; onToggle: () => void }) {
   const due = dueLabel(entry);
   const isReply = entry.origin === "reply";
-  const hasBody = isReply || entry.goalTags.length > 0 || entry.meetingTopics.length > 0;
+  const hasBody = (isReply && Boolean(entry.source.quote)) || entry.meetingTopics.length > 0;
+  const tags =
+    entry.goalTags.length > 0
+      ? entry.goalTags.map((g) => <GoalChip key={g.goalId} title={g.title} />)
+      : undefined;
   return (
     <li className="flex items-start gap-2.5 px-3 py-2 transition-colors hover:bg-secondary/40">
       {entry.origin === "item" ? (
@@ -342,6 +324,7 @@ function EntryRow({ entry, busy, onToggle }: { entry: AttentionEntry; busy: bool
         source={entry.source}
         reasoning={entry.reasoning ?? undefined}
         kind={<KindTag kind={entry.kind} />}
+        tags={tags}
         meta={due ? <span className={TONE_CLASS[due.tone]}>{due.text}</span> : undefined}
         actions={entry.threadLink ? <ReplyAction entry={entry} /> : undefined}
       >
@@ -349,13 +332,6 @@ function EntryRow({ entry, busy, onToggle }: { entry: AttentionEntry; busy: bool
           <div className="space-y-1">
             {isReply && entry.source.quote && (
               <p className="line-clamp-2 text-xs italic leading-snug text-muted-foreground">&ldquo;{entry.source.quote}&rdquo;</p>
-            )}
-            {entry.goalTags.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1">
-                {entry.goalTags.map((g) => (
-                  <GoalChip key={g.goalId} title={g.title} />
-                ))}
-              </div>
             )}
             {entry.meetingTopics.length > 0 && (
               <p className="text-xs leading-snug text-muted-foreground">

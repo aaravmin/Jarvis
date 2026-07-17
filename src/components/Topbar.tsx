@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { Search } from "lucide-react";
 import { NavDrawer } from "@/components/NavDrawer";
 import { GoalFilter } from "@/components/goals/GoalFilter";
+import { CONTENT_COL } from "@/lib/ui";
+import { cn } from "@/lib/utils";
 
 /**
  * A minimal top control strip. Below md the hamburger <NavDrawer> plus a search affordance (opens the
@@ -16,7 +18,7 @@ export function Topbar({ userEmail }: { userEmail?: string }) {
   const pathname = usePathname();
   const showGoalFilter = pathname === "/tasks";
   return (
-    <div className="flex items-center gap-2 px-5 pt-4 md:px-6 md:pt-5">
+    <div className={cn(CONTENT_COL, "flex items-center gap-2 px-5 pt-4 md:px-6 md:pt-5")}>
       <span className="md:hidden">
         <NavDrawer userEmail={userEmail} />
       </span>

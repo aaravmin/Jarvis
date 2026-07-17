@@ -43,7 +43,7 @@ export function GoalsManager({ initialGoals }: { initialGoals: GoalSummary[] }) 
   const refresh = () => router.refresh();
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-4">
+    <div className="space-y-4">
       <h1 className="text-base font-semibold tracking-tight text-foreground">Goals</h1>
 
       <AddGoal onChanged={refresh} />

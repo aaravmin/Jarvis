@@ -25,7 +25,7 @@ export default async function CalendarPage() {
   const events = (data ?? []) as EventRow[];
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-4">
+    <div className="space-y-4">
       <header className="flex items-end justify-between gap-3">
         <div>
           <h1 className="text-base font-semibold tracking-tight text-foreground">Calendar</h1>

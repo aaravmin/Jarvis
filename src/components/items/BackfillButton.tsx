@@ -6,7 +6,8 @@ import { Loader2, Sparkles } from "lucide-react";
 
 /**
  * Mine already-ingested emails/meetings for action items on demand. Sync only extracts NEW mail, so
- * this is how the user surfaces items from messages that arrived before the extractor ran.
+ * this is how the user surfaces items from messages that arrived before the extractor ran. This is a
+ * one-time / power action, so it lives quietly on Connections rather than on the Today header.
  */
 export function BackfillButton() {
   const router = useRouter();
@@ -49,17 +50,17 @@ export function BackfillButton() {
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="flex flex-col items-start gap-1">
       <button
         type="button"
         onClick={() => void run()}
         disabled={busy}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-surface disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
       >
-        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-accent" />}
-        {busy ? "Scanning…" : "Scan past emails"}
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+        {busy ? "Scanning older messages…" : "Scan past emails for action items"}
       </button>
-      {msg && <p className="max-w-xs text-right text-xs text-muted">{msg}</p>}
+      {msg && <p className="max-w-md text-xs text-muted-foreground">{msg}</p>}
     </div>
   );
 }

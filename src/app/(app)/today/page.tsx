@@ -53,7 +53,7 @@ export default async function TodayPage() {
 
   if (!feed) {
     return (
-      <div className="mx-auto w-full max-w-6xl space-y-3">
+      <div className="space-y-3">
         <p className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
           {loadError ?? "Could not build your day."}
         </p>
@@ -65,14 +65,12 @@ export default async function TodayPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
-      <TodayView
-        key={feed.generatedAt}
-        initialFeed={feed}
-        notionEnabled={notionOn}
-        newestSourceAt={newestSourceAt}
-        reviewItems={reviewItems}
-      />
-    </div>
+    <TodayView
+      key={feed.generatedAt}
+      initialFeed={feed}
+      notionEnabled={notionOn}
+      newestSourceAt={newestSourceAt}
+      reviewItems={reviewItems}
+    />
   );
 }

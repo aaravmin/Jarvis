@@ -1,9 +1,13 @@
-/** A small neutral pill naming a goal an item serves. Shared by the Today feed and the Review queue.
- *  No icon: goal linkage is not a status, so it stays quiet ink on a faint fill. */
+import { PILL } from "@/lib/ui";
+import { cn } from "@/lib/utils";
+
+/** A muted pill naming a goal an item serves. Shares the one standard PILL style; a tiny target dot
+ *  marks it as a goal without introducing a loud color. Shared by the Today feed and the Review queue. */
 export function GoalChip({ title }: { title: string }) {
   return (
-    <span className="inline-flex max-w-[14rem] items-center truncate rounded border border-border bg-secondary px-1.5 py-0.5 text-[11px] font-medium text-muted-strong">
-      {title}
+    <span className={cn(PILL, "max-w-[12rem]")}>
+      <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/50" aria-hidden />
+      <span className="min-w-0 truncate">{title}</span>
     </span>
   );
 }

@@ -6,6 +6,7 @@ import { Topbar } from "@/components/Topbar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { CONTENT_COL } from "@/lib/ui";
 
 /**
  * The dashboard shell. Desktop (md+) shows a tight Notion-style left rail so the daily Today <-> Review
@@ -36,7 +37,9 @@ export default async function AppLayout({
           <DesktopRail userEmail={user.email ?? undefined} />
           <div className="flex min-w-0 flex-1 flex-col">
             <Topbar userEmail={user.email ?? undefined} />
-            <main className="flex-1 px-5 pb-12 pt-4 md:px-6">{children}</main>
+            <main className="flex-1 px-5 pb-12 pt-4 md:px-6">
+              <div className={CONTENT_COL}>{children}</div>
+            </main>
           </div>
         </div>
       </AppBackground>

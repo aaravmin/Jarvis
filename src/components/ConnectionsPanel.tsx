@@ -4,6 +4,7 @@ import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GoogleConnection } from "@/lib/google/store";
 import { NotionCard } from "@/components/connections/NotionCard";
+import { BackfillButton } from "@/components/items/BackfillButton";
 
 function StatusBanner({ status }: { status?: string }) {
   if (!status) return null;
@@ -91,6 +92,15 @@ export function ConnectionsPanel({
           envFallback={notion.envFallback}
           status={notion.status}
         />
+      </div>
+
+      {/* Quiet home for the one-time backfill. New mail is extracted on sync automatically; this mines
+          messages that arrived before Otto was connected. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-card px-3 py-2.5">
+        <p className="min-w-0 text-xs text-muted-foreground">
+          Otto extracts tasks from new mail automatically. Scan older messages if you connected after they arrived.
+        </p>
+        <BackfillButton />
       </div>
     </div>
   );
