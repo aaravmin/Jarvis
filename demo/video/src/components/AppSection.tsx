@@ -5,7 +5,9 @@ import { Footage } from "./Footage";
 import { LowerThird } from "./LowerThird";
 import { GreenBurst } from "./GreenBurst";
 import { ClickFx, type FxClick } from "./ClickFx";
+import { ExampleTag } from "./ExampleTag";
 import { FRAME } from "../layout";
+import type { Focus } from "../motion";
 
 export type Caption = {
   text: string;
@@ -23,6 +25,7 @@ type Props = {
     label: string; // stand-in label
     page: string; // active nav for the stand-in
     variant?: string; // stand-in content variant
+    still?: string; // a pre-extracted still (public/stills/<file>) instead of video, for focus scenes
     trimStart?: number; // frames into the usable clip to begin
     playbackRate?: number; // calm 0.85-1.6; NOT the old frantic 2.4x
   };
@@ -31,8 +34,10 @@ type Props = {
   captions?: Caption[];
   /** optional green celebration on a real check-off going done. */
   greenBurst?: { x: number; y: number; at: number };
-  /** real clicks in the footage -> caramel ripple + zoom-on-click + page-switch sweep, in sync. */
+  /** real clicks in the footage -> status pulse + zoom-on-click + page-switch sweep, in sync. */
   clicks?: FxClick[];
+  /** focus + context zoom targets scripted to caption beats (zoom into an element, hold, zoom out). */
+  focuses?: Focus[];
   /** dynamic URL pill that flips with real in-footage navigation (scene-relative frames). */
   urlSwitches?: Array<{ frame: number; url: string }>;
 };
@@ -49,6 +54,7 @@ export const AppSection: React.FC<Props> = ({
   captions = [],
   greenBurst,
   clicks = [],
+  focuses = [],
   urlSwitches,
 }) => {
   return (
@@ -57,16 +63,17 @@ export const AppSection: React.FC<Props> = ({
         <BrowserFrame
           url={url}
           sceneDuration={durationInFrames}
-          zoom={{ from: 1.0, to: 1.0 }} // BrowserFrame stays fixed; the ClickFx layer owns the zoom-on-click
+          zoom={{ from: 1.0, to: 1.0 }} // BrowserFrame stays fixed; the ClickFx layer owns the focus/click zoom
           pan={{ x: 0, y: 0 }}
           urlSwitches={urlSwitches}
         >
-          <ClickFx clicks={clicks} sceneDuration={durationInFrames} idle={clicks.length === 0}>
+          <ClickFx clicks={clicks} focuses={focuses} sceneDuration={durationInFrames} idle={clicks.length === 0}>
             <Footage
               id={footage.id}
               label={footage.label}
               page={footage.page}
               variant={footage.variant}
+              still={footage.still}
               showFrames={durationInFrames}
               trimStart={footage.trimStart ?? 0}
               playbackRate={footage.playbackRate ?? 1}
@@ -74,6 +81,9 @@ export const AppSection: React.FC<Props> = ({
           </ClickFx>
         </BrowserFrame>
       </div>
+
+      {/* Persistent "Example . Brown Bee Coffee" watermark - Otto is the tool, Brown Bee is the sample. */}
+      <ExampleTag durationInFrames={durationInFrames} />
 
       {captions.map((c, i) => (
         <Sequence key={i} from={c.from} durationInFrames={c.dur} name={`caption-${i}`}>

@@ -68,19 +68,25 @@ export const shadow = {
 
 export const fps = 30;
 
-// Motion v2 spine (frames @ 30fps). Scenes are sequenced with @remotion/transitions, so these are plain
-// durations (not absolute boundaries); each scene-to-scene transition overlaps TRANS frames. The HERO
-// scene's duration is derived from the real capture (see hero.ts) and is not listed here.
-//  intro     -> the Driftwood emblem assembles + the wordmark
-//  today     -> the red Overdue / Sam needs-reply attention beat (calm)
-//  suggested -> the Suggested approval gate at the end of Today (calm)
-//  hero      -> the continuous take: Today -> click Tasks -> check off (green) -> click Goals (motion)
-//  close     -> the plain "Otto" wordmark, text only
+// Story v2 spine (frames @ 30fps). The three TEXT cards + the four near-static FOCUS scenes are fixed
+// durations; only the LOOP scene (SC6b) derives its length from the real hero take (see windows.ts).
+// The focus scenes are driven by pre-extracted STILLS (crisp, no video-decode blank under slow-mo), so
+// they need no footage window - just a duration to hold the context -> zoom -> context beat.
+//  intro     (SC1)  -> the "Otto" wordmark + promise (the tool leads)
+//  example   (SC2)  -> "An example: Maya runs Brown Bee Coffee" + the scattered-sources problem
+//  goals     (SC3)  -> her goals + weekly goals (the lens), zoom into "Grow wholesale revenue"
+//  connect   (SC4)  -> reads it all, ties every task to a goal (zoom the "Land 10 new cafe accounts" chip)
+//  day       (SC5)  -> the day in priority order (zoom the red reply she owes)
+//  suggested (SC6a) -> it only suggests, you approve (zoom a suggestion's weekly-goal chip)
+//  close     (SC7)  -> the plain "Otto" wordmark + promise + "Example shown: Brown Bee Coffee" footnote
 export const DUR = {
   intro: 120, // 4.0s
-  today: 214, // 7.1s
-  suggested: 166, // 5.5s
-  close: 106, // 3.5s
+  example: 150, // 5.0s
+  goals: 184, // 6.1s
+  connect: 197, // 6.6s
+  day: 159, // 5.3s
+  suggested: 130, // 4.3s
+  close: 138, // 4.6s
 } as const;
 
 /** Frames each scene-to-scene transition overlaps (directional slide / fade). */

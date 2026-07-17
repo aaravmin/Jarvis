@@ -1,5 +1,5 @@
 import React from "react";
-import { OffthreadVideo, staticFile } from "remotion";
+import { Img, OffthreadVideo, staticFile } from "remotion";
 import { StandIn } from "./StandIn";
 import { FOOTAGE_AVAILABLE, getClip, clipStartFrom } from "../footage";
 import { fps } from "../theme";
@@ -15,6 +15,10 @@ type Props = {
   label: string; // stand-in scene label
   page: string; // url path / active nav
   variant?: string; // stand-in content variant
+  /** a STILL frame (public/stills/<file>) instead of video - for the near-static focus scenes, which
+   * are examined with a focus+context zoom and don't need playback. Avoids the OffthreadVideo blank-tail
+   * artifact under heavy slow-mo entirely, and is crisper. */
+  still?: string;
   /** frames into the usable clip to begin (relative to usable start). */
   trimStart?: number;
   /** how many frames of the clip this scene will show. */
@@ -23,18 +27,27 @@ type Props = {
   playbackRate?: number;
 };
 
+const FILL: React.CSSProperties = { width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" };
+
 /**
- * Renders real capture footage when available, else the app-shell stand-in.
+ * Renders a still frame (focus scenes), real capture video, or the app-shell stand-in.
  */
 export const Footage: React.FC<Props> = ({
   id,
   label,
   page,
   variant,
+  still,
   trimStart = 0,
   showFrames,
   playbackRate = 1,
 }) => {
+  // A pre-extracted still, shown exactly like the video (object-fit cover, top-aligned) so focus
+  // coordinates measured against the footage stay valid.
+  if (still) {
+    return <Img src={staticFile(`stills/${still}`)} style={FILL} />;
+  }
+
   const clip = getClip(id);
 
   if (!FOOTAGE_AVAILABLE || !clip) {
@@ -57,7 +70,7 @@ export const Footage: React.FC<Props> = ({
       startFrom={startFrom}
       endAt={endAt}
       playbackRate={playbackRate}
-      style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }}
+      style={FILL}
       transparent={false}
     />
   );

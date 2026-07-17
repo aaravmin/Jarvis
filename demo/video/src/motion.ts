@@ -53,6 +53,33 @@ export function pulse(
 }
 
 /**
+ * A FOCUS + CONTEXT zoom target. Unlike the click-driven zoom, this is scripted to a caption beat: the
+ * framed footage eases from the full dashboard (scale 1 = context) INTO a specific element (scale > 1,
+ * origin x/y), HOLDS while the caption explains it, then eases back OUT to the whole surface so the
+ * viewer re-orients where it lives. Coordinates are VIEW-local px (inside the browser frame); build them
+ * from page-space with `pageToView`. All frames are scene-relative.
+ */
+export type Focus = {
+  inStart: number; // frame the zoom-in begins (context held before this)
+  inEnd: number; // frame it is fully zoomed by (hold begins)
+  outStart: number; // frame the zoom-out begins (hold ends)
+  outEnd: number; // frame it is back to full context
+  x: number; // view-local origin px
+  y: number;
+  scale: number; // peak zoom (e.g. 1.5-2.1)
+};
+
+/** Current scale of a focus target at frame `f` (1 = full context). Smootherstep in and out so the
+ * push is gentle and purposeful, never flashy. */
+export function focusScale(f: number, ph: Focus): number {
+  if (f <= ph.inStart) return 1;
+  if (f < ph.inEnd) return 1 + (ph.scale - 1) * smoother((f - ph.inStart) / (ph.inEnd - ph.inStart));
+  if (f <= ph.outStart) return ph.scale;
+  if (f < ph.outEnd) return ph.scale + (1 - ph.scale) * smoother((f - ph.outStart) / (ph.outEnd - ph.outStart));
+  return 1;
+}
+
+/**
  * The nav-click "push": a quick scale recoil around the clicked nav item - dip in, overshoot, settle -
  * that punctuates the real page switch happening in the footage at the same instant.
  */

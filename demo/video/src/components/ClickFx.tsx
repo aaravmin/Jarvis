@@ -3,7 +3,7 @@ import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { theme } from "../theme";
 import { ClickRipple } from "./ClickRipple";
 import { DoneStamp } from "./DoneStamp";
-import { clamp01, navPush, pulse, smoother, VIEW_W, VIEW_H } from "../motion";
+import { clamp01, focusScale, navPush, pulse, smoother, VIEW_W, VIEW_H, type Focus } from "../motion";
 
 export type FxKind = "nav" | "check" | "tap";
 /** Optional explicit status color; otherwise derived from kind (check -> green, else neutral). */
@@ -72,24 +72,39 @@ function NavSweep({ c }: { c: FxClick }) {
 }
 
 /**
- * Wraps the framed footage with the click-driven motion: a gentle zoom that eases toward whichever
- * click is active (springy in, hold, ease back), ONE clean status-colored pulse at every click, a
- * green "done" stamp on check-offs, and a subtle neutral sweep punctuating each page switch. When
- * `clicks` is empty it applies a calm idle drift so still surfaces still breathe.
+ * Wraps the framed footage with two kinds of motion:
+ *  - FOCUS + CONTEXT (scripted to captions): eases from the full dashboard into a specific element,
+ *    holds, then eases back out (the `focuses` prop). This is the spine of the app scenes.
+ *  - CLICK-DRIVEN (synced to real clicks): a gentle zoom toward the active click, ONE clean
+ *    status-colored pulse at every click, a green "done" stamp on check-offs, and a subtle neutral
+ *    sweep punctuating each page switch (the `clicks` prop, used by the loop scene).
+ * A scene uses one or the other; whichever deviates from scale 1 more at a given frame wins the zoom.
+ * When neither is active it applies a calm idle drift so still surfaces still breathe.
  */
 export const ClickFx: React.FC<{
   clicks: FxClick[];
+  focuses?: Focus[];
   sceneDuration: number;
   idle?: boolean;
   children: React.ReactNode;
-}> = ({ clicks, sceneDuration, idle = true, children }) => {
+}> = ({ clicks, focuses = [], sceneDuration, idle = true, children }) => {
   const frame = useCurrentFrame();
 
-  // Pick the strongest active click's zoom + origin; fall back to a slow center idle drift.
+  // Pick the strongest active zoom (focus target or click) + its origin; fall back to a slow idle drift.
   let scale = 1;
   let ox = VIEW_W / 2;
   let oy = VIEW_H / 2;
   let strength = 0;
+  for (const f of focuses) {
+    const s = focusScale(frame, f);
+    const st = Math.abs(s - 1);
+    if (st > strength) {
+      strength = st;
+      scale = s;
+      ox = f.x;
+      oy = f.y;
+    }
+  }
   for (const c of clicks) {
     const s = clickScale(frame, c);
     const st = Math.abs(s - 1);
@@ -100,7 +115,7 @@ export const ClickFx: React.FC<{
       oy = c.y;
     }
   }
-  if (strength < 0.0008 && clicks.length === 0 && idle) {
+  if (strength < 0.0008 && clicks.length === 0 && focuses.length === 0 && idle) {
     scale = 1 + 0.012 * smoother(clamp01(frame / sceneDuration));
   }
 

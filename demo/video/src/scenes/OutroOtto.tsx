@@ -4,8 +4,8 @@ import { theme, font } from "../theme";
 import { Wordmark } from "../components/Wordmark";
 
 /**
- * The close. Just the word "Otto" (text, no logo, no graphic) with a quiet one-line descriptor,
- * settling to white. No twin dots, no attention tagline - a plain, calm sign-off.
+ * The close (SC7). Just the word "Otto" (text, no logo, no graphic) with the one-line promise it opened
+ * on, then a small footnote making clear the whole tour was a sample. Settles to white. Text only.
  */
 export const OutroOtto: React.FC<{ durationInFrames: number }> = ({ durationInFrames }) => {
   const frame = useCurrentFrame();
@@ -13,6 +13,8 @@ export const OutroOtto: React.FC<{ durationInFrames: number }> = ({ durationInFr
 
   const sub = spring({ frame: frame - 30, fps, config: { damping: 200, mass: 0.7, stiffness: 140 } });
   const subY = interpolate(sub, [0, 1], [14, 0]);
+
+  const foot = interpolate(frame, [46, 62], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
   // fade to white at the very end
   const white = interpolate(frame, [durationInFrames - 34, durationInFrames - 6], [0, 1], {
@@ -39,7 +41,21 @@ export const OutroOtto: React.FC<{ durationInFrames: number }> = ({ durationInFr
               color: theme.muted,
             }}
           >
-            A goal-grounded attention engine
+            Every commitment, tied to what matters.
+          </div>
+
+          <div
+            style={{
+              marginTop: 40,
+              opacity: foot * 0.9,
+              fontFamily: font.sans,
+              fontSize: 15,
+              fontWeight: 500,
+              letterSpacing: 0.6,
+              color: theme.muted,
+            }}
+          >
+            Example shown: Brown Bee Coffee
           </div>
         </div>
       </AbsoluteFill>
