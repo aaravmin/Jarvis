@@ -13,7 +13,8 @@ import { getClicks } from "./clicks";
 import { pageToView } from "./motion";
 import type { FxClick } from "./components/ClickFx";
 
-const STRIKE_SEC = 1.14; // footage time from a check click to the strike-through / green landing
+const STRIKE_SEC = 2.0; // footage time from a check click to the strike-through / done landing (measured
+// on the clean-dashboard hero recapture: click ~7.87s, the row strikes through ~9.9s)
 
 function kindOf(label: string): FxClick["kind"] {
   if (label.startsWith("nav:")) return "nav";

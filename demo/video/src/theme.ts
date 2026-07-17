@@ -5,7 +5,7 @@
  * it never carries a status and is used sparingly (intro eyebrow + rule, the neutral caption bar, the
  * Otto close). Everything else stays neutral ink so attention is still carried by red/green.
  */
-import { SERIF, SANS } from "./fonts";
+import { SERIF, SANS, WORDMARK } from "./fonts";
 
 export const theme = {
   // Canvas + surfaces
@@ -55,6 +55,8 @@ export const theme = {
 export const font = {
   serif: SERIF,
   sans: SANS,
+  // The homey rounded "Otto" wordmark face (Baloo 2), matching the app's --font-otto wordmark.
+  wordmark: WORDMARK,
   mono: 'ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace',
 } as const;
 

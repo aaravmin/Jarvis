@@ -22,21 +22,25 @@ export const IntroOtto: React.FC<{ durationInFrames: number }> = ({ durationInFr
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", opacity: fadeIn }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <Wordmark size={178} delay={2} weight={600} color={theme.caramel} />
+        <Wordmark size={182} delay={2} weight={700} color={theme.caramel} />
 
         <div
           style={{
             marginTop: 30,
+            maxWidth: 1080,
+            textAlign: "center",
             transform: `translateY(${subY}px)`,
             opacity: sub,
             fontFamily: font.sans,
-            fontSize: 27,
+            fontSize: 30,
             fontWeight: 500,
-            letterSpacing: 0.3,
+            letterSpacing: 0.2,
+            lineHeight: 1.35,
             color: theme.muted,
           }}
         >
-          Everything you owe, tied to what matters.
+          Turns your email, meetings, and notes into what to do next
+          <span style={{ color: theme.caramel, fontWeight: 600 }}> - ranked by your goals.</span>
         </div>
       </div>
     </AbsoluteFill>

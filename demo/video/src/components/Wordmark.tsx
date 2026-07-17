@@ -3,15 +3,15 @@ import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { theme, font } from "../theme";
 
 /**
- * The Otto wordmark: text only, no logo mark - now set in the warm Fraunces serif. Letters stagger
- * up on a spring while the letter-spacing eases from tight to a calm resting track. Used only in the
- * closing card, where it carries the caramel brand accent.
+ * The Otto wordmark: text only, no logo mark - set in the homey rounded Baloo 2, the SAME face the app's
+ * wordmark uses (next/font --font-otto), so the video's open + close match the product exactly. Letters
+ * stagger up on a spring while the letter-spacing eases from tight to a calm resting track.
  */
 export const Wordmark: React.FC<{ size?: number; delay?: number; color?: string; weight?: number }> = ({
   size = 130,
   delay = 0,
   color = theme.foreground,
-  weight = 600,
+  weight = 700,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -37,9 +37,8 @@ export const Wordmark: React.FC<{ size?: number; delay?: number; color?: string;
               transform: `translateY(${y}px)`,
               opacity: s,
               marginRight: tracking,
-              fontFamily: font.serif,
+              fontFamily: font.wordmark,
               fontWeight: weight,
-              fontOpticalSizing: "auto",
               fontSize: size,
               lineHeight: 1,
               color,

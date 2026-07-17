@@ -6,6 +6,7 @@ import { LowerThird } from "./LowerThird";
 import { GreenBurst } from "./GreenBurst";
 import { ClickFx, type FxClick } from "./ClickFx";
 import { ExampleTag } from "./ExampleTag";
+import { Pointer, type PointTarget } from "./Pointer";
 import { FRAME } from "../layout";
 import type { Focus } from "../motion";
 
@@ -38,6 +39,8 @@ type Props = {
   clicks?: FxClick[];
   /** focus + context zoom targets scripted to caption beats (zoom into an element, hold, zoom out). */
   focuses?: Focus[];
+  /** highlight ring + connector targets: every caption points at the exact element it describes. */
+  pointers?: PointTarget[];
   /** dynamic URL pill that flips with real in-footage navigation (scene-relative frames). */
   urlSwitches?: Array<{ frame: number; url: string }>;
 };
@@ -55,6 +58,7 @@ export const AppSection: React.FC<Props> = ({
   greenBurst,
   clicks = [],
   focuses = [],
+  pointers = [],
   urlSwitches,
 }) => {
   return (
@@ -84,6 +88,16 @@ export const AppSection: React.FC<Props> = ({
 
       {/* Persistent "Example . Brown Bee Coffee" watermark - Otto is the tool, Brown Bee is the sample. */}
       <ExampleTag durationInFrames={durationInFrames} />
+
+      {/* Highlight ring + connector: every caption visibly points at the element it describes. Drawn
+          above the frame but below the caption text, and tracks the live focus/click zoom. */}
+      <Pointer
+        targets={pointers}
+        clicks={clicks}
+        focuses={focuses}
+        sceneDuration={durationInFrames}
+        idle={clicks.length === 0}
+      />
 
       {captions.map((c, i) => (
         <Sequence key={i} from={c.from} durationInFrames={c.dur} name={`caption-${i}`}>

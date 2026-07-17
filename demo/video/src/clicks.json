@@ -1,19 +1,19 @@
 {
   "hero": [
     {
-      "tSec": 4.674,
+      "tSec": 4.547,
       "x": 112,
       "y": 168,
       "label": "nav:tasks"
     },
     {
-      "tSec": 8.529,
-      "x": 514,
+      "tSec": 7.872,
+      "x": 642,
       "y": 373,
       "label": "check:book-probat"
     },
     {
-      "tSec": 13.695,
+      "tSec": 13.999,
       "x": 112,
       "y": 138,
       "label": "nav:goals"

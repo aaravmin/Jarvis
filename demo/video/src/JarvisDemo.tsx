@@ -8,6 +8,7 @@ import { buildWindow } from "./windows";
 import { pageToView, type Focus } from "./motion";
 import { Backdrop } from "./components/Backdrop";
 import { AppSection, type Caption } from "./components/AppSection";
+import { type PointTarget } from "./components/Pointer";
 import { IntroOtto } from "./scenes/IntroOtto";
 import { ExampleBrownBee } from "./scenes/ExampleBrownBee";
 import { OutroOtto } from "./scenes/OutroOtto";
@@ -42,23 +43,33 @@ const focus = (
 const SC6B = buildWindow("hero", 7.7, 16.4, { playback: 1.0, baseUrl: "tasks", clickTrack: "hero" });
 const SC6B_CHECK = SC6B.clicks.find((c) => c.kind === "check");
 const SC6B_NAV = SC6B.clicks.filter((c) => c.kind === "nav").slice(-1)[0];
+// The app holds a busy spinner on the just-checked row through router.refresh(); hold the green "done"
+// stamp over it for the whole "done" beat (until the nav-to-Goals click at ~frame 189) so green = done
+// reads cleanly the entire time the checked row is on screen, never the muted spinner.
+const SC6B_CLICKS = SC6B.clicks.map((c) => (c.kind === "check" ? { ...c, stampFade: 188 } : c));
 
-// --- Focus targets (page coords measured off the footage; content is left-aligned in the column) ---
-// Each holds the FULL dashboard (context) for a beat, eases INTO the element, holds while the caption
-// explains, then eases back OUT so the viewer re-orients where it lives.
-const SC3_FOCUS: Focus[] = [focus(655, 335, 2.05, { inStart: 34, inEnd: 60, outStart: DUR.goals - 40, outEnd: DUR.goals - 12 })];
-const SC4_FOCUS: Focus[] = [focus(662, 450, 2.3, { inStart: 34, inEnd: 62, outStart: DUR.connect - 40, outEnd: DUR.connect - 12 })];
-const SC5_FOCUS: Focus[] = [focus(952, 322, 1.9, { inStart: 32, inEnd: 58, outStart: DUR.day - 36, outEnd: DUR.day - 12 })];
-const SC6A_FOCUS: Focus[] = [focus(705, 975, 1.7, { inStart: 26, inEnd: 52, outStart: DUR.suggested - 34, outEnd: DUR.suggested - 10 })];
-// SC6b features the completion: a gentle zoom into the check-off row so "done" (green) reads, easing back
-// out before the nav-to-Goals click so its push + the goal landing play at full frame.
+// --- Focus targets (page coords measured off the clean-dashboard stills; the app column is CONTAINED
+// and centered now, so content sits around x=625-1520). Each holds the FULL dashboard (context), eases
+// INTO the element, HOLDS while the caption explains, then eases back OUT so the viewer re-orients. ---
+const SC3_FOCUS: Focus[] = [
+  focus(940, 322, 1.5, { inStart: 26, inEnd: 52, outStart: DUR.goals - 40, outEnd: DUR.goals - 12 }),
+];
+const SC4_FOCUS: Focus[] = [
+  focus(880, 228, 1.85, { inStart: 24, inEnd: 52, outStart: DUR.connect - 40, outEnd: DUR.connect - 12 }),
+];
+// SC5 uses TWO targets: a gentle look at the ordered Overdue list, then a close look at the red reply.
+const SC5_FOCUS: Focus[] = [
+  focus(1010, 210, 1.32, { inStart: 14, inEnd: 36, outStart: 60, outEnd: 78 }),
+  focus(1080, 396, 1.85, { inStart: 82, inEnd: 104, outStart: DUR.day - 28, outEnd: DUR.day - 10 }),
+];
+const SC6A_FOCUS: Focus[] = [
+  focus(1130, 846, 1.45, { inStart: 20, inEnd: 46, outStart: DUR.suggested - 28, outEnd: DUR.suggested - 10 }),
+];
+// SC6b features the completion: a gentle zoom into the check-off row so "done" (green) reads, easing
+// back out before the nav-to-Goals click so its push + the goal landing play at full frame. The goal it
+// advances is then marked by a ring (below), not another zoom, so the tail plays clean.
 const SC6B_FOCUS: Focus[] = SC6B_CHECK
-  ? [focus(600, 373, 1.3, {
-      inStart: SC6B_CHECK.frame - 16,
-      inEnd: SC6B_CHECK.frame + 6,
-      outStart: (SC6B_NAV?.frame ?? SC6B_CHECK.frame + 120) - 40,
-      outEnd: (SC6B_NAV?.frame ?? SC6B_CHECK.frame + 120) - 16,
-    })]
+  ? [focus(810, 373, 1.28, { inStart: 6, inEnd: 30, outStart: 150, outEnd: 172 })]
   : [];
 
 // --- Captions: a flowing narrative, one connected line to the next (Figtree, no em dashes). ---
@@ -71,18 +82,55 @@ const SC4_CAPTIONS: Caption[] = [
   { text: "and ties every task to a goal.", from: 100, dur: DUR.connect - 112 },
 ];
 const SC5_CAPTIONS: Caption[] = [
-  { text: "Her day comes back in priority order.", from: 12, dur: 66 },
+  { text: "Her day comes back in priority order.", from: 12, dur: 64 },
   { text: "A reply she owes, before it slips.", accent: "red", from: 82, dur: DUR.day - 94 },
 ];
 const SC6A_CAPTIONS: Caption[] = [
-  { text: "Otto only surfaces what matters, for you to approve.", from: 14, dur: DUR.suggested - 26 },
+  { text: "Otto only surfaces what matters,", from: 14, dur: 50 },
+  { text: "for you to approve.", from: 68, dur: DUR.suggested - 80 },
 ];
 const SC6B_CAPTIONS: Caption[] = (() => {
   const caps: Caption[] = [];
-  if (SC6B_CHECK) caps.push({ text: "It becomes a task you finish,", accent: "green", from: SC6B_CHECK.frame + 6, dur: 112 });
+  if (SC6B_CHECK) caps.push({ text: "It becomes a task you finish,", accent: "green", from: 10, dur: 150 });
   // Land the second line just as the Goals page actually paints in the footage (~0.9s after the click).
   if (SC6B_NAV) caps.push({ text: "and moves a goal forward.", from: SC6B_NAV.frame + 30, dur: SC6B.duration - (SC6B_NAV.frame + 30) - 6 });
   return caps;
+})();
+
+// --- Pointing: every caption draws a RING around the exact element it describes + a CONNECTOR from the
+// caption up to it. Coords are page-space element boxes (measured off the stills). Accent: goal=caramel
+// (the goal spine), red=urgent, green=done, ink=neutral. Timings track their caption. ---
+const SC3_POINTERS: PointTarget[] = [
+  // "working toward" -> the big goal
+  { pageX: 717, pageY: 264, w: 172, h: 28, accent: "goal", from: 18, dur: 74, anchorX: 360, anchorY: 905 },
+  // "broken down into this week" -> its weekly goals
+  { pageX: 762, pageY: 358, w: 210, h: 96, accent: "goal", from: 100, dur: 68, anchorX: 360, anchorY: 905 },
+];
+const SC4_POINTERS: PointTarget[] = [
+  // "reads her email, meetings, and Notion" -> the source chip on the task
+  { pageX: 986, pageY: 228, w: 222, h: 28, accent: "ink", from: 14, dur: 78, anchorX: 380, anchorY: 905 },
+  // "ties every task to a goal" -> the goal chip (the link)
+  { pageX: 795, pageY: 228, w: 156, h: 26, accent: "goal", from: 100, dur: DUR.connect - 112, anchorX: 360, anchorY: 905 },
+];
+const SC5_POINTERS: PointTarget[] = [
+  // "in priority order" -> the Overdue (top-priority) bucket header
+  { pageX: 660, pageY: 113, w: 82, h: 26, accent: "ink", from: 16, dur: 58, anchorX: 340, anchorY: 905 },
+  // "a reply she owes, before it slips" -> the red waiting time
+  { pageX: 1439, pageY: 383, w: 146, h: 26, accent: "red", from: 84, dur: DUR.day - 98, anchorX: 560, anchorY: 895 },
+];
+const SC6A_POINTERS: PointTarget[] = [
+  // "what matters" -> the goal a suggestion serves (the spine weekly goal)
+  { pageX: 795, pageY: 853, w: 156, h: 26, accent: "goal", from: 16, dur: 48, anchorX: 380, anchorY: 930 },
+  // "for you to approve" -> that suggestion's Accept
+  { pageX: 1463, pageY: 838, w: 98, h: 40, accent: "ink", from: 68, dur: DUR.suggested - 82, anchorX: 520, anchorY: 895 },
+];
+const SC6B_POINTERS: PointTarget[] = (() => {
+  const pts: PointTarget[] = [];
+  // "It becomes a task you finish" -> the checkbox + title going done (green)
+  if (SC6B_CHECK) pts.push({ pageX: 748, pageY: 370, w: 238, h: 38, accent: "green", from: 10, dur: 150, anchorX: 360, anchorY: 905 });
+  // "and moves a goal forward" -> the big goal on the Goals landing (caramel spine)
+  if (SC6B_NAV) pts.push({ pageX: 717, pageY: 264, w: 172, h: 28, accent: "goal", from: SC6B_NAV.frame + 30, dur: SC6B.duration - (SC6B_NAV.frame + 30) - 8, anchorX: 360, anchorY: 905 });
+  return pts;
 })();
 
 // Timings: gentle fades throughout, with one soft slide for the "keep scrolling into Suggested" join.
@@ -114,6 +162,7 @@ export const JarvisDemo: React.FC = () => {
             footage={{ id: "hero", label: "Goals", page: "goals", variant: "goals", still: "goals.png" }}
             captions={SC3_CAPTIONS}
             focuses={SC3_FOCUS}
+            pointers={SC3_POINTERS}
           />
         </TransitionSeries.Sequence>
         <TransitionSeries.Transition presentation={fade()} timing={fadeT} />
@@ -126,6 +175,7 @@ export const JarvisDemo: React.FC = () => {
             footage={{ id: "today", label: "Today", page: "today", variant: "today", still: "today-scroll0.png" }}
             captions={SC4_CAPTIONS}
             focuses={SC4_FOCUS}
+            pointers={SC4_POINTERS}
           />
         </TransitionSeries.Sequence>
         <TransitionSeries.Transition presentation={fade()} timing={fadeT} />
@@ -138,6 +188,7 @@ export const JarvisDemo: React.FC = () => {
             footage={{ id: "today", label: "Today", page: "today", variant: "today", still: "today-scroll0.png" }}
             captions={SC5_CAPTIONS}
             focuses={SC5_FOCUS}
+            pointers={SC5_POINTERS}
           />
         </TransitionSeries.Sequence>
         {/* keep scrolling down the same page into Suggested */}
@@ -151,6 +202,7 @@ export const JarvisDemo: React.FC = () => {
             footage={{ id: "today", label: "Suggested", page: "today", variant: "today", still: "today-suggested.png" }}
             captions={SC6A_CAPTIONS}
             focuses={SC6A_FOCUS}
+            pointers={SC6A_POINTERS}
           />
         </TransitionSeries.Sequence>
         <TransitionSeries.Transition presentation={fade()} timing={fadeT} />
@@ -162,8 +214,9 @@ export const JarvisDemo: React.FC = () => {
             durationInFrames={SC6B.duration}
             footage={{ id: "hero", label: "Tasks", page: "tasks", variant: "tasks", trimStart: SC6B.trimStart, playbackRate: SC6B.playbackRate }}
             captions={SC6B_CAPTIONS}
-            clicks={SC6B.clicks}
+            clicks={SC6B_CLICKS}
             focuses={SC6B_FOCUS}
+            pointers={SC6B_POINTERS}
             urlSwitches={SC6B.urlSwitches}
           />
         </TransitionSeries.Sequence>
